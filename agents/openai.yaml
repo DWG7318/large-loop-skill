@@ -1,0 +1,4 @@
+interface:
+  display_name: "Large Loop Skill (LLK)"
+  short_description: "Five-role governance for complex Codex projects"
+  default_prompt: "Use $large-loop-skill to govern this complex project as an LLK with explicit contracts, evidence, and routing."
