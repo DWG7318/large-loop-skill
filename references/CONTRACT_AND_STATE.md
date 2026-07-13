@@ -4,6 +4,7 @@
 
 - Control Tree
 - Frozen Project Contract
+- Isolation and Model Bindings
 - Loop Contract
 - State Machine
 - CELL Contract
@@ -17,7 +18,11 @@ Create only what the project needs, using this default shape:
 ```text
 .large-loop/
   project-contracts/r0001.md
+  config/
+    isolation-policies/r0001.md
+    model-bindings/r0001.json
   role-registry.json
+  workspace-registry.json
   state.json
   events.jsonl
   evidence-index.jsonl
@@ -43,8 +48,8 @@ Record at minimum:
 - project ID, Owner objective, source project, and authoritative asset boundaries;
 - in-scope and out-of-scope work;
 - measurable project acceptance and hard brakes;
-- role bindings and separation constraints;
-- approved models, tools, skills, secrets references, budgets, and escalation choices;
+- role/context/workspace/capability/model bindings and separation constraints;
+- approved per-role providers, models, endpoint/credential references, tools, skills, parameters, budgets, fallbacks, and escalation choices;
 - Loop graph and dependency rules;
 - Worker isolation and write scopes;
 - double-validation methods;
@@ -54,6 +59,10 @@ Record at minimum:
 - contract revision and content hash.
 
 Never store raw credentials. Store only secure-loader names or secret references.
+
+## Isolation and Model Bindings
+
+The frozen isolation policy and model-binding matrix are contract revisions. Every active role registry entry points to immutable policy/binding IDs and hashes. There is no implicit global model configuration. Read `ISOLATION_AND_MODEL_BINDINGS.md` for required fields and switch rules.
 
 ## Loop Contract
 
@@ -75,7 +84,7 @@ Observation overlays do not replace chain state:
 
 - `stalled-unconfirmed`: activity or silence lacks a formal checkpoint.
 - `handoff-risk`: sender output exists but receiver acknowledgement is missing.
-- `governance-hold`: Supervisor observes that a required role/authority is unavailable before a formal route can be issued; it has no routing or closure effect.
+- `governance-hold`: Supervisor observes that required authority is unavailable or that runtime isolation/model binding differs from the frozen contract before a formal route can be issued; it has no routing or closure effect.
 - `paused`: Supervisor or Owner intentionally suspends dispatch.
 
 ## CELL Contract
@@ -89,7 +98,7 @@ A formal CELL assignment includes:
 - acceptance items;
 - Worker validation commands/methods;
 - Checker independent validation commands/methods;
-- resource/tool binding;
+- resource, capability-profile, workspace, and model binding IDs;
 - timeout, blocker, and rollback instructions;
 - required receipt fields.
 

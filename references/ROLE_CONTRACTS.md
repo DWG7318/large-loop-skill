@@ -13,10 +13,12 @@
 ## Role Isolation
 
 - Create fresh mutable role contexts for every unrelated LLK project.
-- Record role type, agent/task ID, model or runtime binding, allowed tools, write scope, and start time.
-- A role may be replaced only through explicit authority transfer recorded by Supervisor.
+- Record role type, agent/task ID, context ID, workspace ID, capability profile ID, model binding ID, and start time.
+- A role may be replaced only after Router routing or a frozen amendment authorizes replacement; Supervisor records the authority transfer but does not create replacement authority by itself.
 - One instance may serve multiple child Loops only when its context and records remain unambiguous.
-- Worker and Checker must be different contexts for the same CELL. Checker and Router must be different contexts for the same Loop.
+- Worker and Checker must have different contexts, workspaces, capabilities, and model binding IDs for the same CELL. Checker and Router must have different contexts and binding IDs for the same Loop.
+- Planner and Router cannot write product artifacts. Checker writes only isolated validation outputs. Worker writes only its assigned sandbox/worktree.
+- Read `ISOLATION_AND_MODEL_BINDINGS.md` before creating the role registry or launching any role.
 - Discussion is not authority. Only a labeled formal record changes LLK state.
 
 ## Launch Cards
@@ -82,7 +84,7 @@ Forbidden: implementation, planning, QC substitution, inferred evidence
 - `handoff-record`
 - `final-acceptance`
 
-Every formal message includes project ID, Loop ID, cycle/CELL ID when applicable, contract revision, sender role/ID, recipient role/ID, timestamp, artifact identity, and evidence paths.
+Every formal message includes project ID, Loop ID, cycle/CELL ID when applicable, contract revision, sender/recipient role IDs, sender context/workspace/capability/model-binding IDs, timestamp, artifact identity, and evidence paths.
 
 ## Bounded Repair Test
 

@@ -17,6 +17,7 @@ Evidence is append-only, attributable, reproducible where possible, and bound to
 - project, Loop, cycle, and CELL IDs;
 - contract revision/hash;
 - role and agent/task ID;
+- context, workspace, capability-profile, and model-binding IDs;
 - artifact identity;
 - command or inspection method;
 - timestamp, environment, result, and retained output path.
@@ -81,21 +82,22 @@ The heartbeat observes and wakes Supervisor. It cannot approve, route, dispatch,
 
 | Condition | State/action |
 |---|---|
-| Worker silent, workspace unchanged | `stalled-unconfirmed`; request checkpoint, then replace only through authority transfer. |
+| Worker silent, workspace unchanged | `stalled-unconfirmed`; request checkpoint; replacement/authority transfer waits for Router routing or a frozen amendment. |
 | Workspace changing without receipt | Preserve snapshot; prevent conflicting writes; request formal checkpoint. |
 | Sender complete, receiver silent | `handoff-risk`; resend exact record and require acknowledgement. |
 | Checker unavailable before Router can act | Supervisor records `governance-hold`; never let Worker/Supervisor inherit QC. |
 | Router unavailable | Supervisor records `governance-hold`; never let Checker/Supervisor/Owner close, merge, or release through LLK. |
 | Artifact changed after pass | Start a new attempt; Worker issues a fresh receipt, then Checker independently validates. |
 | Contract defect discovered | Router selects `replan`; preserve output and enter amendment QC. |
-| Role context lost | Bind a fresh role, provide the recovery packet, record transfer, resume from last valid state. |
+| Role context lost | Supervisor records `governance-hold`, preserves state, and prepares the recovery packet; Router or a frozen amendment decides replacement, transfer, and restart point. |
 
 ## Recovery Packet
 
-A replacement role receives only verified continuity material:
+After Router routing or a frozen amendment authorizes replacement, the new role receives only verified continuity material:
 
 - frozen contract and current revision/hash;
 - role registry and explicit new binding;
+- isolation-policy and model-binding revisions/hashes;
 - current state and last Router record;
 - active CELL assignment;
 - artifact identity and retained workspace snapshot;
