@@ -1,0 +1,189 @@
+{
+  "version": "2.0.0",
+  "product": {
+    "name": "Graph Loop Skill",
+    "abbreviation": "GLK",
+    "invocation": "$graph-loop-skill",
+    "legacy_names": [
+      "Large Loop Skill",
+      "LLK",
+      "$large-loop-skill"
+    ],
+    "target_repository": "DWG7318/graph-loop-skill",
+    "legacy_repository": "DWG7318/large-loop-skill"
+  },
+  "role_types": [
+    "SUPERVISOR",
+    "GRAPHER",
+    "PLANNER",
+    "WORKER",
+    "CHECKER",
+    "ROUTER",
+    "VERIFICATION"
+  ],
+  "authority": {
+    "calabash_and_contract_freeze": [
+      "SUPERVISOR"
+    ],
+    "graph_structure_and_route": [
+      "GRAPHER"
+    ],
+    "cell_plan": [
+      "PLANNER"
+    ],
+    "product_write": [
+      "WORKER_WITH_ACTIVE_LEASE"
+    ],
+    "cell_validation": [
+      "CHECKER"
+    ],
+    "cell_route": [
+      "ROUTER"
+    ],
+    "go_verdict": [
+      "VERIFICATION"
+    ],
+    "final_project_acceptance": [
+      "SUPERVISOR"
+    ]
+  },
+  "calabash_gate": {
+    "required": true,
+    "minimum_layers": [
+      "GRANDPA",
+      "PRODUCT_ARCHITECTURE",
+      "ONTOLOGY"
+    ],
+    "supervisor_must_establish_when_missing": true,
+    "go_trace_required": true,
+    "edge_trace_required": true,
+    "verification_contract_requires_trace": true
+  },
+  "graph_model": {
+    "grapher": true,
+    "chain_model": false,
+    "node_type": "GO",
+    "cell_as_cross_go_node": false,
+    "partial_unlock": true,
+    "conditional_routing": true,
+    "joins": [
+      "ALL",
+      "ANY",
+      "QUORUM"
+    ],
+    "fallback": true,
+    "conflict_constraints": true,
+    "cycles": "BOUNDED_ONLY",
+    "dynamic_graph_revision": true,
+    "ready_set_owner": "GRAPHER",
+    "terminal_evaluator": "GRAPHER"
+  },
+  "cross_go_rule": {
+    "cell_to_cell_dependency_allowed": false,
+    "required_source_state": "GO_VERIFIED",
+    "named_frozen_output_required": true
+  },
+  "cell_loop": {
+    "ordered_roles": [
+      "PLANNER",
+      "WORKER",
+      "CHECKER",
+      "ROUTER"
+    ],
+    "scope": "CELL",
+    "router_routes": [
+      "CELL_ACCEPTED",
+      "WORKER_REWORK",
+      "WORKER_HANDOFF",
+      "WORKER_SWITCH",
+      "CELL_REPLAN",
+      "CELL_BLOCKED",
+      "CELL_REJECTED",
+      "GO_CANDIDATE_READY",
+      "MANUAL_INTERVENTION"
+    ],
+    "router_can_choose_go": false,
+    "planner_can_choose_go": false,
+    "checker_can_route": false
+  },
+  "worker_set": {
+    "multiple_eligible_workers_per_cell": true,
+    "maximum_active_workers_per_cell": 1,
+    "concurrent_product_writes": false,
+    "planner_recommends_worker": true,
+    "router_grants_lease": false,
+    "switch_requires_router": true,
+    "old_lease_revoked_before_new": true,
+    "immutable_handoff_required": true,
+    "fresh_workspace_on_switch": true,
+    "standby_hidden_work": false,
+    "split_if_independently_verifiable": true,
+    "planner_selects_worker": true,
+    "planner_grants_lease": true,
+    "handoff_requires_router": true
+  },
+  "verification_policy": {
+    "fresh_per_go_candidate": true,
+    "prebound_before_first_cell": true,
+    "direct_handoff": true,
+    "supervisor_relay": false,
+    "product_writes": false,
+    "verdicts": [
+      "GO_VERIFIED",
+      "GO_EVIDENCE_GAP",
+      "GO_REWORK_REQUIRED",
+      "GO_DEFINITION_DEFECT",
+      "GO_BLOCKED",
+      "GO_REJECTED"
+    ],
+    "sends_to": [
+      "GRAPHER",
+      "SUPERVISOR",
+      "OWNING_CELL_CONTROL_SET"
+    ]
+  },
+  "autonomy": {
+    "project_autonomy_envelope_required": true,
+    "routine_owner_authorization_required": false,
+    "cell_owner_approval_required": false,
+    "worker_switch_owner_approval_required": false,
+    "go_owner_approval_required": false,
+    "graph_route_owner_approval_required": false,
+    "loop_iteration_owner_approval_required": false,
+    "owner_contact_authority": [
+      "SUPERVISOR"
+    ]
+  },
+  "isolation": {
+    "visible_conversations_only": true,
+    "hidden_agents": false,
+    "separate_contexts": true,
+    "separate_mutable_workspaces": true,
+    "separate_model_bindings": true,
+    "separate_evidence_paths": true,
+    "checker_verification_separation": true,
+    "worker_switch_reuses_mutable_workspace": false
+  },
+  "detection_tiers": [
+    "CELL_ALWAYS",
+    "CELL_TRIGGERED",
+    "GO_BOUNDARY",
+    "GRAPH_EDGE",
+    "PROJECT_FINAL"
+  ],
+  "append_only": {
+    "graph_versions": true,
+    "worker_leases": true,
+    "handoffs": true,
+    "evidence": true,
+    "verdicts": true,
+    "current_state_indexes_mutable": true
+  },
+  "completion": {
+    "requires_graph_terminal": true,
+    "requires_required_go_verified": true,
+    "requires_project_final_detection": true,
+    "requires_project_goal_when_configured": true,
+    "final_authority": "SUPERVISOR"
+  }
+}
