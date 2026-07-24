@@ -1,0 +1,105 @@
+{
+  "version": "2.0.0",
+  "questions": [
+    {
+      "id": "Q01",
+      "prompt": "GLK的正式名称、缩写、调用名和旧LLK名称是什么关系？"
+    },
+    {
+      "id": "Q02",
+      "prompt": "GLK启动前是否必须有Calabash？最小Calabash是什么？"
+    },
+    {
+      "id": "Q03",
+      "prompt": "没有Calabash时谁建立？什么情况才允许询问Owner？"
+    },
+    {
+      "id": "Q04",
+      "prompt": "Supervisor与Grapher分别拥有哪一层的唯一权力？"
+    },
+    {
+      "id": "Q05",
+      "prompt": "GLK图中的节点是什么？CELL能否成为跨GO节点或边端点？"
+    },
+    {
+      "id": "Q06",
+      "prompt": "哪些需求应选择GLK而不是MSLK？"
+    },
+    {
+      "id": "Q07",
+      "prompt": "Planner、Worker、Checker、Router的权力范围是哪一层？"
+    },
+    {
+      "id": "Q08",
+      "prompt": "Planner能否选择下一个GO？谁选择并激活当前CELL的Worker？"
+    },
+    {
+      "id": "Q09",
+      "prompt": "Router能否修改GO图或给出GO最终Verdict？"
+    },
+    {
+      "id": "Q10",
+      "prompt": "一个CELL是否可以配置多个Worker？同一时间最多激活几个？"
+    },
+    {
+      "id": "Q11",
+      "prompt": "谁选择并授予ACTIVE_WORKER_LEASE，谁有权路由WORKER_HANDOFF/WORKER_SWITCH？"
+    },
+    {
+      "id": "Q12",
+      "prompt": "Worker切换前必须完成哪些冻结、撤销和隔离步骤？"
+    },
+    {
+      "id": "Q13",
+      "prompt": "什么情况下多Worker工作应拆成多个CELL？"
+    },
+    {
+      "id": "Q14",
+      "prompt": "谁拥有产品实施和产品返工权？"
+    },
+    {
+      "id": "Q15",
+      "prompt": "Checker验证什么？能否修改产品后验收自己的修改？"
+    },
+    {
+      "id": "Q16",
+      "prompt": "GO什么时候送给Verification，谁直接发送，Supervisor是否中转？"
+    },
+    {
+      "id": "Q17",
+      "prompt": "Verification拥有何种唯一权力，不能做什么？"
+    },
+    {
+      "id": "Q18",
+      "prompt": "Verification判决发给谁，Grapher如何使用GO_VERIFIED？"
+    },
+    {
+      "id": "Q19",
+      "prompt": "允许CELL依赖另一个GO未完成CELL吗？跨GO输入需要什么？"
+    },
+    {
+      "id": "Q20",
+      "prompt": "GLK支持哪些分支、Join、Fallback和Conflict语义？"
+    },
+    {
+      "id": "Q21",
+      "prompt": "LOOP_BACK为什么必须有最大次数、退出条件、不变量和hard brake？"
+    },
+    {
+      "id": "Q22",
+      "prompt": "检测的五个层级是什么？"
+    },
+    {
+      "id": "Q23",
+      "prompt": "PROJECT_AUTONOMY_ENVELOPE是否免除逐CELL、逐Worker切换、逐GO和逐图路由的Owner授权？"
+    },
+    {
+      "id": "Q24",
+      "prompt": "Grapher什么时候可以修改图，图修订需要哪些门？"
+    },
+    {
+      "id": "Q25",
+      "prompt": "项目满足什么条件才能由Supervisor宣布完成？"
+    }
+  ]
+}

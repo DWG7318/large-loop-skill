@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "answers": {
+    "Q01": "正式名称Graph Loop Skill，缩写GLK，调用$graph-loop-skill；LLK/Large Loop Skill是仅用于迁移识别的旧名称，新运行必须使用GLK。",
+    "Q02": "必须。优先完整Calabash；最低为Grandpa、Product Architecture、Ontology。",
+    "Q03": "Supervisor从权威Owner陈述和已验证项目证据建立；只有无法推导且会改变产品含义的Owner独占歧义才能询问Owner。",
+    "Q04": "Supervisor拥有Calabash、合同冻结、资源/自治、Owner升级和最终项目审计；Grapher独占GO图结构、READY/ACTIVE集合、图调度与图路由。",
+    "Q05": "节点是独立可验证GO；CELL只存在于一个GO内部，不能成为跨GO图节点或边端点。",
+    "Q06": "需要任意依赖、条件分支、局部解锁、Join、Fallback、有界循环、动态图修订或非固定屏障并行时用GLK；固定多链层级用MSLK。",
+    "Q07": "四者都在CELL执行层：Planner规划CELL，Worker实施，Checker独立验证，Router决定CELL路由。",
+    "Q08": "不能选择下一个GO。Planner依据冻结CELL Worker Set选择并激活当前attempt唯一Worker；Grapher选择GO，Router在结果后决定CELL route。",
+    "Q09": "不能。Router只处理CELL路由和GO候选移交；Grapher改图，Verification给GO Verdict。",
+    "Q10": "可以配置多个eligible Worker，但同一CELL同一时间必须且最多只有一个ACTIVE_WORKER_LEASE。",
+    "Q11": "Planner选择Worker并授予/撤销lease；Router唯一决定是否需要WORKER_REWORK、计划HANDOFF或恢复SWITCH，但不选择替代Worker。",
+    "Q12": "Checker验证状态，Router发WORKER_SWITCH，Planner撤销旧lease并封存旧workspace，生成不可变handoff；Planner从冻结Worker Set选择合格替代者并授予新lease，新Worker在新workspace启动。",
+    "Q13": "当各Worker输出可以独立验收、安全组合或并行时必须拆CELL；多Worker不能掩盖错误粒度。",
+    "Q14": "只有持有active lease的Worker拥有产品实施和产品返工权。",
+    "Q15": "Checker在清洁隔离环境验证不可变CELL candidate；不能改产品再验收自己的修改。",
+    "Q16": "最后必需CELL通过后Router输出GO_CANDIDATE_READY，Checker直接把中立冻结包发给预绑定Fresh Verification；Supervisor不做中转。",
+    "Q17": "Verification独占GO Evidence Verdict；不能规划、实施、修复、路由、改图或询问Owner。",
+    "Q18": "Verdict直接给Grapher和Supervisor并抄送本地CELL角色；GO_VERIFIED后Grapher冻结命名输出、更新节点并评估出边和READY集合。",
+    "Q19": "不允许。跨GO只能消费GO_VERIFIED来源的命名冻结输出。",
+    "Q20": "支持HARD_DEPENDENCY、CONDITIONAL、JOIN_ALL、JOIN_ANY、JOIN_QUORUM、FALLBACK、LOOP_BACK和CONFLICT。",
+    "Q21": "为了防止无限、自我修改和不可验证循环；每次迭代必须可追溯并在预算或hard brake处停止。",
+    "Q22": "CELL_ALWAYS、CELL_TRIGGERED、GO_BOUNDARY、GRAPH_EDGE、PROJECT_FINAL。",
+    "Q23": "是。所有冻结自治范围内的例行工作无需逐项Owner授权；只有Owner独占事项由Supervisor提出单一明确请求。",
+    "Q24": "Grapher只能提出版本化amendment；需影响分析、Calabash trace、失效分析、Supervisor批准、无副作用simulation和GRAPH_REVISION_SIMULATION_PASS后激活。",
+    "Q25": "图终点条件达成、所有必需终端GO已验证、图组合/边/循环/安全/PROJECT_FINAL证据通过、Calabash与图版本一致、PROJECT_GOAL满足（如配置），最后由Supervisor接受。"
+  }
+}
