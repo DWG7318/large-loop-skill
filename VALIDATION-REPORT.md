@@ -20,7 +20,7 @@
 Environment: Windows, Python 3.14, UTF-8 mode enabled.
 
 ```text
-PASS: 38 pytest cases
+PASS: 39 pytest cases
 PASS: repository structure and canonical semantics
 PASS: all 11 templates against Draft 2020-12 Schema
 PASS: hash manifest path and content verification
