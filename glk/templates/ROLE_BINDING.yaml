@@ -1,0 +1,10 @@
+schema_version: 2.3.1
+role_binding_id: ROLE-RUN-001-SUPERVISOR
+role_type: RUN_SUPERVISOR
+run_id: RUN-001
+go_id: null
+instance_id: SUPERVISOR-RUN-001
+context_id: CONTEXT-RUN-001-SUPERVISOR
+workspace_id: WORKSPACE-RUN-001-SUPERVISOR
+evidence_root: evidence/RUN-001/supervisor
+created_at: "1970-01-01T00:00:00Z"

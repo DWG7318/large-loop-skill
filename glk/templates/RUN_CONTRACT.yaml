@@ -1,0 +1,25 @@
+schema_version: 2.3.1
+run_id: RUN-001
+feature_slice_id: FS-001
+run_feature: "Describe one frozen bounded Run Feature"
+run_scope:
+  included: ["Authorized project scope"]
+  excluded: ["Out-of-Run work"]
+baselines: ["BASELINE-001"]
+ui_lock: null
+claims: ["RUN-CLAIM-001"]
+evidence_required: ["D0-D3 receipts bound to the final candidate"]
+autonomy_boundaries: ["Non-destructive repository work"]
+candidate_binding: CANDIDATE-RUN-001
+run_supervisor_binding:
+  schema_version: 2.3.1
+  role_binding_id: ROLE-RUN-001-SUPERVISOR
+  role_type: RUN_SUPERVISOR
+  run_id: RUN-001
+  go_id: null
+  instance_id: SUPERVISOR-RUN-001
+  context_id: CONTEXT-RUN-001-SUPERVISOR
+  workspace_id: WORKSPACE-RUN-001-SUPERVISOR
+  evidence_root: evidence/RUN-001/supervisor
+  created_at: "1970-01-01T00:00:00Z"
+supervisor_reuse_forbidden: true

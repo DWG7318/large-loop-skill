@@ -1,18 +1,36 @@
 # Changelog
 
+## 2.3.1
+
+### Owner-frozen architecture
+
+- Preserve exactly six roles: Run Supervisor, Worker, Checker, GO Verifier, Run
+  Verifier, and Owner.
+- Require a fresh Run Supervisor instance for every Run.
+- Keep the GO execution graph acyclic.
+- Remove the READY state and queue interpretation.
+- Replace single-GO scheduling with a maximal safe ACTIVE_GO set.
+- Require typed waiting reasons and prohibit arbitrary serialization or fake edges.
+- Keep independent D0-D3 evidence layers, immediate Run Owner Acceptance, and the
+  LCCoding security boundary.
+
+### Engineering fixes
+
+- Enforce D1-before-D2 and same-candidate bindings.
+- Define formal resolution semantics for superseded/cancelled GO nodes.
+- Add executable JSON Schema and eleven complete templates.
+- Add a self-validating Run bootstrap.
+- Add cross-platform UTF-8 tests, repository validation, and clean release tooling.
+- Remove cache artifacts and obsolete 2.0.0 control-role contracts.
+
+## 2.3.0 — withdrawn
+
+The 2.3.0 candidate correctly introduced the six-role Run boundary and independent
+D2/D3, but incorrectly specified multiple READY nodes with exactly one ACTIVE node.
+Its state model, tests, validator, and package hygiene were incomplete. It must not
+be installed or substituted for 2.3.1.
+
 ## 2.0.0
 
-- Rename Large Loop Skill (LLK) to Graph Loop Skill (GLK).
-- Add mandatory Calabash / Minimum Calabash gate.
-- Add project-level Grapher as sole GO Graph authority.
-- Restrict Planner, Worker, Checker, and Router to CELL scope.
-- Add isolated GO-scoped Verification as sole GO verdict authority.
-- Add branches, joins, partial unlock, fallbacks, conflicts, and bounded cycles.
-- Add graph versioning, READY/ACTIVE/BLOCKED sets, deadlock detection, and graph
-  revision simulation.
-- Add multiple eligible Workers per CELL with exactly one active Worker lease.
-- Add immutable Worker handoff, switch, and collision recovery.
-- Inherit MSLK 1.9 autonomy, isolation, GO evidence, no cross-GO CELL dependency,
-  layered detection, append-only evidence, and Owner-exclusive escalation rules.
-- Replace old Router-owned “Goal verified?” project closure with layered
-  CELL Router -> GO Verification -> Grapher -> Supervisor authority.
+Historical seven-role GLK architecture. Existing historical receipts remain bound
+to their original version and do not migrate automatically.

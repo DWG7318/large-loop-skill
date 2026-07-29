@@ -1,0 +1,18 @@
+schema_version: 2.3.1
+amendment_id: GA-001
+graph_id: GRAPH-001
+from_version: 1
+to_version: 2
+reason: "Verified implementation evidence invalidated one frozen graph assumption"
+before:
+  nodes: ["GO-001"]
+  edges: []
+after:
+  nodes: ["GO-001"]
+  edges: []
+affected_claims: ["RUN-CLAIM-001"]
+active_work_impact: ["No active candidate remains valid until rebind"]
+invalidated_evidence: ["evidence/GRAPH-001/v1.json"]
+rollback: "Restore graph version 1 and quarantine version 2 candidates"
+authority_binding_ref: ROLE-RUN-001-SUPERVISOR
+issued_at: "1970-01-01T00:00:00Z"

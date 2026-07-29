@@ -1,4 +1,4 @@
 interface:
-  display_name: "Large Loop Skill (LLK)"
-  short_description: "Five-role governance for complex Codex projects"
-  default_prompt: "Use $large-loop-skill to govern this complex project as an LLK with explicit contracts, evidence, and routing."
+  display_name: "Graph Loop Skill (GLK)"
+  short_description: "Six-role maximal-concurrency GO DAG governance"
+  default_prompt: "Use $graph-loop-skill to govern this bounded Run as a six-role GO execution DAG with typed WAITING_GO reasons and a maximal safe ACTIVE_GO set."

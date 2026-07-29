@@ -1,0 +1,13 @@
+schema_version: 2.3.1
+run_id: RUN-001
+candidate_id: CANDIDATE-RUN-001
+candidate_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+entry_points: ["README.md"]
+roles: ["Run Supervisor", "Worker", "Checker", "GO Verifier", "Run Verifier", "Owner"]
+steps: ["Exercise the frozen Run Feature"]
+expected_visible_outcomes: ["The Run Feature behaves as accepted"]
+known_limitations: ["Project-wide security closure remains outside GLK"]
+d3_covered_invisible_risks: ["Graph seam composition"]
+owner_binding_ref: ROLE-OWNER-RUN-001
+owner_verdict: PENDING
+issued_at: "1970-01-01T00:00:00Z"

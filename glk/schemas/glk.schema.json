@@ -1,0 +1,326 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/DWG7318/large-loop-skill/glk/schemas/glk.schema.json",
+  "title": "GLK 2.3.1 executable contracts",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "string_array": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "role_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "role_binding_id", "role_type", "run_id",
+        "instance_id", "context_id", "workspace_id", "evidence_root", "created_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "role_binding_id": {"$ref": "#/$defs/id"},
+        "role_type": {
+          "enum": [
+            "RUN_SUPERVISOR", "WORKER", "CHECKER",
+            "GO_VERIFIER", "RUN_VERIFIER", "OWNER"
+          ]
+        },
+        "run_id": {"$ref": "#/$defs/id"},
+        "go_id": {"type": ["string", "null"]},
+        "instance_id": {"$ref": "#/$defs/id"},
+        "context_id": {"$ref": "#/$defs/id"},
+        "workspace_id": {"$ref": "#/$defs/id"},
+        "evidence_root": {"$ref": "#/$defs/id"},
+        "created_at": {"$ref": "#/$defs/id"}
+      }
+    },
+    "waiting_reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "references", "evidence_ref"],
+      "properties": {
+        "type": {
+          "enum": [
+            "DEPENDENCY_UNMET", "WRITE_CONFLICT", "RESOURCE",
+            "ISOLATION", "SAFETY"
+          ]
+        },
+        "references": {"$ref": "#/$defs/string_array", "minItems": 1},
+        "evidence_ref": {"$ref": "#/$defs/id"}
+      }
+    },
+    "run_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "run_id", "feature_slice_id", "run_feature",
+        "run_scope", "baselines", "ui_lock", "claims", "evidence_required",
+        "autonomy_boundaries", "candidate_binding", "run_supervisor_binding",
+        "supervisor_reuse_forbidden"
+      ],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "run_id": {"$ref": "#/$defs/id"},
+        "feature_slice_id": {"$ref": "#/$defs/id"},
+        "run_feature": {"$ref": "#/$defs/id"},
+        "run_scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["included", "excluded"],
+          "properties": {
+            "included": {"$ref": "#/$defs/string_array"},
+            "excluded": {"$ref": "#/$defs/string_array"}
+          }
+        },
+        "baselines": {"$ref": "#/$defs/string_array"},
+        "ui_lock": {"type": ["string", "null"]},
+        "claims": {"$ref": "#/$defs/string_array"},
+        "evidence_required": {"$ref": "#/$defs/string_array"},
+        "autonomy_boundaries": {"$ref": "#/$defs/string_array"},
+        "candidate_binding": {"$ref": "#/$defs/id"},
+        "run_supervisor_binding": {
+          "allOf": [
+            {"$ref": "#/$defs/role_binding"},
+            {"properties": {"role_type": {"const": "RUN_SUPERVISOR"}}}
+          ]
+        },
+        "supervisor_reuse_forbidden": {"const": true}
+      }
+    },
+    "go": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "go_id", "run_id", "graph_version", "title",
+        "intent", "scope", "claim", "acceptance", "evidence_required",
+        "predecessors", "conflict_keys", "graph_state", "execution_phase",
+        "waiting_reasons", "candidate_binding"
+      ],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "run_id": {"$ref": "#/$defs/id"},
+        "graph_version": {"type": "integer", "minimum": 1},
+        "title": {"$ref": "#/$defs/id"},
+        "intent": {"$ref": "#/$defs/id"},
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["included", "excluded"],
+          "properties": {
+            "included": {"$ref": "#/$defs/string_array"},
+            "excluded": {"$ref": "#/$defs/string_array"}
+          }
+        },
+        "claim": {"$ref": "#/$defs/id"},
+        "acceptance": {"$ref": "#/$defs/string_array"},
+        "evidence_required": {"$ref": "#/$defs/string_array"},
+        "predecessors": {"$ref": "#/$defs/string_array"},
+        "conflict_keys": {"$ref": "#/$defs/string_array"},
+        "graph_state": {
+          "enum": [
+            "WAITING_GO", "ACTIVE_GO", "GO_VERIFIED", "GO_BLOCKED",
+            "GO_REJECTED", "SUPERSEDED", "CANCELLED"
+          ]
+        },
+        "execution_phase": {
+          "type": ["string", "null"],
+          "enum": [null, "IMPLEMENTING", "CHECKING", "VERIFYING", "REWORK"]
+        },
+        "waiting_reasons": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/waiting_reason"}
+        },
+        "candidate_binding": {"type": ["string", "null"]}
+      }
+    },
+    "graph_baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "graph_id", "run_id", "version", "graph_hash",
+        "nodes", "edges", "entry_go_ids", "terminal_go_ids",
+        "run_feature_coverage", "acyclic", "waiting_go_ids", "active_go_ids",
+        "frozen_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "graph_id": {"$ref": "#/$defs/id"},
+        "run_id": {"$ref": "#/$defs/id"},
+        "version": {"type": "integer", "minimum": 1},
+        "graph_hash": {"$ref": "#/$defs/hash"},
+        "nodes": {"$ref": "#/$defs/string_array"},
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source", "target", "justification"],
+            "properties": {
+              "source": {"$ref": "#/$defs/id"},
+              "target": {"$ref": "#/$defs/id"},
+              "justification": {"$ref": "#/$defs/id"}
+            }
+          }
+        },
+        "entry_go_ids": {"$ref": "#/$defs/string_array"},
+        "terminal_go_ids": {"$ref": "#/$defs/string_array"},
+        "run_feature_coverage": {"$ref": "#/$defs/string_array"},
+        "acyclic": {"const": true},
+        "waiting_go_ids": {"$ref": "#/$defs/string_array"},
+        "active_go_ids": {"$ref": "#/$defs/string_array"},
+        "frozen_at": {"$ref": "#/$defs/id"}
+      }
+    },
+    "cell_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "cell_id", "go_id", "graph_version", "candidate_id", "candidate_sha256", "d0", "d1"],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "cell_id": {"$ref": "#/$defs/id"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "graph_version": {"type": "integer", "minimum": 1},
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "candidate_sha256": {"$ref": "#/$defs/hash"},
+        "d0": {"$ref": "#/$defs/verdict_block"},
+        "d1": {"$ref": "#/$defs/verdict_block"}
+      }
+    },
+    "verdict_block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receipt_id", "actor_binding_ref", "verdict", "evidence", "issued_at"],
+      "properties": {
+        "receipt_id": {"$ref": "#/$defs/id"},
+        "actor_binding_ref": {"$ref": "#/$defs/id"},
+        "verdict": {"$ref": "#/$defs/id"},
+        "evidence": {"$ref": "#/$defs/string_array"},
+        "issued_at": {"$ref": "#/$defs/id"}
+      }
+    },
+    "go_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "go_id", "graph_version", "candidate_id", "candidate_sha256", "d2", "successor_release"],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "graph_version": {"type": "integer", "minimum": 1},
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "candidate_sha256": {"$ref": "#/$defs/hash"},
+        "d2": {"$ref": "#/$defs/verification_block"},
+        "successor_release": {"$ref": "#/$defs/string_array"}
+      }
+    },
+    "run_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "graph_version", "candidate_id", "candidate_sha256", "d3"],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "run_id": {"$ref": "#/$defs/id"},
+        "graph_version": {"type": "integer", "minimum": 1},
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "candidate_sha256": {"$ref": "#/$defs/hash"},
+        "d3": {"$ref": "#/$defs/verification_block"}
+      }
+    },
+    "verification_block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receipt_id", "verifier_binding_ref", "execution_context_ref", "verdict", "receipts_consumed", "claims_checked", "evidence", "issued_at"],
+      "properties": {
+        "receipt_id": {"$ref": "#/$defs/id"},
+        "verifier_binding_ref": {"$ref": "#/$defs/id"},
+        "execution_context_ref": {"$ref": "#/$defs/id"},
+        "verdict": {"$ref": "#/$defs/id"},
+        "receipts_consumed": {"$ref": "#/$defs/string_array"},
+        "claims_checked": {"$ref": "#/$defs/string_array"},
+        "evidence": {"$ref": "#/$defs/string_array"},
+        "issued_at": {"$ref": "#/$defs/id"}
+      }
+    },
+    "graph_amendment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "amendment_id", "graph_id", "from_version", "to_version", "reason", "before", "after", "affected_claims", "active_work_impact", "invalidated_evidence", "rollback", "authority_binding_ref", "issued_at"],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "amendment_id": {"$ref": "#/$defs/id"},
+        "graph_id": {"$ref": "#/$defs/id"},
+        "from_version": {"type": "integer", "minimum": 1},
+        "to_version": {"type": "integer", "minimum": 2},
+        "reason": {"$ref": "#/$defs/id"},
+        "before": {"type": "object"},
+        "after": {"type": "object"},
+        "affected_claims": {"$ref": "#/$defs/string_array"},
+        "active_work_impact": {"$ref": "#/$defs/string_array"},
+        "invalidated_evidence": {"$ref": "#/$defs/string_array"},
+        "rollback": {"$ref": "#/$defs/id"},
+        "authority_binding_ref": {"$ref": "#/$defs/id"},
+        "issued_at": {"$ref": "#/$defs/id"}
+      }
+    },
+    "formal_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "resolution_id", "go_id", "kind", "amendment_id", "releases_successors", "removes_required", "authority_binding_ref", "evidence", "issued_at"],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "resolution_id": {"$ref": "#/$defs/id"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["SUPERSEDED", "CANCELLED"]},
+        "amendment_id": {"$ref": "#/$defs/id"},
+        "releases_successors": {"type": "boolean"},
+        "removes_required": {"type": "boolean"},
+        "authority_binding_ref": {"$ref": "#/$defs/id"},
+        "evidence": {"$ref": "#/$defs/string_array"},
+        "issued_at": {"$ref": "#/$defs/id"}
+      }
+    },
+    "owner_acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "candidate_id", "candidate_sha256", "entry_points", "roles", "steps", "expected_visible_outcomes", "known_limitations", "d3_covered_invisible_risks", "owner_binding_ref", "owner_verdict", "issued_at"],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "run_id": {"$ref": "#/$defs/id"},
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "candidate_sha256": {"$ref": "#/$defs/hash"},
+        "entry_points": {"$ref": "#/$defs/string_array"},
+        "roles": {"$ref": "#/$defs/string_array"},
+        "steps": {"$ref": "#/$defs/string_array"},
+        "expected_visible_outcomes": {"$ref": "#/$defs/string_array"},
+        "known_limitations": {"$ref": "#/$defs/string_array"},
+        "d3_covered_invisible_risks": {"$ref": "#/$defs/string_array"},
+        "owner_binding_ref": {"$ref": "#/$defs/id"},
+        "owner_verdict": {"enum": ["PENDING", "LOOP_OWNER_ACCEPTED", "LOOP_PRODUCT_REWORK", "PRODUCT_DEFINITION_CHANGE", "NEW_FEATURE_REQUEST"]},
+        "issued_at": {"$ref": "#/$defs/id"}
+      }
+    },
+    "security_handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "candidate_id", "candidate_sha256", "scope", "required_auditor_binding", "status", "post_security_acceptance_requirement", "issued_at"],
+      "properties": {
+        "schema_version": {"const": "2.3.1"},
+        "run_id": {"$ref": "#/$defs/id"},
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "candidate_sha256": {"$ref": "#/$defs/hash"},
+        "scope": {"$ref": "#/$defs/string_array"},
+        "required_auditor_binding": {"$ref": "#/$defs/id"},
+        "status": {"enum": ["PENDING_LCCODING_AUDIT", "ACCEPTED_BY_LCCODING"]},
+        "post_security_acceptance_requirement": {"const": true},
+        "issued_at": {"$ref": "#/$defs/id"}
+      }
+    }
+  }
+}

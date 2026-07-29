@@ -1,0 +1,9 @@
+schema_version: 2.3.1
+run_id: RUN-001
+candidate_id: CANDIDATE-RUN-001
+candidate_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+scope: ["Run-local accepted candidate for centralized project audit"]
+required_auditor_binding: LCCODING-SECURITY-AUDITOR
+status: PENDING_LCCODING_AUDIT
+post_security_acceptance_requirement: true
+issued_at: "1970-01-01T00:00:00Z"

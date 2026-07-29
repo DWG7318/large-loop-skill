@@ -1,0 +1,14 @@
+schema_version: 2.3.1
+run_id: RUN-001
+graph_version: 1
+candidate_id: CANDIDATE-RUN-001
+candidate_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+d3:
+  receipt_id: D3-RUN-001
+  verifier_binding_ref: ROLE-RUN-VERIFIER-RUN-001
+  execution_context_ref: CONTEXT-RUN-VERIFIER-RUN-001
+  verdict: PENDING
+  receipts_consumed: ["D2-GO-001"]
+  claims_checked: ["RUN-CLAIM-001", "GRAPH-SEAMS"]
+  evidence: ["evidence/RUN-001/d3.json"]
+  issued_at: "1970-01-01T00:00:00Z"
