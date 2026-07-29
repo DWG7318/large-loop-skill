@@ -48,8 +48,6 @@ def build_hash_manifest(root: Path, output: Path | None = None):
 def write_hash_manifest(root: Path, output: Path | None = None):
     manifest = build_hash_manifest(root, output)
     destination = root / "FILE_HASHES.json"
-    destination.write_text(
-        json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    with destination.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
     return destination

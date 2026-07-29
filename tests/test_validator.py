@@ -128,6 +128,20 @@ def test_release_builder_emits_clean_integrity_checked_zip(tmp_path):
     )
 
 
+def test_release_builder_writes_hash_manifest_with_lf(tmp_path):
+    root = copy_repo(tmp_path)
+    output = tmp_path / "GLK-2.3.1.zip"
+    result = subprocess.run(
+        [sys.executable, str(root / "glk/scripts/build_release.py"), str(output)],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert b"\r\n" not in (root / "FILE_HASHES.json").read_bytes()
+
+
 def test_release_builder_never_archives_its_own_output_from_another_cwd(tmp_path):
     root = copy_repo(tmp_path)
     output = root / "dist" / "GLK-2.3.1.zip"
