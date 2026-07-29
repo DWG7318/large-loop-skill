@@ -21,6 +21,7 @@ ROLES = [
     "Owner",
 ]
 REQUIRED = [
+    ".gitattributes",
     ".github/workflows/validate.yml",
     "requirements-dev.txt",
     "agents/openai.yaml",

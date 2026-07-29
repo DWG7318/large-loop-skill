@@ -43,6 +43,11 @@ def test_repository_validator_passes_current_tree():
     assert "PASS: GLK 2.3.1" in result.stdout
 
 
+def test_repository_pins_lf_for_cross_platform_hashes():
+    attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+    assert "* text=auto eol=lf" in attributes.splitlines()
+
+
 def test_validator_rejects_version_drift(tmp_path):
     root = copy_repo(tmp_path)
     (root / "VERSION").write_text("2.3.0\n", encoding="utf-8")

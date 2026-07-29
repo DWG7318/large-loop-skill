@@ -20,7 +20,7 @@
 Environment: Windows, Python 3.14, UTF-8 mode enabled.
 
 ```text
-PASS: 37 pytest cases
+PASS: 38 pytest cases
 PASS: repository structure and canonical semantics
 PASS: all 11 templates against Draft 2020-12 Schema
 PASS: hash manifest path and content verification
@@ -28,7 +28,9 @@ PASS: ZIP integrity and cache exclusion
 ```
 
 The GitHub workflow repeats validation and all tests on Windows and Ubuntu using
-Python 3.12. A release is mergeable only after both jobs pass.
+Python 3.12. Repository text is pinned to LF so byte-level integrity hashes remain
+stable across both checkout platforms. A release is mergeable only after both jobs
+pass.
 
 ## Interpreting green tests
 
