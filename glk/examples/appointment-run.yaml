@@ -1,0 +1,18 @@
+schema_version: 2.3.1
+run_id: RUN-APPOINTMENT-001
+run_feature: "Operator can configure and publish an appointment service"
+graph:
+  nodes: [GO-AUTH, GO-SCHEDULE, GO-PUBLISH, GO-AUDIT]
+  edges:
+    - {source: GO-AUTH, target: GO-PUBLISH}
+    - {source: GO-SCHEDULE, target: GO-PUBLISH}
+    - {source: GO-PUBLISH, target: GO-AUDIT}
+initial_graph_state:
+  active_go_ids: [GO-AUTH, GO-SCHEDULE]
+  waiting_go_ids: [GO-PUBLISH, GO-AUDIT]
+  waiting_reasons:
+    GO-PUBLISH:
+      - {type: DEPENDENCY_UNMET, references: [GO-AUTH, GO-SCHEDULE]}
+    GO-AUDIT:
+      - {type: DEPENDENCY_UNMET, references: [GO-PUBLISH]}
+completion: LOOP_OWNER_ACCEPTED

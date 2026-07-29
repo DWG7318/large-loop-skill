@@ -1,0 +1,20 @@
+# Verification
+
+## D0-D3
+
+- D0 proves that one CELL candidate behaves as its Worker intended.
+- D1 proves that the immutable CELL candidate satisfies its frozen contract.
+- D2 proves that accepted CELL candidates compose one frozen GO claim.
+- D3 proves that verified GO outcomes, graph seams, and the final candidate compose
+  the frozen Run Feature.
+
+Every receipt binds schema and graph versions, candidate ID and hash, role binding,
+execution context, evidence, verdict, and timestamp.
+
+D2 must consume D1 PASS for the same candidate and use a context independent from
+the Checker. D3 must consume D2 receipts for the accepted graph version and must not
+pass by receipt counting alone.
+
+Repetition is valid only for changed candidates/environments, stale or contradictory
+evidence, expanded regression scope, graph-composition effects, or specific new
+risks. Record the source layer, reason, scope delta, and result.

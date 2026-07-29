@@ -1,0 +1,14 @@
+schema_version: 2.3.1
+graph_id: GRAPH-001
+run_id: RUN-001
+version: 1
+graph_hash: "0000000000000000000000000000000000000000000000000000000000000000"
+nodes: ["GO-001"]
+edges: []
+entry_go_ids: ["GO-001"]
+terminal_go_ids: ["GO-001"]
+run_feature_coverage: ["RUN-CLAIM-001"]
+acyclic: true
+waiting_go_ids: []
+active_go_ids: ["GO-001"]
+frozen_at: "1970-01-01T00:00:00Z"

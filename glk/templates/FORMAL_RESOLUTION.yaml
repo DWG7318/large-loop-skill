@@ -1,0 +1,10 @@
+schema_version: 2.3.1
+resolution_id: RES-001
+go_id: GO-001
+kind: SUPERSEDED
+amendment_id: GA-001
+releases_successors: false
+removes_required: true
+authority_binding_ref: ROLE-RUN-001-SUPERVISOR
+evidence: ["evidence/GO-001/resolution.json"]
+issued_at: "1970-01-01T00:00:00Z"

@@ -1,1 +1,8 @@
 .codex/
+.worktrees/
+.pytest_cache/
+__pycache__/
+*.pyc
+.venv/
+dist/
+*.log

@@ -1,0 +1,15 @@
+schema_version: 2.3.1
+go_id: GO-001
+graph_version: 1
+candidate_id: CANDIDATE-GO-001
+candidate_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+d2:
+  receipt_id: D2-GO-001
+  verifier_binding_ref: ROLE-GO-VERIFIER-GO-001
+  execution_context_ref: CONTEXT-GO-VERIFIER-GO-001
+  verdict: PENDING
+  receipts_consumed: ["D1-CELL-001"]
+  claims_checked: ["GO-CLAIM-001"]
+  evidence: ["evidence/GO-001/d2.json"]
+  issued_at: "1970-01-01T00:00:00Z"
+successor_release: []
