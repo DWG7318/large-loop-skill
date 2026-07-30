@@ -11,7 +11,7 @@ sys.dont_write_bytecode = True
 from repository import EXCLUDED_PARTS, build_hash_manifest, sha256
 
 
-VERSION = "2.3.1"
+VERSION = "2.4.0"
 ROLES = [
     "Run Supervisor",
     "Worker",
@@ -49,6 +49,7 @@ REQUIRED = [
     "glk/templates/CELL_RECEIPT.yaml",
     "glk/templates/GO_RECEIPT.yaml",
     "glk/templates/RUN_RECEIPT.yaml",
+    "glk/templates/GO_CAUSAL_TRACE.yaml",
     "glk/templates/GRAPH_AMENDMENT.yaml",
     "glk/templates/FORMAL_RESOLUTION.yaml",
     "glk/templates/OWNER_ACCEPTANCE.yaml",
@@ -62,6 +63,7 @@ NORMATIVE = [
     "docs/interpretation-test.md",
     "glk/SKILL.md",
     "glk/references/canonical-dictionary.md",
+    "glk/references/causal-impact.md",
     "glk/references/go-graph-construction.md",
     "glk/references/graph-amendment.md",
     "glk/references/non-goals.md",
@@ -80,6 +82,7 @@ TEMPLATES = {
     "CELL_RECEIPT.yaml": "cell_receipt",
     "GO_RECEIPT.yaml": "go_receipt",
     "RUN_RECEIPT.yaml": "run_receipt",
+    "GO_CAUSAL_TRACE.yaml": "go_causal_trace",
     "GRAPH_AMENDMENT.yaml": "graph_amendment",
     "FORMAL_RESOLUTION.yaml": "formal_resolution",
     "OWNER_ACCEPTANCE.yaml": "owner_acceptance",
@@ -103,13 +106,19 @@ def validate_structure(root: Path):
 
 def validate_version(root: Path):
     if read(root / "VERSION").strip() != VERSION:
-        fail("VERSION file does not contain version 2.3.1")
+        fail("VERSION file does not contain version 2.4.0")
     manifest = json.loads(read(root / "MANIFEST.json"))
     if manifest.get("version") != VERSION:
         fail("MANIFEST version mismatch")
     if manifest.get("roles") != ROLES:
         fail("MANIFEST must contain exactly the six canonical roles")
-    for relative in ["SPEC.md", "SKILL.md", "glk/SKILL.md", "README.md"]:
+    for relative in [
+        "SPEC.md",
+        "SKILL.md",
+        "glk/SKILL.md",
+        "README.md",
+        "glk/examples/appointment-run.yaml",
+    ]:
         if VERSION not in read(root / relative):
             fail(f"version missing from {relative}")
     if read(root / "SKILL.md") != read(root / "glk/SKILL.md"):
@@ -136,6 +145,15 @@ def validate_semantics(root: Path):
         "arbitrary serialization",
         "fake dependency",
         "LOOP_OWNER_ACCEPTED",
+        "GO_CAUSAL_TRACE",
+        "CAUSAL_SOURCE",
+        "DOWNSTREAM_SYMPTOM",
+        "source_claim_or_output_refs",
+        "actual consumption",
+        "CONFIRMED",
+        "UNAFFECTED",
+        "current-validity",
+        "full-graph replay",
     ]
     missing = [marker for marker in required if marker not in combined]
     if missing:
@@ -214,7 +232,7 @@ def main():
     validate_templates(root)
     validate_hygiene(root)
     validate_hashes(root)
-    print("PASS: GLK 2.3.1 structure, semantics, schema, hashes, and hygiene are valid.")
+    print("PASS: GLK 2.4.0 structure, semantics, schema, hashes, and hygiene are valid.")
 
 
 if __name__ == "__main__":

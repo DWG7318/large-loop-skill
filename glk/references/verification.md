@@ -18,3 +18,8 @@ pass by receipt counting alone.
 Repetition is valid only for changed candidates/environments, stale or contradictory
 evidence, expanded regression scope, graph-composition effects, or specific new
 risks. Record the source layer, reason, scope delta, and result.
+
+A causal amendment keeps old receipts as immutable history but may remove their
+current-validity for the new graph version. Repeat D1/D2 only for GOs classified
+`REVERIFY`, `REWORK`, or `QUARANTINE`; an `UNAFFECTED` GO does not repeat evidence
+merely because it is reachable from the source.

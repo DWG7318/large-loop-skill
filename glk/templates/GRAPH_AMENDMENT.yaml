@@ -1,18 +1,40 @@
-schema_version: 2.3.1
+schema_version: 2.4.0
 amendment_id: GA-001
 graph_id: GRAPH-001
 from_version: 1
 to_version: 2
 reason: "Verified implementation evidence invalidated one frozen graph assumption"
+causal_trace_ref: TRACE-001
+causal_trace_status: CONFIRMED
+impact_seed_refs: ["GO-002.output"]
 before:
-  nodes: ["GO-001"]
-  edges: []
+  nodes: ["GO-001", "GO-002", "GO-003"]
 after:
-  nodes: ["GO-001"]
-  edges: []
-affected_claims: ["RUN-CLAIM-001"]
-active_work_impact: ["No active candidate remains valid until rebind"]
-invalidated_evidence: ["evidence/GRAPH-001/v1.json"]
+  nodes: ["GO-001", "GO-002", "GO-003"]
+affected_claims: ["GO-CLAIM-002", "GO-CLAIM-003"]
+active_work_impact: ["Only GO-002 and its consuming successor GO-003 require re-projection"]
+impact_slice:
+  - go_id: GO-001
+    disposition: UNAFFECTED
+    invalidated_candidate_refs: []
+    invalidated_receipt_refs: []
+    evidence_refs: ["evidence/amendments/GA-001/GO-001-unaffected.json"]
+  - go_id: GO-002
+    disposition: REWORK
+    invalidated_candidate_refs: ["candidates/GO-002/v1"]
+    invalidated_receipt_refs: ["receipts/D2-GO-002-v1.json"]
+    evidence_refs: ["evidence/amendments/GA-001/GO-002-impact.json"]
+  - go_id: GO-003
+    disposition: REVERIFY
+    invalidated_candidate_refs: []
+    invalidated_receipt_refs: ["receipts/D2-GO-003-v1.json"]
+    evidence_refs: ["evidence/amendments/GA-001/GO-003-impact.json"]
+invalidated_evidence: ["evidence/GO-002/v1.json", "evidence/GO-003/v1.json"]
+invalidated_receipts: ["receipts/D2-GO-002-v1.json", "receipts/D2-GO-003-v1.json"]
+reactivation_projection:
+  waiting_go_ids: ["GO-003"]
+  active_go_ids: ["GO-002"]
+  unchanged_go_ids: ["GO-001"]
 rollback: "Restore graph version 1 and quarantine version 2 candidates"
 authority_binding_ref: ROLE-RUN-001-SUPERVISOR
 issued_at: "1970-01-01T00:00:00Z"

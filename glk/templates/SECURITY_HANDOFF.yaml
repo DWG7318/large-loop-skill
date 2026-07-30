@@ -1,4 +1,4 @@
-schema_version: 2.3.1
+schema_version: 2.4.0
 run_id: RUN-001
 candidate_id: CANDIDATE-RUN-001
 candidate_sha256: "0000000000000000000000000000000000000000000000000000000000000000"

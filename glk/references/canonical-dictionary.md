@@ -9,4 +9,8 @@
 - **Execution phase**: IMPLEMENTING, CHECKING, VERIFYING, or REWORK inside ACTIVE_GO.
 - **D2**: independent GO claim verdict bound to accepted CELL receipts and one candidate.
 - **D3**: independent Run Feature verdict over verified GO outcomes and graph seams.
+- **GO_CAUSAL_TRACE**: versioned incident evidence distinguishing one confirmed
+  source GO from downstream symptom GOs along actual-consumption edges.
+- **Causal impact slice**: minimum successor set whose current candidate or evidence
+  validity is affected by explicit changed refs.
 - **Loop Owner Acceptance**: immediate product acceptance of this bounded Run.

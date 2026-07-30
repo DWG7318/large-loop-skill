@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.4.0
+
+### Causal GO-DAG recovery
+
+- Bind every new D2 dependency edge to source claim/output refs, target
+  input/assumption refs, and consumption evidence.
+- Add versioned `GO_CAUSAL_TRACE` records that distinguish a confirmed causal source
+  GO from downstream symptom GOs without adding node types, states, or roles.
+- Trace incidents backward only over actual-consumption edges; suspected traces
+  remain evidence and cannot invalidate receipts.
+- Project the minimum changed-ref successor slice as `UNAFFECTED`, `REVERIFY`,
+  `REWORK`, or `QUARANTINE` while preserving historical receipts append-only.
+- Reuse WAITING_GO/ACTIVE_GO and the maximum-cardinality scheduler so repaired
+  branches reactivate safely and concurrently without READY or full-graph replay.
+
+### Preserved Owner baseline
+
+- Keep exactly six roles, a fresh Run Supervisor per Run, an acyclic execution
+  graph, D0-D3 independence, immediate Run Owner Acceptance, and the LCCoding
+  security boundary.
+
 ## 2.3.1
 
 ### Owner-frozen architecture

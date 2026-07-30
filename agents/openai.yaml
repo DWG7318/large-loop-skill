@@ -1,4 +1,4 @@
 interface:
   display_name: "Graph Loop Skill (GLK)"
-  short_description: "Six-role maximal-concurrency GO DAG governance"
-  default_prompt: "Use $graph-loop-skill to govern this bounded Run as a six-role GO execution DAG with typed WAITING_GO reasons and a maximal safe ACTIVE_GO set."
+  short_description: "Six-role causal-recovery GO DAG governance"
+  default_prompt: "Use $graph-loop-skill to govern this bounded Run as a six-role GO execution DAG with typed WAITING_GO reasons, confirmed causal slices, and a maximal safe ACTIVE_GO set."

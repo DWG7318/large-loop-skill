@@ -10,7 +10,7 @@ MODEL_PATH = ROOT / "glk" / "scripts" / "graph_model.py"
 
 def load_model():
     if not MODEL_PATH.exists():
-        pytest.fail("GLK 2.3.1 graph model does not exist")
+        pytest.fail("GLK 2.4.0 graph model does not exist")
     spec = importlib.util.spec_from_file_location("glk_graph_model", MODEL_PATH)
     module = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
@@ -121,7 +121,274 @@ def test_waiting_reason_rejects_subjective_or_unknown_reason_types():
         m.WaitingReason("PREFERENCE", ("serialize-for-convenience",))
 
 
+def test_dependency_edge_requires_d2_justification():
+    m = load_model()
+    with pytest.raises(m.GraphError, match="justification"):
+        m.DependencyEdge(
+            source="A",
+            target="B",
+            justification="",
+            source_claim_or_output_refs=("A.out",),
+            target_input_or_assumption_refs=("B.input",),
+            consumption_evidence_refs=("evidence/A-B.json",),
+        )
+
+
+def test_causal_source_cannot_also_be_a_downstream_symptom_annotation():
+    m = load_model()
+    with pytest.raises(m.GraphError, match="source GO cannot be a symptom"):
+        m.GoCausalTrace(
+            incident_id="INC-BAD",
+            graph_version=1,
+            observed_at_go="B",
+            source_go="A",
+            source_candidate_ref="candidate/A-v1",
+            evidence_refs=("evidence/INC-BAD.json",),
+            symptom_gos=("A", "B"),
+            causal_path=(),
+            excluded_edges=(),
+            stopping_reason="confirmed source reached",
+            confirmation_status=m.CONFIRMED,
+        )
+
+
+def test_confirmed_causal_trace_distinguishes_internal_source_from_symptom():
+    m = load_model()
+    graph = m.GoGraph(
+        [
+            m.Go("R"),
+            m.Go("A", predecessors={"R"}),
+            m.Go("X"),
+            m.Go("B", predecessors={"A", "X"}),
+        ],
+        edges=[
+            edge(m, "R", "A", "R.out", "A.base"),
+            edge(m, "A", "B", "A.out", "B.input"),
+            edge(m, "X", "B", "X.out", "B.other"),
+        ],
+    )
+
+    trace = graph.confirm_causal_trace(
+        incident_id="INC-1",
+        observed_at_go="B",
+        source_go="A",
+        source_candidate_ref="candidate/A-v1",
+        evidence_refs=("evidence/INC-1/root-cause.json",),
+    )
+
+    assert trace.confirmation_status == m.CONFIRMED
+    assert trace.source_go == "A"
+    assert trace.symptom_gos == ("B",)
+    assert [(step.source, step.target) for step in trace.causal_path] == [("A", "B")]
+    assert [(step.source, step.target) for step in trace.excluded_edges] == [
+        ("R", "A"),
+        ("X", "B"),
+    ]
+    assert trace.stopping_reason == "confirmed source reached"
+
+
+def test_multi_hop_causal_carrier_is_not_automatically_a_symptom_go():
+    m = load_model()
+    graph = m.GoGraph(
+        [
+            m.Go("A"),
+            m.Go("M", predecessors={"A"}),
+            m.Go("X"),
+            m.Go("B", predecessors={"M", "X"}),
+        ],
+        edges=[
+            edge(m, "A", "M", "A.out", "M.input"),
+            edge(m, "M", "B", "M.out", "B.input"),
+            edge(m, "X", "B", "X.out", "B.other"),
+        ],
+    )
+
+    trace = graph.confirm_causal_trace(
+        incident_id="INC-MULTI",
+        observed_at_go="B",
+        source_go="A",
+        source_candidate_ref="candidate/A-v1",
+        evidence_refs=("evidence/INC-MULTI/root-cause.json",),
+    )
+
+    assert trace.symptom_gos == ("B",)
+    assert [(step.source, step.target) for step in trace.causal_path] == [
+        ("A", "M"),
+        ("M", "B"),
+    ]
+    assert [(step.source, step.target) for step in trace.excluded_edges] == [("X", "B")]
+
+
+def test_causal_trace_requires_bound_consumption_edges():
+    m = load_model()
+    graph = m.GoGraph([m.Go("A"), m.Go("B", predecessors={"A"})])
+
+    with pytest.raises(m.GraphError, match="bound consumption path"):
+        graph.confirm_causal_trace(
+            incident_id="INC-1",
+            observed_at_go="B",
+            source_go="A",
+            source_candidate_ref="candidate/A-v1",
+            evidence_refs=("evidence/INC-1/root-cause.json",),
+        )
+
+
+def test_causal_trace_fails_closed_when_path_node_has_unbound_incoming_edge():
+    m = load_model()
+    graph = m.GoGraph(
+        [m.Go("A"), m.Go("X"), m.Go("B", predecessors={"A", "X"})],
+        edges=[edge(m, "A", "B", "A.out", "B.input")],
+    )
+
+    with pytest.raises(m.GraphError, match="unbound incoming dependency"):
+        graph.confirm_causal_trace(
+            incident_id="INC-UNBOUND",
+            observed_at_go="B",
+            source_go="A",
+            source_candidate_ref="candidate/A-v1",
+            evidence_refs=("evidence/INC-UNBOUND/root-cause.json",),
+        )
+
+
+def test_suspected_causal_trace_cannot_invalidate_receipts():
+    m = load_model()
+    graph = m.GoGraph(
+        [m.Go("A"), m.Go("B", predecessors={"A"})],
+        edges=[edge(m, "A", "B", "A.out", "B.input")],
+    )
+    trace = graph.trace_causal_incident(
+        incident_id="INC-1",
+        observed_at_go="B",
+        source_go="A",
+        source_candidate_ref="candidate/A-v1",
+        evidence_refs=("evidence/INC-1/hypothesis.json",),
+        confirmation_status=m.SUSPECTED,
+    )
+
+    with pytest.raises(m.GraphError, match="CONFIRMED"):
+        graph.apply_causal_amendment(
+            trace,
+            changed_refs=("A.out",),
+            dispositions={"A": m.REWORK_IMPACT, "B": m.REVERIFY},
+            new_graph_version=2,
+        )
+
+
+def test_confirmed_amendment_requires_evidence_for_each_affected_go():
+    m = load_model()
+    graph = m.GoGraph(
+        [m.Go("A"), m.Go("B", predecessors={"A"})],
+        edges=[edge(m, "A", "B", "A.out", "B.input")],
+    )
+    complete_go(m, graph, "A", "candidate-A-v1")
+    complete_go(m, graph, "B", "candidate-B-v1")
+    trace = graph.confirm_causal_trace(
+        incident_id="INC-EVIDENCE",
+        observed_at_go="B",
+        source_go="A",
+        source_candidate_ref="candidate-A-v1",
+        evidence_refs=("evidence/INC-EVIDENCE/root-cause.json",),
+    )
+
+    with pytest.raises(m.GraphError, match="impact evidence"):
+        graph.apply_causal_amendment(
+            trace,
+            changed_refs=("A.out",),
+            dispositions={"A": m.REWORK_IMPACT, "B": m.REVERIFY},
+            new_graph_version=2,
+        )
+
+
+def test_causal_amendment_invalidates_minimum_slice_and_reactivates_in_parallel():
+    m = load_model()
+    graph = m.GoGraph(
+        [
+            m.Go("R"),
+            m.Go("U"),
+            m.Go("A", predecessors={"R"}),
+            m.Go("B", predecessors={"A"}),
+            m.Go("C", predecessors={"A"}),
+            m.Go("D", predecessors={"A"}),
+        ],
+        edges=[
+            edge(m, "R", "A", "R.out", "A.base"),
+            edge(m, "A", "B", "A.changed", "B.input"),
+            edge(m, "A", "C", "A.changed", "C.input"),
+            edge(m, "A", "D", "A.stable", "D.input"),
+        ],
+    )
+    for go_id in ["R", "U", "A", "B", "C", "D"]:
+        if go_id in graph.active():
+            complete_go(m, graph, go_id, f"candidate-{go_id}-v1")
+    assert graph.complete_prerequisites()
+
+    trace = graph.confirm_causal_trace(
+        incident_id="INC-2",
+        observed_at_go="B",
+        source_go="A",
+        source_candidate_ref="candidate-A-v1",
+        evidence_refs=("evidence/INC-2/root-cause.json",),
+    )
+    projection = graph.apply_causal_amendment(
+        trace,
+        changed_refs=("A.changed",),
+        dispositions={
+            "A": m.REWORK_IMPACT,
+            "B": m.REVERIFY,
+            "C": m.QUARANTINE,
+        },
+        impact_evidence={
+            "A": ("evidence/INC-2/A-impact.json",),
+            "B": ("evidence/INC-2/B-impact.json",),
+            "C": ("evidence/INC-2/C-impact.json",),
+        },
+        new_graph_version=2,
+    )
+
+    assert projection.affected_gos == ("A", "B", "C")
+    assert projection.disposition("D") == m.UNAFFECTED
+    assert set(projection.invalidated_receipt_refs) >= {
+        "d1-A",
+        "d2-A",
+        "d2-B",
+        "d1-C",
+        "d2-C",
+    }
+    assert "d1-B" not in projection.invalidated_receipt_refs
+    assert graph.graph_version == 2
+    assert graph.state("R") == m.GO_VERIFIED
+    assert graph.state("U") == m.GO_VERIFIED
+    assert graph.state("D") == m.GO_VERIFIED
+    assert graph.active() == ["A"]
+    assert graph.waiting() == ["B", "C"]
+    assert graph.waiting_reasons("B") == [
+        m.WaitingReason("DEPENDENCY_UNMET", ("A",))
+    ]
+    assert graph.gos["B"].candidate_id == "candidate-B-v1"
+    assert graph.gos["B"].d1_receipt_id == "d1-B"
+
+    complete_go(m, graph, "A", "candidate-A-v2")
+    assert graph.active() == ["B", "C"]
+    assert graph.waiting() == []
+    assert graph.phase("B") == m.VERIFYING
+    assert graph.phase("C") == m.IMPLEMENTING
+    graph.d2_pass("B", "candidate-B-v1", "d2-B-v2", "verifier-B-v2")
+    assert graph.state("B") == m.GO_VERIFIED
+    assert graph.amendment_history == [projection]
+
+
 def complete_go(m, graph, go_id: str, candidate_id: str):
     graph.start_checking(go_id, candidate_id, f"d0-{go_id}")
     graph.d1_pass(go_id, candidate_id, f"d1-{go_id}", f"checker-{go_id}")
     graph.d2_pass(go_id, candidate_id, f"d2-{go_id}", f"verifier-{go_id}")
+
+
+def edge(m, source: str, target: str, source_ref: str, target_ref: str):
+    return m.DependencyEdge(
+        source=source,
+        target=target,
+        justification=f"{target} requires {source} D2 PASS",
+        source_claim_or_output_refs=(source_ref,),
+        target_input_or_assumption_refs=(target_ref,),
+        consumption_evidence_refs=(f"evidence/{source}-{target}.json",),
+    )

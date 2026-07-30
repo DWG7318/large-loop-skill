@@ -35,3 +35,11 @@ graph appear less concurrent than it is.
 
 Every state event records Run ID, graph version, GO ID, candidate identity when
 applicable, actor binding, evidence, and timestamp.
+
+## Causal amendment projection
+
+A confirmed causal amendment does not add a graph state. It preserves historical
+`GO_VERIFIED` events and receipts append-only, removes their current-validity only
+where the impact slice proves invalidation, and projects affected GOs into existing
+`WAITING_GO` or `ACTIVE_GO` under the new graph version. `SUSPECTED` traces cause no
+state projection.

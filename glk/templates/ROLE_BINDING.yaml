@@ -1,4 +1,4 @@
-schema_version: 2.3.1
+schema_version: 2.4.0
 role_binding_id: ROLE-RUN-001-SUPERVISOR
 role_type: RUN_SUPERVISOR
 run_id: RUN-001

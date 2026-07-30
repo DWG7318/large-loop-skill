@@ -1,4 +1,4 @@
-# GLK 2.3.1 Validation Report
+# GLK 2.4.0 Validation Report
 
 ## Scope
 
@@ -7,6 +7,10 @@
 - directed acyclic GO graph;
 - typed `WAITING_GO` reasons and direct activation;
 - maximal safe multi-GO activation;
+- evidence-bound D2 consumption edges;
+- confirmed source/symptom causal traces;
+- minimum descendant invalidation and append-only receipt history;
+- WAITING/ACTIVE maximal-parallel reactivation after repair;
 - D1-before-D2, candidate identity, and context independence;
 - formal resolution semantics;
 - executable templates and JSON Schema;
@@ -20,9 +24,9 @@
 Environment: Windows, Python 3.14, UTF-8 mode enabled.
 
 ```text
-PASS: 39 pytest cases
+PASS: 59 pytest cases
 PASS: repository structure and canonical semantics
-PASS: all 11 templates against Draft 2020-12 Schema
+PASS: all 12 templates against Draft 2020-12 Schema
 PASS: hash manifest path and content verification
 PASS: ZIP integrity and cache exclusion
 ```
@@ -34,6 +38,6 @@ pass.
 
 ## Interpreting green tests
 
-Green tests prove the executable 2.3.1 contracts shipped in this repository. They
+Green tests prove the executable 2.4.0 contracts shipped in this repository. They
 do not accept product work, substitute for D1-D3, or claim that LCCoding's
 centralized vulnerability closure has passed.

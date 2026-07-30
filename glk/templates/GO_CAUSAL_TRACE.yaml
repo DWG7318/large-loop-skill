@@ -1,0 +1,27 @@
+schema_version: 2.4.0
+trace_id: TRACE-001
+incident_id: INCIDENT-001
+graph_id: GRAPH-001
+graph_version: 1
+observed_at_go: GO-003
+source_go: GO-002
+source_candidate_ref: candidates/GO-002/v1
+source_evidence_refs: ["evidence/incidents/INCIDENT-001/root-cause.json"]
+symptom_go_ids: ["GO-003"]
+causal_path:
+  - source: GO-002
+    target: GO-003
+    justification: "GO-003 consumed the invalid GO-002 output"
+    source_claim_or_output_refs: ["GO-002.output"]
+    target_input_or_assumption_refs: ["GO-003.input"]
+    consumption_evidence_refs: ["evidence/edges/GO-002-GO-003.json"]
+excluded_edges:
+  - source: GO-001
+    target: GO-002
+    justification: "Traversal stops at the confirmed GO-002 source"
+    source_claim_or_output_refs: ["GO-001.output"]
+    target_input_or_assumption_refs: ["GO-002.input"]
+    consumption_evidence_refs: ["evidence/edges/GO-001-GO-002.json"]
+stopping_reason: "confirmed source reached"
+confirmation_status: CONFIRMED
+issued_at: "1970-01-01T00:00:00Z"

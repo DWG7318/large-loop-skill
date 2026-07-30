@@ -10,7 +10,7 @@ MODEL_PATH = ROOT / "glk" / "scripts" / "run_model.py"
 
 def load_model():
     if not MODEL_PATH.exists():
-        pytest.fail("GLK 2.3.1 Run model does not exist")
+        pytest.fail("GLK 2.4.0 Run model does not exist")
     spec = importlib.util.spec_from_file_location("glk_run_model", MODEL_PATH)
     module = importlib.util.module_from_spec(spec)
     assert spec and spec.loader

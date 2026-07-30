@@ -16,6 +16,7 @@ TEMPLATES = {
     "CELL_RECEIPT.yaml": "cell_receipt",
     "GO_RECEIPT.yaml": "go_receipt",
     "RUN_RECEIPT.yaml": "run_receipt",
+    "GO_CAUSAL_TRACE.yaml": "go_causal_trace",
     "GRAPH_AMENDMENT.yaml": "graph_amendment",
     "FORMAL_RESOLUTION.yaml": "formal_resolution",
     "OWNER_ACCEPTANCE.yaml": "owner_acceptance",
@@ -56,7 +57,7 @@ def main():
         instance = yaml.safe_load(destination.read_text(encoding="utf-8"))
         validator_for(schema, definition).validate(instance)
 
-    print(f"PASS: bootstrapped and validated GLK 2.3.1 Run workspace at {target}")
+    print(f"PASS: bootstrapped and validated GLK 2.4.0 Run workspace at {target}")
 
 
 if __name__ == "__main__":

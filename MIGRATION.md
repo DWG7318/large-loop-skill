@@ -1,10 +1,23 @@
-# Migration to GLK 2.3.1
+# Migration to GLK 2.4.0
 
 ## Hard boundary
 
-GLK 2.3.1 is the Owner-approved six-role architecture. Historical Runs remain
+GLK 2.4.0 preserves the Owner-approved 2.3.1 six-role architecture and adds
+evidence-bound causal recovery. Historical Runs remain
 governed by the version under which their contracts and receipts were frozen.
-Neither 2.0.0 nor the withdrawn 2.3.0 may be silently relabeled as 2.3.1.
+No historical version may be silently relabeled as 2.4.0.
+
+## From 2.3.1
+
+Existing 2.3.1 graphs remain readable for ordinary scheduling. To use 2.4.0 causal
+recovery, create a new graph/schema version and bind every participating D2 edge to
+source claim/output refs, target input/assumption refs, and consumption evidence.
+
+Do not infer a causal source from ancestor position. Record `GO_CAUSAL_TRACE` with
+`SUSPECTED` or `CONFIRMED`; only the latter can authorize a minimum impact slice.
+Preserve historical candidates and receipts append-only while marking their
+current-validity for the new version. Re-project affected GOs through existing
+`WAITING_GO` and `ACTIVE_GO`; do not introduce READY, a Barrier, or full-graph replay.
 
 ## From withdrawn 2.3.0
 
@@ -45,15 +58,18 @@ claim consumed by the new candidate.
 
 ## Version and identity checks
 
-Before starting a 2.3.1 Run, verify:
+Before starting a 2.4.0 Run, verify:
 
 - `VERSION`, Skill front matter, SPEC, MANIFEST, templates, and Schema all say
-  `2.3.1`;
+  `2.4.0`;
 - the six role bindings are used and no undeclared control role exists;
 - the Supervisor binding is new for this Run;
 - no normative READY state exists;
 - the initial maximal safe active set is recorded;
 - every waiting GO has typed evidence-backed reasons;
+- every new D2 edge has complete actual-consumption bindings;
+- suspected causal traces cannot invalidate receipts;
+- causal amendments record minimum impact and reactivation projections;
 - execution graph acyclicity and Run Feature coverage pass;
 - D0-D3 candidate and context bindings are executable;
 - Owner Acceptance and security handoff templates are available.

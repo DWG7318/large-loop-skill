@@ -1,12 +1,27 @@
-schema_version: 2.3.1
+schema_version: 2.4.0
 run_id: RUN-APPOINTMENT-001
 run_feature: "Operator can configure and publish an appointment service"
 graph:
   nodes: [GO-AUTH, GO-SCHEDULE, GO-PUBLISH, GO-AUDIT]
   edges:
-    - {source: GO-AUTH, target: GO-PUBLISH}
-    - {source: GO-SCHEDULE, target: GO-PUBLISH}
-    - {source: GO-PUBLISH, target: GO-AUDIT}
+    - source: GO-AUTH
+      target: GO-PUBLISH
+      justification: "Publishing requires verified authorization behavior"
+      source_claim_or_output_refs: ["GO-AUTH.authorization-output"]
+      target_input_or_assumption_refs: ["GO-PUBLISH.authorization-input"]
+      consumption_evidence_refs: ["evidence/edges/GO-AUTH-GO-PUBLISH.json"]
+    - source: GO-SCHEDULE
+      target: GO-PUBLISH
+      justification: "Publishing requires a verified schedule candidate"
+      source_claim_or_output_refs: ["GO-SCHEDULE.schedule-output"]
+      target_input_or_assumption_refs: ["GO-PUBLISH.schedule-input"]
+      consumption_evidence_refs: ["evidence/edges/GO-SCHEDULE-GO-PUBLISH.json"]
+    - source: GO-PUBLISH
+      target: GO-AUDIT
+      justification: "Audit requires the verified published service candidate"
+      source_claim_or_output_refs: ["GO-PUBLISH.service-output"]
+      target_input_or_assumption_refs: ["GO-AUDIT.service-input"]
+      consumption_evidence_refs: ["evidence/edges/GO-PUBLISH-GO-AUDIT.json"]
 initial_graph_state:
   active_go_ids: [GO-AUTH, GO-SCHEDULE]
   waiting_go_ids: [GO-PUBLISH, GO-AUDIT]

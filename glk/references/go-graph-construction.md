@@ -9,6 +9,10 @@ before A receives D2 PASS. Record that justification on the edge. Preferred orde
 shared files, likely calls, team structure, and scheduling convenience are not edge
 evidence.
 
+Every new edge binds source claim/output refs, target input/assumption refs, and
+consumption evidence. These bindings support causal slicing but do not authorize
+edges derived only from call graphs, data-flow graphs, files, or module structure.
+
 Validate:
 
 - every node is a GO;

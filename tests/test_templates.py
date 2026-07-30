@@ -21,6 +21,7 @@ TEMPLATES = {
     "CELL_RECEIPT.yaml": "cell_receipt",
     "GO_RECEIPT.yaml": "go_receipt",
     "RUN_RECEIPT.yaml": "run_receipt",
+    "GO_CAUSAL_TRACE.yaml": "go_causal_trace",
     "GRAPH_AMENDMENT.yaml": "graph_amendment",
     "FORMAL_RESOLUTION.yaml": "formal_resolution",
     "OWNER_ACCEPTANCE.yaml": "owner_acceptance",
@@ -102,6 +103,72 @@ def test_waiting_reason_requires_at_least_one_reference():
     ]
     with pytest.raises(ValidationError):
         validate_definition(schema, "go", go)
+
+
+def test_dependency_edges_bind_actual_consumption_evidence():
+    schema = load_schema()
+    graph = yaml.safe_load(
+        (TEMPLATE_DIR / "GRAPH_BASELINE.yaml").read_text(encoding="utf-8")
+    )
+    edge = graph["edges"][0]
+    assert edge["source_claim_or_output_refs"]
+    assert edge["target_input_or_assumption_refs"]
+    assert edge["consumption_evidence_refs"]
+
+    edge["consumption_evidence_refs"] = []
+    with pytest.raises(ValidationError):
+        validate_definition(schema, "graph_baseline", graph)
+
+
+def test_causal_trace_uses_incident_annotations_not_go_types_or_states():
+    schema = load_schema()
+    trace = yaml.safe_load(
+        (TEMPLATE_DIR / "GO_CAUSAL_TRACE.yaml").read_text(encoding="utf-8")
+    )
+    assert trace["source_go"] not in trace["symptom_go_ids"]
+    assert trace["observed_at_go"] in trace["symptom_go_ids"]
+    assert trace["confirmation_status"] == "CONFIRMED"
+    assert trace["causal_path"]
+    assert trace["excluded_edges"]
+    assert trace["stopping_reason"]
+    validate_definition(schema, "go_causal_trace", trace)
+
+
+def test_suspected_trace_is_recordable_but_cannot_authorize_amendment():
+    schema = load_schema()
+    trace = yaml.safe_load(
+        (TEMPLATE_DIR / "GO_CAUSAL_TRACE.yaml").read_text(encoding="utf-8")
+    )
+    trace["confirmation_status"] = "SUSPECTED"
+    validate_definition(schema, "go_causal_trace", trace)
+
+    amendment = yaml.safe_load(
+        (TEMPLATE_DIR / "GRAPH_AMENDMENT.yaml").read_text(encoding="utf-8")
+    )
+    amendment["causal_trace_status"] = "SUSPECTED"
+    with pytest.raises(ValidationError):
+        validate_definition(schema, "graph_amendment", amendment)
+
+
+def test_amendment_declares_minimal_impact_and_reactivation_projection():
+    amendment = yaml.safe_load(
+        (TEMPLATE_DIR / "GRAPH_AMENDMENT.yaml").read_text(encoding="utf-8")
+    )
+    assert amendment["causal_trace_status"] == "CONFIRMED"
+    assert amendment["impact_seed_refs"]
+    assert {item["disposition"] for item in amendment["impact_slice"]} <= {
+        "UNAFFECTED",
+        "REVERIFY",
+        "REWORK",
+        "QUARANTINE",
+    }
+    projection = amendment["reactivation_projection"]
+    assert set(projection) == {
+        "waiting_go_ids",
+        "active_go_ids",
+        "unchanged_go_ids",
+    }
+    assert set(projection["waiting_go_ids"]).isdisjoint(projection["active_go_ids"])
 
 
 def test_bootstrap_creates_and_validates_complete_run_workspace(tmp_path):

@@ -1,6 +1,6 @@
 {
   "name": "GLK",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "type": "complete-github-repository",
   "canonical_identity": "Run-scoped GO Execution Graph Standard",
   "roles": [
@@ -14,6 +14,7 @@
   "graph_rule": "directed acyclic GO execution graph",
   "waiting_rule": "typed WAITING_GO reasons; no schedulable intermediate queue",
   "activation_rule": "maximum-cardinality maximal safe ACTIVE_GO set",
+  "causal_rule": "confirmed actual-consumption trace and minimum successor impact",
   "supervisor_rule": "fresh instance for every Run",
   "completion_handoff": "LOOP_OWNER_ACCEPTED",
   "centralized_vulnerability_owner": "LCCoding"

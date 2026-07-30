@@ -1,4 +1,4 @@
-schema_version: 2.3.1
+schema_version: 2.4.0
 run_id: RUN-001
 feature_slice_id: FS-001
 run_feature: "Describe one frozen bounded Run Feature"
@@ -12,7 +12,7 @@ evidence_required: ["D0-D3 receipts bound to the final candidate"]
 autonomy_boundaries: ["Non-destructive repository work"]
 candidate_binding: CANDIDATE-RUN-001
 run_supervisor_binding:
-  schema_version: 2.3.1
+  schema_version: 2.4.0
   role_binding_id: ROLE-RUN-001-SUPERVISOR
   role_type: RUN_SUPERVISOR
   run_id: RUN-001

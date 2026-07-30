@@ -1,4 +1,4 @@
-# GLK Standard Specification 2.3.1
+# GLK Standard Specification 2.4.0
 
 ## 1. Identity
 
@@ -176,6 +176,12 @@ Performs product acceptance of this bounded Run after D3 PASS.
 14. Run Owner Acceptance occurs immediately after D3 PASS.
 15. No silent node, edge, claim, baseline, role-binding, or candidate amendment is
     allowed.
+16. Causal source and downstream symptom labels are incident annotations, never new
+    GO types or graph states.
+17. Only a `CONFIRMED` causal trace over actual consumption bindings may invalidate
+    current evidence.
+18. Causal repair invalidates the minimum proven successor slice and preserves
+    maximum-cardinality activation outside and after that slice.
 
 ## 7. Graph construction
 
@@ -190,6 +196,25 @@ Performs product acceptance of this bounded Run after D3 PASS.
 8. Prove that the topology is not honestly a strict line or stable Chain/Stage plan.
 9. Freeze `GRAPH_BASELINE` with graph and candidate hashes.
 10. Compute waiting reasons and immediately activate the maximal safe set.
+
+Every D2 precedence edge also binds:
+
+```text
+source_claim_or_output_refs
+target_input_or_assumption_refs
+consumption_evidence_refs
+```
+
+These bindings explain which frozen producer claim or output the successor actually
+consumes. They do not turn a call graph, data-flow graph, module graph, or file
+relationship into a GO edge. An edge without all three bindings may be read as
+historical 2.3.1 scheduling evidence, but it cannot participate in 2.4.0 causal
+recovery.
+
+For a 2.4.0 causal trace, every incoming dependency of the source and traversed
+path targets must have this contract. An `unbound incoming dependency` fails causal
+recovery closed because it cannot be excluded with evidence; ordinary legacy
+scheduling may continue without claiming a causal result.
 
 ### Edge test
 
@@ -271,7 +296,62 @@ Repeat a lower-layer check only when the candidate or environment changed, evide
 expired or conflicts, graph composition changes its meaning, regression scope
 expanded, or a specific new risk requires it. Record the reason and scope delta.
 
-## 11. Formal resolution
+## 11. Causal recovery
+
+### Source and symptom annotations
+
+For one incident, `CAUSAL_SOURCE` identifies the GO whose candidate, claim, output,
+or evidence first introduced the confirmed defect. `DOWNSTREAM_SYMPTOM` identifies
+one or more GOs where that defect became observable through consumption. They are
+incident annotations, not a new GO type, state, role, or topology. A source GO may
+appear at any position in the DAG and may also be the observation GO.
+
+A versioned `GO_CAUSAL_TRACE` binds the incident, graph version, observation GO,
+source GO, source candidate, evidence, symptom set, actual-consumption path, and
+`SUSPECTED` or `CONFIRMED` status. A `SUSPECTED` trace is retained as evidence but
+must not revoke candidates or receipts.
+
+### Reverse causal slice
+
+Run Supervisor computes a reverse causal slice from the observation GO toward the
+confirmed source. It may traverse only edges whose
+`source_claim_or_output_refs`, `target_input_or_assumption_refs`, and
+`consumption_evidence_refs` prove actual consumption for this incident. The trace
+records excluded incoming edges and its stopping reason. Mere ancestor reachability,
+source-code calls, file proximity, or shared modules are insufficient.
+
+### Minimal impact projection
+
+After a confirmed source changes, `GRAPH_AMENDMENT` starts from explicit changed
+candidate, claim, output, or evidence refs. The first forward step includes only
+successor edges that consume a changed ref; later steps follow consumption from an
+already affected GO. Every GO receives one projection disposition:
+
+```text
+UNAFFECTED
+REVERIFY
+REWORK
+QUARANTINE
+```
+
+Historical candidates and D0-D3 receipts remain append-only. Invalidated items lose
+`current-validity` only for the new graph version and remain addressable as history.
+Unproven descendants remain `UNAFFECTED`; full-graph replay is forbidden.
+
+### Safe reactivation
+
+Affected GOs are re-projected as unresolved in the amended graph. A repaired source
+with no waiting reason enters `ACTIVE_GO` directly. A consuming successor remains
+`WAITING_GO` with the existing `DEPENDENCY_UNMET` reason until a current source D2
+clears it. After that D2, every safe successor enters the maximum-cardinality active
+set in the same recalculation. No schedulable intermediate queue, Chain, Barrier,
+or arbitrary serial replay is introduced.
+
+GO-local defect reproduction and repair discipline stays outside this graph
+topology. GLK consumes its frozen candidate and D0/D1 evidence at the handoff
+boundary; it does not copy a separate defect micro-loop.
+
+## 12. Formal resolution
 
 `SUPERSEDED` and `CANCELLED` do not imply success. A formal resolution requires a
 versioned graph amendment, authority binding, evidence, successor-release decision,
@@ -281,16 +361,17 @@ A Required GO stops blocking Run completion only when it has D2 PASS or an appro
 amendment removes/replaces it. A formal resolution releases successors only when its
 contract explicitly says so.
 
-## 12. Graph amendment
+## 13. Graph amendment
 
 A frozen graph changes only through `GRAPH_AMENDMENT`, recording reason, before and
-after versions, affected claims, active-work impact, candidate/evidence invalidation,
-rollback, authority, and issue time.
+after versions, affected claims, confirmed causal-trace reference when applicable,
+impact seeds and slice, active-work impact, candidate/evidence/receipt invalidation,
+reactivation projection, rollback, authority, and issue time.
 
 Product-definition changes return to LCCoding/Calabash rather than being hidden as
 graph edits.
 
-## 13. Owner Acceptance
+## 14. Owner Acceptance
 
 After D3 PASS, Run Supervisor provides the exact candidate, bounded Run Feature,
 entry points, roles, concise steps, visible outcomes, limitations, and D3-covered
@@ -308,7 +389,7 @@ NEW_FEATURE_REQUEST
 This is immediate acceptance for the current Run, never a deferred project-end
 mega-acceptance.
 
-## 14. Security boundary
+## 15. Security boundary
 
 GLK performs Run-contract-local safety checks only. It does not issue centralized
 vulnerability closure.
@@ -317,7 +398,7 @@ After required Runs are Owner-accepted, GLK emits a versioned security handoff t
 binds the accepted candidate and scope. LCCoding owns the independent centralized
 audit, repair loop, closure, and Post-Security Owner Acceptance.
 
-## 15. Failure rules
+## 16. Failure rules
 
 Stop or reject when:
 
@@ -336,8 +417,12 @@ Stop or reject when:
 - Owner Acceptance is postponed to project end;
 - graph amendments are silent;
 - the topology is honestly a strict line or stable Chain/Stage plan.
+- a suspected or unbound causal path invalidates a receipt;
+- an unrelated descendant is replayed without consumption evidence;
+- a causal repair creates a new role, GO type, intermediate queue, Chain, or Barrier;
+- multiple newly unblocked successors are serialized without a real constraint.
 
-## 16. Completion
+## 17. Completion
 
 A GLK Run completes only when all Required GO claims are resolved under the frozen
 graph, terminal coverage is complete, D3 passes on the final candidate, evidence and

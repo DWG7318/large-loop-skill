@@ -26,3 +26,9 @@ losing node records the real conflict reason. Priority never creates an edge.
 Invalid reasons include easier coordination, model preference, reduced Supervisor
 effort, or a desire to serialize the Run. Non-dependency constraints must never be
 encoded as fake dependency edges.
+
+After a confirmed causal amendment, only affected GOs are re-projected. A source GO
+with no waiting reason enters `ACTIVE_GO` directly. Consuming successors remain
+`WAITING_GO` under existing dependency reasons until the source has current D2;
+then every safe successor activates in the same maximum-cardinality recalculation.
+Unaffected active or verified branches are not replayed.

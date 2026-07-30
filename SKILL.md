@@ -1,10 +1,10 @@
 ---
 name: graph-loop-skill
 description: Use for one frozen engineering Run whose independently verifiable GO outcomes form a directed acyclic GO execution graph that cannot be represented honestly as a strict line or stable Chain/Stage plan.
-version: 2.3.1
+version: 2.4.0
 ---
 
-# Graph Loop Skill (GLK) 2.3.1
+# Graph Loop Skill (GLK) 2.4.0
 
 ## Mandatory load chain
 
@@ -55,7 +55,8 @@ instances without adding role types.
 1. Load and validate one frozen `RUN_CONTRACT`.
 2. Construct the minimum complete GO set.
 3. Freeze every GO claim, evidence boundary, predecessor, and conflict key.
-4. Add only mandatory D2 predecessor edges using the edge test.
+4. Add only mandatory D2 predecessor edges using the edge test and bind actual
+   source-claim/output to target-input/assumption consumption evidence.
 5. Validate acyclicity, reachability, terminal coverage, and Run Feature coverage.
 6. Freeze `GRAPH_BASELINE`.
 7. Classify unresolved non-active nodes as `WAITING_GO` with typed
@@ -63,12 +64,16 @@ instances without adding role types.
 8. Immediately activate the maximal safe set of waiting-clear GO nodes.
 9. Execute each active GO through Worker D0, independent Checker D1, and independent
    GO Verifier D2.
-10. Recompute the graph after every relevant event; newly unblocked GO nodes enter
-    `ACTIVE_GO` directly.
-11. After all Required GO outcomes resolve, obtain independent Run Verifier D3.
-12. Conduct immediate Run Owner Acceptance and emit `LOOP_OWNER_ACCEPTED` or the
+10. When an incident crosses GO boundaries, record a versioned causal trace that
+    distinguishes the source GO from downstream symptom GOs.
+11. Only after that trace is CONFIRMED, amend the graph with the minimum proven
+    successor impact and preserve unaffected branches.
+12. Recompute the graph after every relevant event; newly unblocked GO nodes enter
+    `ACTIVE_GO` directly, including maximal-parallel reactivation after repair.
+13. After all Required GO outcomes resolve, obtain independent Run Verifier D3.
+14. Conduct immediate Run Owner Acceptance and emit `LOOP_OWNER_ACCEPTED` or the
     appropriate rework/change verdict.
-13. Emit the accepted candidate's standardized security handoff to LCCoding.
+15. Emit the accepted candidate's standardized security handoff to LCCoding.
 
 ## Hard constraints
 
@@ -83,6 +88,10 @@ instances without adding role types.
 - Run Supervisor never signs D1, D2, or D3;
 - D2 consumes D1 for the same immutable candidate;
 - D3 consumes D2 and tests graph seams plus the final Run claim;
+- causal source and symptom labels are incident annotations, not GO types or states;
+- only confirmed actual-consumption paths may invalidate current evidence;
+- historical receipts remain append-only while amended current-validity is explicit;
+- causal recovery invalidates only the proven minimum successor slice;
 - no silent graph, role-binding, candidate, or evidence amendment;
 - centralized vulnerability closure remains owned by LCCoding.
 
@@ -93,6 +102,7 @@ instances without adding role types.
 - state: `glk/references/state-machine.md`
 - roles and isolation: `glk/references/roles-and-isolation.md`
 - verification: `glk/references/verification.md`
+- causal slice and recovery: `glk/references/causal-impact.md`
 - amendments and resolutions: `glk/references/graph-amendment.md`
 - Owner Acceptance and security handoff:
   `glk/references/owner-acceptance.md` and

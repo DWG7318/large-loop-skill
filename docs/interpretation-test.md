@@ -1,4 +1,4 @@
-# GLK 2.3.1 Interpretation Test
+# GLK 2.4.0 Interpretation Test
 
 A conforming Agent answers:
 
@@ -14,3 +14,10 @@ A conforming Agent answers:
 10. Who signs D1, D2, and D3? **Checker, GO Verifier, and Run Verifier.**
 11. When does Owner Acceptance occur? **Immediately after D3 PASS.**
 12. Who owns centralized vulnerability closure? **LCCoding.**
+13. Must a causal source be an entry/root GO? **No; it may occur at any DAG position.**
+14. Are source and symptom new GO types or states? **No; they are incident annotations.**
+15. Can a suspected trace invalidate a receipt? **No; only a confirmed actual-consumption path can.**
+16. What makes a D2 edge usable for causal slicing? **Bound source claim/output refs,
+    target input/assumption refs, consumption evidence, and D2 justification.**
+17. What happens after a repaired source receives current D2? **Every safe affected
+    successor activates in the same maximum-cardinality recalculation.**
