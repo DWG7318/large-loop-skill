@@ -30,4 +30,44 @@ initial_graph_state:
       - {type: DEPENDENCY_UNMET, references: [GO-AUTH, GO-SCHEDULE]}
     GO-AUDIT:
       - {type: DEPENDENCY_UNMET, references: [GO-PUBLISH]}
+causal_recovery_example:
+  trace:
+    incident_id: INCIDENT-APPOINTMENT-001
+    observed_at_go: GO-AUDIT
+    source_go: GO-SCHEDULE
+    source_candidate_ref: candidates/GO-SCHEDULE/v1
+    source_evidence_refs:
+      - "evidence/incidents/INCIDENT-APPOINTMENT-001/root.json"
+      - "evidence/incidents/INCIDENT-APPOINTMENT-001/schedule-publish.json"
+      - "evidence/incidents/INCIDENT-APPOINTMENT-001/publish-audit.json"
+    symptom_go_ids: [GO-AUDIT]
+    causal_path:
+      - source: GO-SCHEDULE
+        target: GO-PUBLISH
+        justification: "Incident evidence confirms schedule output consumption"
+        source_claim_or_output_refs: ["GO-SCHEDULE.schedule-output"]
+        target_input_or_assumption_refs: ["GO-PUBLISH.schedule-input"]
+        consumption_evidence_refs: ["evidence/edges/GO-SCHEDULE-GO-PUBLISH.json"]
+        incident_evidence_refs: ["evidence/incidents/INCIDENT-APPOINTMENT-001/schedule-publish.json"]
+        confirmation_status: CONFIRMED
+      - source: GO-PUBLISH
+        target: GO-AUDIT
+        justification: "Incident evidence confirms published service consumption"
+        source_claim_or_output_refs: ["GO-PUBLISH.service-output"]
+        target_input_or_assumption_refs: ["GO-AUDIT.service-input"]
+        consumption_evidence_refs: ["evidence/edges/GO-PUBLISH-GO-AUDIT.json"]
+        incident_evidence_refs: ["evidence/incidents/INCIDENT-APPOINTMENT-001/publish-audit.json"]
+        confirmation_status: CONFIRMED
+    excluded_edges:
+      - source: GO-AUTH
+        target: GO-PUBLISH
+        justification: "Authorization edge was reachable but not incident-confirmed"
+        source_claim_or_output_refs: ["GO-AUTH.authorization-output"]
+        target_input_or_assumption_refs: ["GO-PUBLISH.authorization-input"]
+        consumption_evidence_refs: ["evidence/edges/GO-AUTH-GO-PUBLISH.json"]
+    stopping_reason: "confirmed source reached"
+    confirmation_status: CONFIRMED
+  amendment_seeds:
+    - kind: CANDIDATE
+      ref: candidates/GO-SCHEDULE/v1
 completion: LOOP_OWNER_ACCEPTED

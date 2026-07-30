@@ -106,6 +106,28 @@ def test_only_confirmed_trace_can_drive_minimal_invalidation():
     assert "full-graph replay" in spec
 
 
+def test_confirmed_trace_binds_current_source_explicit_symptoms_and_selected_edges():
+    spec = text(ROOT / "SPEC.md")
+    assert "current immutable" in spec
+    assert "current D2 receipt" in spec
+    assert "symptom set is explicit" in spec
+    assert "explicitly selects each traversed edge" in spec
+    assert "Alternative reachable edges" in spec
+    assert "reachability" in spec and "insufficient" in spec
+
+
+def test_amendment_uses_typed_seed_kinds_and_rejects_unrelated_refs():
+    spec = text(ROOT / "SPEC.md")
+    assert all(kind in spec for kind in ["CANDIDATE", "EVIDENCE", "CLAIM_OR_OUTPUT"])
+    assert "Unrelated refs fail closed" in spec
+    amendment = yaml.safe_load(
+        text(ROOT / "glk" / "templates" / "GRAPH_AMENDMENT.yaml")
+    )
+    assert amendment["impact_seeds"] == [
+        {"kind": "CLAIM_OR_OUTPUT", "ref": "GO-002.output"}
+    ]
+
+
 def test_repaired_source_reuses_waiting_active_and_maximal_parallelism():
     combined = text(ROOT / "SPEC.md") + text(
         ROOT / "glk" / "references" / "causal-impact.md"

@@ -6,7 +6,9 @@ graph_version: 1
 observed_at_go: GO-003
 source_go: GO-002
 source_candidate_ref: candidates/GO-002/v1
-source_evidence_refs: ["evidence/incidents/INCIDENT-001/root-cause.json"]
+source_evidence_refs:
+  - "evidence/incidents/INCIDENT-001/root-cause.json"
+  - "evidence/incidents/INCIDENT-001/GO-002-GO-003.json"
 symptom_go_ids: ["GO-003"]
 causal_path:
   - source: GO-002
@@ -15,6 +17,8 @@ causal_path:
     source_claim_or_output_refs: ["GO-002.output"]
     target_input_or_assumption_refs: ["GO-003.input"]
     consumption_evidence_refs: ["evidence/edges/GO-002-GO-003.json"]
+    incident_evidence_refs: ["evidence/incidents/INCIDENT-001/GO-002-GO-003.json"]
+    confirmation_status: CONFIRMED
 excluded_edges:
   - source: GO-001
     target: GO-002

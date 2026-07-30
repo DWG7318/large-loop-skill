@@ -47,11 +47,14 @@ activate the alternative containing the greatest number of GO nodes.
 ## Causal recovery
 
 Each D2 edge binds the producer claim/output, consumer input/assumption, and
-consumption evidence. A `GO_CAUSAL_TRACE` distinguishes one incident's confirmed
-source GO from downstream symptom GOs; these are annotations, not new node types or
-states. Only a confirmed actual-consumption path may invalidate current evidence.
+consumption evidence. A `GO_CAUSAL_TRACE` binds one incident's confirmed source to
+its current immutable candidate, an explicit set of real symptom GOs, and only the
+actual-consumption edges selected by incident evidence. Alternative reachable paths
+remain excluded unless separately confirmed; these are annotations, not new node
+types or states. Only a confirmed selected path may invalidate current evidence.
 
-After repair, GLK re-projects only the proven impact slice. Historical receipts stay
+Amendments use typed candidate, evidence, or claim/output seeds and reject unrelated
+refs. After repair, GLK re-projects only the proven impact slice. Historical receipts stay
 append-only, unaffected branches remain valid, the source enters `ACTIVE_GO` when
 waiting-clear, and newly unlocked successors reactivate together under the same
 maximum-cardinality scheduler. No schedulable intermediate queue or full-graph

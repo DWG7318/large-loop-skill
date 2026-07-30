@@ -129,6 +129,8 @@ def test_causal_trace_uses_incident_annotations_not_go_types_or_states():
     assert trace["observed_at_go"] in trace["symptom_go_ids"]
     assert trace["confirmation_status"] == "CONFIRMED"
     assert trace["causal_path"]
+    assert all(step["incident_evidence_refs"] for step in trace["causal_path"])
+    assert all(step["confirmation_status"] == "CONFIRMED" for step in trace["causal_path"])
     assert trace["excluded_edges"]
     assert trace["stopping_reason"]
     validate_definition(schema, "go_causal_trace", trace)
@@ -155,7 +157,12 @@ def test_amendment_declares_minimal_impact_and_reactivation_projection():
         (TEMPLATE_DIR / "GRAPH_AMENDMENT.yaml").read_text(encoding="utf-8")
     )
     assert amendment["causal_trace_status"] == "CONFIRMED"
-    assert amendment["impact_seed_refs"]
+    assert amendment["impact_seeds"]
+    assert {seed["kind"] for seed in amendment["impact_seeds"]} <= {
+        "CANDIDATE",
+        "EVIDENCE",
+        "CLAIM_OR_OUTPUT",
+    }
     assert {item["disposition"] for item in amendment["impact_slice"]} <= {
         "UNAFFECTED",
         "REVERIFY",
@@ -169,6 +176,23 @@ def test_amendment_declares_minimal_impact_and_reactivation_projection():
         "unchanged_go_ids",
     }
     assert set(projection["waiting_go_ids"]).isdisjoint(projection["active_go_ids"])
+
+
+def test_schema_rejects_untyped_impact_seed_and_unconfirmed_path_step():
+    schema = load_schema()
+    amendment = yaml.safe_load(
+        (TEMPLATE_DIR / "GRAPH_AMENDMENT.yaml").read_text(encoding="utf-8")
+    )
+    amendment["impact_seeds"] = [{"kind": "UNKNOWN", "ref": "GO-002.output"}]
+    with pytest.raises(ValidationError):
+        validate_definition(schema, "graph_amendment", amendment)
+
+    trace = yaml.safe_load(
+        (TEMPLATE_DIR / "GO_CAUSAL_TRACE.yaml").read_text(encoding="utf-8")
+    )
+    trace["causal_path"][0]["confirmation_status"] = "SUSPECTED"
+    with pytest.raises(ValidationError):
+        validate_definition(schema, "go_causal_trace", trace)
 
 
 def test_bootstrap_creates_and_validates_complete_run_workspace(tmp_path):

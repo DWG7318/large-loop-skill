@@ -65,9 +65,11 @@ instances without adding role types.
 9. Execute each active GO through Worker D0, independent Checker D1, and independent
    GO Verifier D2.
 10. When an incident crosses GO boundaries, record a versioned causal trace that
-    distinguishes the source GO from downstream symptom GOs.
+    binds the source's current candidate/D2, an explicit real symptom set, and only
+    incident-evidence-selected consumption edges.
 11. Only after that trace is CONFIRMED, amend the graph with the minimum proven
-    successor impact and preserve unaffected branches.
+    successor impact from typed candidate/evidence/claim-output seeds and preserve
+    unaffected branches.
 12. Recompute the graph after every relevant event; newly unblocked GO nodes enter
     `ACTIVE_GO` directly, including maximal-parallel reactivation after repair.
 13. After all Required GO outcomes resolve, obtain independent Run Verifier D3.
@@ -90,6 +92,9 @@ instances without adding role types.
 - D3 consumes D2 and tests graph seams plus the final Run claim;
 - causal source and symptom labels are incident annotations, not GO types or states;
 - only confirmed actual-consumption paths may invalidate current evidence;
+- reachability alone never confirms a causal path; every selected edge carries
+  incident evidence, while alternatives remain explicitly excluded;
+- unrelated amendment seeds fail closed;
 - historical receipts remain append-only while amended current-validity is explicit;
 - causal recovery invalidates only the proven minimum successor slice;
 - no silent graph, role-binding, candidate, or evidence amendment;

@@ -150,6 +150,10 @@ def validate_semantics(root: Path):
         "DOWNSTREAM_SYMPTOM",
         "source_claim_or_output_refs",
         "actual consumption",
+        "incident evidence",
+        "explicit symptom set",
+        "typed `CANDIDATE`, `EVIDENCE`, or `CLAIM_OR_OUTPUT`",
+        "reachability alone",
         "CONFIRMED",
         "UNAFFECTED",
         "current-validity",
@@ -175,6 +179,21 @@ def validate_templates(root: Path):
         )
         if errors:
             fail(f"schema validation failed for {filename}: {errors[0].message}")
+        if filename == "GO_CAUSAL_TRACE.yaml":
+            if instance["source_go"] in instance["symptom_go_ids"]:
+                fail("causal trace source cannot be a symptom")
+            if instance["observed_at_go"] not in instance["symptom_go_ids"]:
+                fail("causal trace observation must be an explicit symptom")
+            trace_evidence = set(instance["source_evidence_refs"])
+            if any(
+                step["confirmation_status"] != "CONFIRMED"
+                or not step["incident_evidence_refs"]
+                or not set(step["incident_evidence_refs"]).issubset(trace_evidence)
+                for step in instance["causal_path"]
+            ):
+                fail("causal trace path requires confirmed incident evidence")
+        if filename == "GRAPH_AMENDMENT.yaml" and not instance["impact_seeds"]:
+            fail("graph amendment requires typed impact seeds")
 
 
 def tracked_files(root: Path):

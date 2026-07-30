@@ -39,6 +39,49 @@
         }
       }
     },
+    "causal_path_step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source", "target", "justification",
+        "source_claim_or_output_refs", "target_input_or_assumption_refs",
+        "consumption_evidence_refs", "incident_evidence_refs",
+        "confirmation_status"
+      ],
+      "properties": {
+        "source": {"$ref": "#/$defs/id"},
+        "target": {"$ref": "#/$defs/id"},
+        "justification": {"$ref": "#/$defs/id"},
+        "source_claim_or_output_refs": {
+          "$ref": "#/$defs/string_array", "minItems": 1
+        },
+        "target_input_or_assumption_refs": {
+          "$ref": "#/$defs/string_array", "minItems": 1
+        },
+        "consumption_evidence_refs": {
+          "$ref": "#/$defs/string_array", "minItems": 1
+        },
+        "incident_evidence_refs": {
+          "$ref": "#/$defs/string_array", "minItems": 1
+        },
+        "confirmation_status": {"enum": ["SUSPECTED", "CONFIRMED"]}
+      }
+    },
+    "confirmed_causal_path_step": {
+      "allOf": [
+        {"$ref": "#/$defs/causal_path_step"},
+        {"properties": {"confirmation_status": {"const": "CONFIRMED"}}}
+      ]
+    },
+    "impact_seed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {"enum": ["CANDIDATE", "EVIDENCE", "CLAIM_OR_OUTPUT"]},
+        "ref": {"$ref": "#/$defs/id"}
+      }
+    },
     "impact_item": {
       "type": "object",
       "additionalProperties": false,
@@ -304,7 +347,7 @@
         "symptom_go_ids": {"$ref": "#/$defs/string_array"},
         "causal_path": {
           "type": "array",
-          "items": {"$ref": "#/$defs/dependency_edge"}
+          "items": {"$ref": "#/$defs/causal_path_step"}
         },
         "excluded_edges": {
           "type": "array",
@@ -313,7 +356,22 @@
         "stopping_reason": {"$ref": "#/$defs/id"},
         "confirmation_status": {"enum": ["SUSPECTED", "CONFIRMED"]},
         "issued_at": {"$ref": "#/$defs/id"}
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"confirmation_status": {"const": "CONFIRMED"}},
+            "required": ["confirmation_status"]
+          },
+          "then": {
+            "properties": {
+              "causal_path": {
+                "items": {"$ref": "#/$defs/confirmed_causal_path_step"}
+              }
+            }
+          }
+        }
+      ]
     },
     "graph_amendment": {
       "type": "object",
@@ -321,7 +379,7 @@
       "required": [
         "schema_version", "amendment_id", "graph_id", "from_version",
         "to_version", "reason", "causal_trace_ref", "causal_trace_status",
-        "impact_seed_refs", "before", "after", "affected_claims",
+        "impact_seeds", "before", "after", "affected_claims",
         "active_work_impact", "impact_slice", "invalidated_evidence",
         "invalidated_receipts", "reactivation_projection", "rollback",
         "authority_binding_ref", "issued_at"
@@ -335,8 +393,10 @@
         "reason": {"$ref": "#/$defs/id"},
         "causal_trace_ref": {"$ref": "#/$defs/id"},
         "causal_trace_status": {"const": "CONFIRMED"},
-        "impact_seed_refs": {
-          "$ref": "#/$defs/string_array", "minItems": 1
+        "impact_seeds": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/impact_seed"},
+          "minItems": 1
         },
         "before": {"type": "object"},
         "after": {"type": "object"},

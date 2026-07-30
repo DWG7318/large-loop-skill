@@ -6,7 +6,9 @@ to_version: 2
 reason: "Verified implementation evidence invalidated one frozen graph assumption"
 causal_trace_ref: TRACE-001
 causal_trace_status: CONFIRMED
-impact_seed_refs: ["GO-002.output"]
+impact_seeds:
+  - kind: CLAIM_OR_OUTPUT
+    ref: GO-002.output
 before:
   nodes: ["GO-001", "GO-002", "GO-003"]
 after:

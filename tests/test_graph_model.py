@@ -167,13 +167,18 @@ def test_confirmed_causal_trace_distinguishes_internal_source_from_symptom():
             edge(m, "X", "B", "X.out", "B.other"),
         ],
     )
+    complete_go(m, graph, "R", "candidate-R-v1")
+    complete_go(m, graph, "X", "candidate-X-v1")
+    complete_go(m, graph, "A", "candidate/A-v1")
 
     trace = graph.confirm_causal_trace(
         incident_id="INC-1",
         observed_at_go="B",
         source_go="A",
         source_candidate_ref="candidate/A-v1",
-        evidence_refs=("evidence/INC-1/root-cause.json",),
+        evidence_refs=("evidence/INC-1/root-cause.json", "evidence/INC-1/A-B.json"),
+        symptom_gos=("B",),
+        selected_path=(selection(m, "A", "B", "evidence/INC-1/A-B.json"),),
     )
 
     assert trace.confirmation_status == m.CONFIRMED
@@ -202,13 +207,20 @@ def test_multi_hop_causal_carrier_is_not_automatically_a_symptom_go():
             edge(m, "X", "B", "X.out", "B.other"),
         ],
     )
+    complete_go(m, graph, "A", "candidate/A-v1")
+    complete_go(m, graph, "M", "candidate-M-v1")
 
     trace = graph.confirm_causal_trace(
         incident_id="INC-MULTI",
         observed_at_go="B",
         source_go="A",
         source_candidate_ref="candidate/A-v1",
-        evidence_refs=("evidence/INC-MULTI/root-cause.json",),
+        evidence_refs=("evidence/INC-MULTI/root-cause.json", "evidence/INC-MULTI/path.json"),
+        symptom_gos=("B",),
+        selected_path=(
+            selection(m, "A", "M", "evidence/INC-MULTI/path.json"),
+            selection(m, "M", "B", "evidence/INC-MULTI/path.json"),
+        ),
     )
 
     assert trace.symptom_gos == ("B",)
@@ -222,14 +234,17 @@ def test_multi_hop_causal_carrier_is_not_automatically_a_symptom_go():
 def test_causal_trace_requires_bound_consumption_edges():
     m = load_model()
     graph = m.GoGraph([m.Go("A"), m.Go("B", predecessors={"A"})])
+    complete_go(m, graph, "A", "candidate/A-v1")
 
-    with pytest.raises(m.GraphError, match="bound consumption path"):
+    with pytest.raises(m.GraphError, match="current D2 consumption edge"):
         graph.confirm_causal_trace(
             incident_id="INC-1",
             observed_at_go="B",
             source_go="A",
             source_candidate_ref="candidate/A-v1",
-            evidence_refs=("evidence/INC-1/root-cause.json",),
+            evidence_refs=("evidence/INC-1/root-cause.json", "evidence/INC-1/path.json"),
+            symptom_gos=("B",),
+            selected_path=(selection(m, "A", "B", "evidence/INC-1/path.json"),),
         )
 
 
@@ -239,6 +254,7 @@ def test_causal_trace_fails_closed_when_path_node_has_unbound_incoming_edge():
         [m.Go("A"), m.Go("X"), m.Go("B", predecessors={"A", "X"})],
         edges=[edge(m, "A", "B", "A.out", "B.input")],
     )
+    complete_go(m, graph, "A", "candidate/A-v1")
 
     with pytest.raises(m.GraphError, match="unbound incoming dependency"):
         graph.confirm_causal_trace(
@@ -246,7 +262,9 @@ def test_causal_trace_fails_closed_when_path_node_has_unbound_incoming_edge():
             observed_at_go="B",
             source_go="A",
             source_candidate_ref="candidate/A-v1",
-            evidence_refs=("evidence/INC-UNBOUND/root-cause.json",),
+            evidence_refs=("evidence/INC-UNBOUND/root-cause.json", "evidence/INC-UNBOUND/path.json"),
+            symptom_gos=("B",),
+            selected_path=(selection(m, "A", "B", "evidence/INC-UNBOUND/path.json"),),
         )
 
 
@@ -262,13 +280,22 @@ def test_suspected_causal_trace_cannot_invalidate_receipts():
         source_go="A",
         source_candidate_ref="candidate/A-v1",
         evidence_refs=("evidence/INC-1/hypothesis.json",),
+        symptom_gos=("B",),
+        selected_path=(
+            m.CausalEdgeSelection(
+                source="A",
+                target="B",
+                incident_evidence_refs=("evidence/INC-1/hypothesis.json",),
+                confirmation_status=m.SUSPECTED,
+            ),
+        ),
         confirmation_status=m.SUSPECTED,
     )
 
     with pytest.raises(m.GraphError, match="CONFIRMED"):
         graph.apply_causal_amendment(
             trace,
-            changed_refs=("A.out",),
+            impact_seeds=(m.ImpactSeed(m.SEED_CLAIM_OR_OUTPUT, "A.out"),),
             dispositions={"A": m.REWORK_IMPACT, "B": m.REVERIFY},
             new_graph_version=2,
         )
@@ -287,13 +314,15 @@ def test_confirmed_amendment_requires_evidence_for_each_affected_go():
         observed_at_go="B",
         source_go="A",
         source_candidate_ref="candidate-A-v1",
-        evidence_refs=("evidence/INC-EVIDENCE/root-cause.json",),
+        evidence_refs=("evidence/INC-EVIDENCE/root-cause.json", "evidence/INC-EVIDENCE/path.json"),
+        symptom_gos=("B",),
+        selected_path=(selection(m, "A", "B", "evidence/INC-EVIDENCE/path.json"),),
     )
 
     with pytest.raises(m.GraphError, match="impact evidence"):
         graph.apply_causal_amendment(
             trace,
-            changed_refs=("A.out",),
+            impact_seeds=(m.ImpactSeed(m.SEED_CLAIM_OR_OUTPUT, "A.out"),),
             dispositions={"A": m.REWORK_IMPACT, "B": m.REVERIFY},
             new_graph_version=2,
         )
@@ -327,11 +356,13 @@ def test_causal_amendment_invalidates_minimum_slice_and_reactivates_in_parallel(
         observed_at_go="B",
         source_go="A",
         source_candidate_ref="candidate-A-v1",
-        evidence_refs=("evidence/INC-2/root-cause.json",),
+        evidence_refs=("evidence/INC-2/root-cause.json", "evidence/INC-2/A-B-path.json"),
+        symptom_gos=("B",),
+        selected_path=(selection(m, "A", "B", "evidence/INC-2/A-B-path.json"),),
     )
     projection = graph.apply_causal_amendment(
         trace,
-        changed_refs=("A.changed",),
+        impact_seeds=(m.ImpactSeed(m.SEED_CLAIM_OR_OUTPUT, "A.changed"),),
         dispositions={
             "A": m.REWORK_IMPACT,
             "B": m.REVERIFY,
@@ -391,4 +422,13 @@ def edge(m, source: str, target: str, source_ref: str, target_ref: str):
         source_claim_or_output_refs=(source_ref,),
         target_input_or_assumption_refs=(target_ref,),
         consumption_evidence_refs=(f"evidence/{source}-{target}.json",),
+    )
+
+
+def selection(m, source: str, target: str, evidence_ref: str):
+    return m.CausalEdgeSelection(
+        source=source,
+        target=target,
+        incident_evidence_refs=(evidence_ref,),
+        confirmation_status=m.CONFIRMED,
     )

@@ -10,6 +10,11 @@
   GO from downstream symptom GOs without adding node types, states, or roles.
 - Trace incidents backward only over actual-consumption edges; suspected traces
   remain evidence and cannot invalidate receipts.
+- Bind a confirmed source to its current candidate and D2 basis, require an explicit
+  real symptom set, and select every causal edge with incident-bound evidence instead
+  of inferring causality from reachability.
+- Type amendment seeds as candidate, evidence, or claim/output refs; reject unrelated
+  refs and revalidate paths, exclusions, and stopping evidence at application time.
 - Project the minimum changed-ref successor slice as `UNAFFECTED`, `REVERIFY`,
   `REWORK`, or `QUARANTINE` while preserving historical receipts append-only.
 - Reuse WAITING_GO/ACTIVE_GO and the maximum-cardinality scheduler so repaired

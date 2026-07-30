@@ -17,6 +17,11 @@ REWORK = "REWORK"
 CONFIRMED = "CONFIRMED"
 SUSPECTED = "SUSPECTED"
 
+SEED_CANDIDATE = "CANDIDATE"
+SEED_EVIDENCE = "EVIDENCE"
+SEED_CLAIM_OR_OUTPUT = "CLAIM_OR_OUTPUT"
+IMPACT_SEED_KINDS = {SEED_CANDIDATE, SEED_EVIDENCE, SEED_CLAIM_OR_OUTPUT}
+
 UNAFFECTED = "UNAFFECTED"
 REVERIFY = "REVERIFY"
 REWORK_IMPACT = "REWORK"
@@ -89,6 +94,40 @@ class DependencyEdge:
 
 
 @dataclass(frozen=True)
+class CausalEdgeSelection:
+    source: str
+    target: str
+    incident_evidence_refs: Tuple[str, ...]
+    confirmation_status: str
+
+    def __post_init__(self):
+        if not self.source or not self.target or self.source == self.target:
+            raise GraphError("causal edge selection requires distinct endpoints")
+        if (
+            not self.incident_evidence_refs
+            or any(not reference for reference in self.incident_evidence_refs)
+        ):
+            raise GraphError("causal edge selection requires incident evidence")
+        if self.confirmation_status not in {CONFIRMED, SUSPECTED}:
+            raise GraphError("causal edge selection has invalid confirmation status")
+
+
+@dataclass(frozen=True)
+class CausalPathStep:
+    edge: DependencyEdge
+    incident_evidence_refs: Tuple[str, ...]
+    confirmation_status: str
+
+    @property
+    def source(self) -> str:
+        return self.edge.source
+
+    @property
+    def target(self) -> str:
+        return self.edge.target
+
+
+@dataclass(frozen=True)
 class GoCausalTrace:
     incident_id: str
     graph_version: int
@@ -97,7 +136,7 @@ class GoCausalTrace:
     source_candidate_ref: str
     evidence_refs: Tuple[str, ...]
     symptom_gos: Tuple[str, ...]
-    causal_path: Tuple[DependencyEdge, ...]
+    causal_path: Tuple[CausalPathStep, ...]
     excluded_edges: Tuple[DependencyEdge, ...]
     stopping_reason: str
     confirmation_status: str
@@ -111,6 +150,18 @@ class GoCausalTrace:
             raise GraphError("causal source GO cannot be a symptom annotation")
         if self.source_go != self.observed_at_go and self.observed_at_go not in self.symptom_gos:
             raise GraphError("observation GO must be a downstream symptom annotation")
+
+
+@dataclass(frozen=True)
+class ImpactSeed:
+    kind: str
+    ref: str
+
+    def __post_init__(self):
+        if self.kind not in IMPACT_SEED_KINDS:
+            raise GraphError(f"invalid impact seed kind: {self.kind}")
+        if not self.ref:
+            raise GraphError("impact seed ref is required")
 
 
 @dataclass(frozen=True)
@@ -131,7 +182,7 @@ class ImpactProjection:
     incident_id: str
     from_graph_version: int
     to_graph_version: int
-    changed_refs: Tuple[str, ...]
+    impact_seeds: Tuple[ImpactSeed, ...]
     items: Tuple[ImpactItem, ...]
 
     @property
@@ -272,6 +323,8 @@ class GoGraph:
         source_go: str,
         source_candidate_ref: str,
         evidence_refs: Tuple[str, ...],
+        symptom_gos: Tuple[str, ...],
+        selected_path: Tuple[CausalEdgeSelection, ...],
     ) -> GoCausalTrace:
         return self.trace_causal_incident(
             incident_id=incident_id,
@@ -279,6 +332,8 @@ class GoGraph:
             source_go=source_go,
             source_candidate_ref=source_candidate_ref,
             evidence_refs=evidence_refs,
+            symptom_gos=symptom_gos,
+            selected_path=selected_path,
             confirmation_status=CONFIRMED,
         )
 
@@ -289,16 +344,19 @@ class GoGraph:
         source_go: str,
         source_candidate_ref: str,
         evidence_refs: Tuple[str, ...],
+        symptom_gos: Tuple[str, ...],
+        selected_path: Tuple[CausalEdgeSelection, ...],
         confirmation_status: str,
     ) -> GoCausalTrace:
-        self._go(observed_at_go)
-        self._go(source_go)
-        path = self._reverse_causal_slice(source_go, observed_at_go)
-        if source_go != observed_at_go and not path:
-            raise GraphError("no bound consumption path connects source and observation")
-        self._assert_causal_slice_fully_bound(path, source_go)
-        symptom_gos = () if source_go == observed_at_go else (observed_at_go,)
-        excluded_edges = self._excluded_incoming_edges(path, source_go)
+        path, excluded_edges = self._validate_selected_trace(
+            observed_at_go=observed_at_go,
+            source_go=source_go,
+            source_candidate_ref=source_candidate_ref,
+            evidence_refs=tuple(evidence_refs),
+            symptom_gos=tuple(symptom_gos),
+            selected_path=tuple(selected_path),
+            confirmation_status=confirmation_status,
+        )
         return GoCausalTrace(
             incident_id=incident_id,
             graph_version=self.graph_version,
@@ -306,7 +364,7 @@ class GoGraph:
             source_go=source_go,
             source_candidate_ref=source_candidate_ref,
             evidence_refs=tuple(evidence_refs),
-            symptom_gos=symptom_gos,
+            symptom_gos=tuple(symptom_gos),
             causal_path=path,
             excluded_edges=excluded_edges,
             stopping_reason="confirmed source reached",
@@ -316,7 +374,7 @@ class GoGraph:
     def apply_causal_amendment(
         self,
         trace: GoCausalTrace,
-        changed_refs: Tuple[str, ...],
+        impact_seeds: Tuple[ImpactSeed, ...],
         dispositions: Mapping[str, str],
         new_graph_version: int,
         impact_evidence: Optional[Mapping[str, Tuple[str, ...]]] = None,
@@ -327,32 +385,47 @@ class GoGraph:
             raise GraphError("causal trace does not bind the current graph version")
         if new_graph_version <= self.graph_version:
             raise GraphError("causal amendment must advance the graph version")
-        if not changed_refs or any(not reference for reference in changed_refs):
-            raise GraphError("causal amendment requires changed refs")
-        source = self._go(trace.source_go)
-        self._go(trace.observed_at_go)
-        if source.candidate_id != trace.source_candidate_ref:
-            raise GraphError("causal trace does not bind the current source candidate")
-        expected_path = self._reverse_causal_slice(
-            trace.source_go, trace.observed_at_go
-        )
-        if trace.causal_path != expected_path:
-            raise GraphError("causal amendment requires the confirmed current path")
-        if trace.excluded_edges != self._excluded_incoming_edges(
-            expected_path, trace.source_go
+        if not impact_seeds:
+            raise GraphError("causal amendment requires impact seeds")
+        for symptom_go in trace.symptom_gos:
+            if symptom_go not in self.gos:
+                raise GraphError(f"unknown symptom GO: {symptom_go}")
+        if any(not isinstance(seed, ImpactSeed) for seed in impact_seeds):
+            raise GraphError("causal amendment requires typed impact seeds")
+        try:
+            reconstructed = tuple(
+                CausalEdgeSelection(
+                    source=step.source,
+                    target=step.target,
+                    incident_evidence_refs=step.incident_evidence_refs,
+                    confirmation_status=step.confirmation_status,
+                )
+                for step in trace.causal_path
+            )
+        except (AttributeError, TypeError) as error:
+            raise GraphError("selected path evidence has an invalid shape") from error
+        try:
+            expected_path, expected_excluded = self._validate_selected_trace(
+                observed_at_go=trace.observed_at_go,
+                source_go=trace.source_go,
+                source_candidate_ref=trace.source_candidate_ref,
+                evidence_refs=trace.evidence_refs,
+                symptom_gos=trace.symptom_gos,
+                selected_path=reconstructed,
+                confirmation_status=trace.confirmation_status,
+            )
+        except GraphError as error:
+            if "unknown symptom GO" in str(error):
+                raise
+            raise GraphError(f"selected path evidence is no longer valid: {error}") from error
+        if (
+            trace.causal_path != expected_path
+            or trace.excluded_edges != expected_excluded
+            or trace.stopping_reason != "confirmed source reached"
         ):
-            raise GraphError("causal amendment requires complete excluded-edge evidence")
+            raise GraphError("selected path evidence is incomplete or stale")
 
-        affected = self._forward_impact_slice(trace.source_go, set(changed_refs))
-        if trace.source_go != trace.observed_at_go:
-            causal_first_hops = [
-                edge for edge in trace.causal_path if edge.source == trace.source_go
-            ]
-            if not any(
-                set(edge.source_claim_or_output_refs) & set(changed_refs)
-                for edge in causal_first_hops
-            ):
-                raise GraphError("changed refs do not intersect the confirmed causal path")
+        affected = self._forward_impact_slice(trace, tuple(impact_seeds))
 
         provided = set(dispositions)
         if provided != affected:
@@ -406,7 +479,7 @@ class GoGraph:
             incident_id=trace.incident_id,
             from_graph_version=self.graph_version,
             to_graph_version=new_graph_version,
-            changed_refs=tuple(changed_refs),
+            impact_seeds=tuple(impact_seeds),
             items=tuple(items),
         )
         for go_id in affected:
@@ -432,55 +505,138 @@ class GoGraph:
         self._refresh_active_set()
         return projection
 
-    def _reverse_causal_slice(
-        self, source_go: str, observed_at_go: str
-    ) -> Tuple[DependencyEdge, ...]:
+    def _validate_selected_trace(
+        self,
+        observed_at_go: str,
+        source_go: str,
+        source_candidate_ref: str,
+        evidence_refs: Tuple[str, ...],
+        symptom_gos: Tuple[str, ...],
+        selected_path: Tuple[CausalEdgeSelection, ...],
+        confirmation_status: str,
+    ) -> Tuple[Tuple[CausalPathStep, ...], Tuple[DependencyEdge, ...]]:
+        self._go(observed_at_go)
+        source = self._go(source_go)
+        if not evidence_refs or any(not reference for reference in evidence_refs):
+            raise GraphError("causal trace requires incident evidence refs")
+        if len(set(symptom_gos)) != len(symptom_gos):
+            raise GraphError("causal trace has duplicate symptom GO")
+        for symptom_go in symptom_gos:
+            if symptom_go not in self.gos:
+                raise GraphError(f"unknown symptom GO: {symptom_go}")
         if source_go == observed_at_go:
-            return ()
+            if symptom_gos or selected_path:
+                raise GraphError("local incident requires empty symptom and selected path sets")
+        else:
+            if source_go in symptom_gos:
+                raise GraphError("causal source GO cannot be a symptom annotation")
+            if observed_at_go not in symptom_gos:
+                raise GraphError("observation GO must belong to the symptom set")
+            if not symptom_gos or not selected_path:
+                raise GraphError("downstream incident requires symptoms and a selected path")
 
-        forward = {source_go}
-        changed = True
-        while changed:
-            changed = False
-            for edge in self.edges:
-                if edge.source in forward and edge.target not in forward:
-                    forward.add(edge.target)
-                    changed = True
+        if confirmation_status == CONFIRMED:
+            if source.candidate_id != source_candidate_ref:
+                raise GraphError("CONFIRMED trace must bind the current source candidate")
+            if source_go != observed_at_go and (
+                source.state != GO_VERIFIED or not source.d2_receipt_id
+            ):
+                raise GraphError("CONFIRMED downstream trace requires current source D2")
 
-        reverse = {observed_at_go}
-        changed = True
-        while changed:
-            changed = False
-            for edge in self.edges:
-                if edge.target in reverse and edge.source not in reverse:
-                    reverse.add(edge.source)
-                    changed = True
-
-        if observed_at_go not in forward:
-            return ()
-        return tuple(
-            sorted(
-                (
-                    edge
-                    for edge in self.edges
-                    if edge.source in forward and edge.target in reverse
-                ),
-                key=lambda edge: (edge.source, edge.target),
+        edge_by_pair = {(edge.source, edge.target): edge for edge in self.edges}
+        evidence_set = set(evidence_refs)
+        steps = []
+        selected_edges = []
+        seen_pairs = set()
+        for selection in selected_path:
+            pair = (selection.source, selection.target)
+            edge = edge_by_pair.get(pair)
+            if edge is None:
+                raise GraphError("selected path edge is not a current D2 consumption edge")
+            if pair in seen_pairs:
+                raise GraphError("selected path contains a duplicate edge")
+            if not set(selection.incident_evidence_refs) <= evidence_set:
+                raise GraphError("selected path incident evidence is not trace-bound")
+            if confirmation_status == CONFIRMED and selection.confirmation_status != CONFIRMED:
+                raise GraphError("CONFIRMED trace requires every selected path edge CONFIRMED")
+            if confirmation_status == CONFIRMED:
+                edge_source = self._go(edge.source)
+                if edge_source.state != GO_VERIFIED or not edge_source.d2_receipt_id:
+                    raise GraphError("CONFIRMED selected path requires current source D2 at every hop")
+            seen_pairs.add(pair)
+            selected_edges.append(edge)
+            steps.append(
+                CausalPathStep(
+                    edge=edge,
+                    incident_evidence_refs=selection.incident_evidence_refs,
+                    confirmation_status=selection.confirmation_status,
+                )
             )
-        )
 
-    def _excluded_incoming_edges(
-        self, path: Tuple[DependencyEdge, ...], source_go: str
+        if source_go != observed_at_go:
+            selected_pairs = {(edge.source, edge.target) for edge in selected_edges}
+            forward = self._reachable({source_go}, selected_pairs)
+            if any(symptom not in forward for symptom in symptom_gos):
+                raise GraphError("selected path must reach every symptom GO")
+            reverse = self._reverse_reachable(set(symptom_gos), selected_pairs)
+            if any(
+                edge.source not in forward or edge.target not in reverse
+                for edge in selected_edges
+            ):
+                raise GraphError("selected path contains an edge outside every symptom path")
+            self._assert_causal_slice_fully_bound(tuple(selected_edges), source_go)
+
+        excluded = self._excluded_for_selected_path(
+            tuple(selected_edges), source_go, symptom_gos
+        )
+        return tuple(steps), excluded
+
+    def _reachable(self, starts: Set[str], pairs: Set[Tuple[str, str]]) -> Set[str]:
+        reached = set(starts)
+        changed = True
+        while changed:
+            changed = False
+            for source, target in pairs:
+                if source in reached and target not in reached:
+                    reached.add(target)
+                    changed = True
+        return reached
+
+    def _reverse_reachable(
+        self, starts: Set[str], pairs: Set[Tuple[str, str]]
+    ) -> Set[str]:
+        reached = set(starts)
+        changed = True
+        while changed:
+            changed = False
+            for source, target in pairs:
+                if target in reached and source not in reached:
+                    reached.add(source)
+                    changed = True
+        return reached
+
+    def _excluded_for_selected_path(
+        self,
+        selected_edges: Tuple[DependencyEdge, ...],
+        source_go: str,
+        symptom_gos: Tuple[str, ...],
     ) -> Tuple[DependencyEdge, ...]:
-        path_targets = {edge.target for edge in path} | {source_go}
-        path_set = set(path)
+        selected = set(selected_edges)
+        all_pairs = {(edge.source, edge.target) for edge in self.edges}
+        forward = self._reachable({source_go}, all_pairs)
+        reverse = self._reverse_reachable(set(symptom_gos), all_pairs)
+        alternative_slice = {
+            edge
+            for edge in self.edges
+            if edge.source in forward and edge.target in reverse
+        }
+        governed_targets = {source_go} | {edge.target for edge in selected_edges}
+        incoming_context = {
+            edge for edge in self.edges if edge.target in governed_targets
+        }
         return tuple(
             sorted(
-                (
-                    edge
-                    for edge in self.edges
-                    if edge.target in path_targets and edge not in path_set
-                ),
+                (alternative_slice | incoming_context) - selected,
                 key=lambda edge: (edge.source, edge.target),
             )
         )
@@ -498,17 +654,41 @@ class GoGraph:
                     )
 
     def _forward_impact_slice(
-        self, source_go: str, changed_refs: Set[str]
+        self, trace: GoCausalTrace, impact_seeds: Tuple[ImpactSeed, ...]
     ) -> Set[str]:
+        source_go = trace.source_go
+        source = self._go(source_go)
         affected = {source_go}
         queue = []
-        for edge in self.edges:
-            if edge.source == source_go and (
-                set(edge.source_claim_or_output_refs) & changed_refs
-            ):
-                if edge.target not in affected:
-                    affected.add(edge.target)
-                    queue.append(edge.target)
+        first_hops = set()
+        for seed in impact_seeds:
+            if seed.kind == SEED_CLAIM_OR_OUTPUT:
+                matching = {
+                    edge.target
+                    for edge in self.edges
+                    if edge.source == source_go
+                    and seed.ref in edge.source_claim_or_output_refs
+                }
+                if not matching:
+                    raise GraphError(f"unrelated impact seed: {seed.kind}:{seed.ref}")
+                first_hops.update(matching)
+            elif seed.kind == SEED_CANDIDATE:
+                if seed.ref != trace.source_candidate_ref or seed.ref != source.candidate_id:
+                    raise GraphError(f"unrelated impact seed: {seed.kind}:{seed.ref}")
+                first_hops.update(
+                    edge.target for edge in self.edges if edge.source == source_go
+                )
+            elif seed.kind == SEED_EVIDENCE:
+                if seed.ref not in set(trace.evidence_refs) | {source.d2_receipt_id}:
+                    raise GraphError(f"unrelated impact seed: {seed.kind}:{seed.ref}")
+                first_hops.update(
+                    edge.target for edge in self.edges if edge.source == source_go
+                )
+
+        for target in sorted(first_hops):
+            if target not in affected:
+                affected.add(target)
+                queue.append(target)
 
         while queue:
             current = queue.pop(0)

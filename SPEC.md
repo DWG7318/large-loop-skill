@@ -311,21 +311,33 @@ source GO, source candidate, evidence, symptom set, actual-consumption path, and
 `SUSPECTED` or `CONFIRMED` status. A `SUSPECTED` trace is retained as evidence but
 must not revoke candidates or receipts.
 
+For `CONFIRMED`, `source_candidate_ref` must equal the source GO's current immutable
+candidate. If the incident crossed a GO edge, that source must retain its current D2 receipt.
+The symptom set is explicit: each member must be a real GO, the source
+must not be a symptom, and the observation GO must be included. The local
+source-equals-observation exception uses empty symptom and path sets.
+
 ### Reverse causal slice
 
 Run Supervisor computes a reverse causal slice from the observation GO toward the
-confirmed source. It may traverse only edges whose
+confirmed source. The incident record explicitly selects each traversed edge and
+binds incident evidence plus a confirmation status to it. It may traverse only edges whose
 `source_claim_or_output_refs`, `target_input_or_assumption_refs`, and
 `consumption_evidence_refs` prove actual consumption for this incident. The trace
-records excluded incoming edges and its stopping reason. Mere ancestor reachability,
+must contain a continuous selected path from the source to every symptom.
+Alternative reachable edges are recorded as excluded unless incident evidence separately confirms
+them; selected paths, excluded incoming edges, and the stopping reason are revalidated
+when an amendment is applied. Mere ancestor reachability,
 source-code calls, file proximity, or shared modules are insufficient.
 
 ### Minimal impact projection
 
-After a confirmed source changes, `GRAPH_AMENDMENT` starts from explicit changed
-candidate, claim, output, or evidence refs. The first forward step includes only
-successor edges that consume a changed ref; later steps follow consumption from an
-already affected GO. Every GO receives one projection disposition:
+After a confirmed source changes, `GRAPH_AMENDMENT` starts from explicit typed
+`CANDIDATE`, `EVIDENCE`, or `CLAIM_OR_OUTPUT` impact seeds. A claim/output seed starts
+only at successor edges that consume that ref. A current source candidate or
+trace/source-D2 evidence seed first invalidates the source validity, then propagates
+conservatively through its bound consumers. Unrelated refs fail closed. Later steps
+follow consumption from an already affected GO. Every GO receives one projection disposition:
 
 ```text
 UNAFFECTED

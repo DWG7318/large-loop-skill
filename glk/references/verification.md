@@ -23,3 +23,7 @@ A causal amendment keeps old receipts as immutable history but may remove their
 current-validity for the new graph version. Repeat D1/D2 only for GOs classified
 `REVERIFY`, `REWORK`, or `QUARANTINE`; an `UNAFFECTED` GO does not repeat evidence
 merely because it is reachable from the source.
+
+A `CONFIRMED` cross-GO causal trace binds the source GO's current immutable candidate
+and current D2 receipt. Each selected consumption edge carries incident evidence and
+`CONFIRMED` status; reachability without that evidence cannot invalidate a receipt.
