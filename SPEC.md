@@ -346,6 +346,16 @@ REWORK
 QUARANTINE
 ```
 
+Seed meaning constrains the source disposition before any mutation. A `CANDIDATE`
+seed requires source `REWORK` or `QUARANTINE` and invalidates that candidate plus
+its current D0/D1/D2 receipts; `REVERIFY` is forbidden. An `EVIDENCE` seed may
+use `REVERIFY` when the candidate and D1 remain valid, or a deeper disposition when
+the evidence supports it. A `CLAIM_OR_OUTPUT` seed cannot preserve the same current
+artifact through `REVERIFY`; it requires `REWORK` or `QUARANTINE`. For multiple
+seeds, the strictest source disposition required by any seed wins. These source
+rules do not widen downstream impact: each successor keeps its own evidence-backed
+disposition, and unrelated branches remain `UNAFFECTED`.
+
 Historical candidates and D0-D3 receipts remain append-only. Invalidated items lose
 `current-validity` only for the new graph version and remain addressable as history.
 Unproven descendants remain `UNAFFECTED`; full-graph replay is forbidden.

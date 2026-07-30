@@ -34,3 +34,10 @@ invalidate source validity. Unrelated seeds fail closed and unproven descendants
 `UNAFFECTED`. Historical
 receipts remain append-only, and reactivation uses the existing maximal-safe
 scheduler without an intermediate queue or full-graph replay.
+
+Record `source_go` and `source_disposition` explicitly. A `CANDIDATE` or
+`CLAIM_OR_OUTPUT` seed forbids source `REVERIFY`; it requires `REWORK` or
+`QUARANTINE`. A candidate seed invalidates the old candidate and its D0/D1/D2
+current-validity. An evidence-only seed may use `REVERIFY`. Multiple seeds apply the
+strictest source requirement, while downstream GOs retain independent impact
+evidence and dispositions.

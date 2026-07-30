@@ -153,6 +153,9 @@ def validate_semantics(root: Path):
         "incident evidence",
         "explicit symptom set",
         "typed `CANDIDATE`, `EVIDENCE`, or `CLAIM_OR_OUTPUT`",
+        "strictest source disposition",
+        "same current artifact",
+        "D0/D1/D2",
         "reachability alone",
         "CONFIRMED",
         "UNAFFECTED",
@@ -192,8 +195,27 @@ def validate_templates(root: Path):
                 for step in instance["causal_path"]
             ):
                 fail("causal trace path requires confirmed incident evidence")
-        if filename == "GRAPH_AMENDMENT.yaml" and not instance["impact_seeds"]:
-            fail("graph amendment requires typed impact seeds")
+        if filename == "GRAPH_AMENDMENT.yaml":
+            if not instance["impact_seeds"]:
+                fail("graph amendment requires typed impact seeds")
+            source_items = [
+                item
+                for item in instance["impact_slice"]
+                if item["go_id"] == instance["source_go"]
+            ]
+            if (
+                len(source_items) != 1
+                or source_items[0]["disposition"]
+                != instance["source_disposition"]
+            ):
+                fail("graph amendment source disposition is inconsistent")
+            seed_kinds = {seed["kind"] for seed in instance["impact_seeds"]}
+            if seed_kinds & {"CANDIDATE", "CLAIM_OR_OUTPUT"} and (
+                instance["source_disposition"] not in {"REWORK", "QUARANTINE"}
+                or not source_items[0]["invalidated_candidate_refs"]
+                or not source_items[0]["invalidated_receipt_refs"]
+            ):
+                fail("artifact-invalidating seed requires deep source invalidation")
 
 
 def tracked_files(root: Path):

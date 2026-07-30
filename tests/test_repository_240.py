@@ -124,8 +124,27 @@ def test_amendment_uses_typed_seed_kinds_and_rejects_unrelated_refs():
         text(ROOT / "glk" / "templates" / "GRAPH_AMENDMENT.yaml")
     )
     assert amendment["impact_seeds"] == [
-        {"kind": "CLAIM_OR_OUTPUT", "ref": "GO-002.output"}
+        {"kind": "CANDIDATE", "ref": "candidates/GO-002/v1"}
     ]
+    assert amendment["source_go"] == "GO-002"
+    assert amendment["source_disposition"] == "REWORK"
+    source_item = next(
+        item
+        for item in amendment["impact_slice"]
+        if item["go_id"] == amendment["source_go"]
+    )
+    assert source_item["disposition"] == amendment["source_disposition"]
+    assert source_item["invalidated_candidate_refs"]
+    assert len(source_item["invalidated_receipt_refs"]) == 3
+
+
+def test_seed_kind_sets_minimum_source_disposition_without_widening_descendants():
+    spec = text(ROOT / "SPEC.md")
+    assert "CANDIDATE" in spec and "REWORK" in spec and "QUARANTINE" in spec
+    assert "`REVERIFY` is forbidden" in spec
+    assert "strictest source disposition" in spec
+    assert "D0/D1/D2" in spec
+    assert "do not widen downstream impact" in spec
 
 
 def test_repaired_source_reuses_waiting_active_and_maximal_parallelism():

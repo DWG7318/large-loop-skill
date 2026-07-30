@@ -379,7 +379,8 @@
       "required": [
         "schema_version", "amendment_id", "graph_id", "from_version",
         "to_version", "reason", "causal_trace_ref", "causal_trace_status",
-        "impact_seeds", "before", "after", "affected_claims",
+        "source_go", "source_disposition", "impact_seeds",
+        "before", "after", "affected_claims",
         "active_work_impact", "impact_slice", "invalidated_evidence",
         "invalidated_receipts", "reactivation_projection", "rollback",
         "authority_binding_ref", "issued_at"
@@ -393,6 +394,8 @@
         "reason": {"$ref": "#/$defs/id"},
         "causal_trace_ref": {"$ref": "#/$defs/id"},
         "causal_trace_status": {"const": "CONFIRMED"},
+        "source_go": {"$ref": "#/$defs/id"},
+        "source_disposition": {"enum": ["REVERIFY", "REWORK", "QUARANTINE"]},
         "impact_seeds": {
           "type": "array",
           "items": {"$ref": "#/$defs/impact_seed"},
@@ -422,7 +425,30 @@
         "rollback": {"$ref": "#/$defs/id"},
         "authority_binding_ref": {"$ref": "#/$defs/id"},
         "issued_at": {"$ref": "#/$defs/id"}
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "impact_seeds": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {"enum": ["CANDIDATE", "CLAIM_OR_OUTPUT"]}
+                  },
+                  "required": ["kind"]
+                }
+              }
+            },
+            "required": ["impact_seeds"]
+          },
+          "then": {
+            "properties": {
+              "source_disposition": {"enum": ["REWORK", "QUARANTINE"]}
+            }
+          }
+        }
+      ]
     },
     "formal_resolution": {
       "type": "object",

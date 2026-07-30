@@ -15,6 +15,9 @@
   of inferring causality from reachability.
 - Type amendment seeds as candidate, evidence, or claim/output refs; reject unrelated
   refs and revalidate paths, exclusions, and stopping evidence at application time.
+- Enforce seed-to-source disposition consistency: candidate and claim/output seeds
+  invalidate the current artifact and require rework/quarantine, evidence-only seeds
+  may reverify, and mixed seeds retain the strictest requirement.
 - Project the minimum changed-ref successor slice as `UNAFFECTED`, `REVERIFY`,
   `REWORK`, or `QUARANTINE` while preserving historical receipts append-only.
 - Reuse WAITING_GO/ACTIVE_GO and the maximum-cardinality scheduler so repaired

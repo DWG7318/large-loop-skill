@@ -106,6 +106,20 @@ def test_validator_rejects_schema_invalid_template(tmp_path):
     assert "schema" in (result.stdout + result.stderr).lower()
 
 
+def test_validator_rejects_source_disposition_drift_inside_amendment(tmp_path):
+    root = copy_repo(tmp_path)
+    path = root / "glk" / "templates" / "GRAPH_AMENDMENT.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    source_item = next(
+        item for item in data["impact_slice"] if item["go_id"] == data["source_go"]
+    )
+    source_item["disposition"] = "QUARANTINE"
+    path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    result = run_validator(root)
+    assert result.returncode != 0
+    assert "source disposition" in (result.stdout + result.stderr).lower()
+
+
 def test_validator_requires_versioned_causal_trace_contract(tmp_path):
     root = copy_repo(tmp_path)
     (root / "glk/templates/GO_CAUSAL_TRACE.yaml").unlink()

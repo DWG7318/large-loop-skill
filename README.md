@@ -54,7 +54,9 @@ remain excluded unless separately confirmed; these are annotations, not new node
 types or states. Only a confirmed selected path may invalidate current evidence.
 
 Amendments use typed candidate, evidence, or claim/output seeds and reject unrelated
-refs. After repair, GLK re-projects only the proven impact slice. Historical receipts stay
+refs. Candidate and claim/output seeds require source rework or quarantine; an
+evidence-only seed may reverify, and multiple seeds apply the strictest source rule.
+After repair, GLK re-projects only the proven impact slice. Historical receipts stay
 append-only, unaffected branches remain valid, the source enters `ACTIVE_GO` when
 waiting-clear, and newly unlocked successors reactivate together under the same
 maximum-cardinality scheduler. No schedulable intermediate queue or full-graph

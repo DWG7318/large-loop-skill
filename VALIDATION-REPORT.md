@@ -11,6 +11,7 @@
 - current-candidate/D2-bound causal sources and explicit real symptom sets;
 - incident-evidence-selected paths with excluded alternative edges;
 - typed candidate/evidence/claim-output impact seeds;
+- strict typed-seed to source-disposition and invalidation consistency;
 - minimum descendant invalidation and append-only receipt history;
 - WAITING/ACTIVE maximal-parallel reactivation after repair;
 - D1-before-D2, candidate identity, and context independence;
@@ -26,7 +27,7 @@
 Environment: Windows, Python 3.14, UTF-8 mode enabled.
 
 ```text
-PASS: 74 pytest cases
+PASS: 82 pytest cases
 PASS: repository structure and canonical semantics
 PASS: all 12 templates against Draft 2020-12 Schema
 PASS: hash manifest path and content verification

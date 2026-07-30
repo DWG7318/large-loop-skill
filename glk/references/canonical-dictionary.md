@@ -13,4 +13,6 @@
   source GO, an explicit symptom set, and evidence-selected actual-consumption paths.
 - **Causal impact slice**: minimum successor set whose current candidate or evidence
   validity is affected by typed candidate, evidence, or claim/output seeds.
+- **Seed-disposition invariant**: the strictest typed seed fixes the minimum source
+  disposition; artifact-invalidating seeds cannot reuse the same current artifact.
 - **Loop Owner Acceptance**: immediate product acceptance of this bounded Run.

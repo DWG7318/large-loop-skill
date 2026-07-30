@@ -195,6 +195,45 @@ def test_schema_rejects_untyped_impact_seed_and_unconfirmed_path_step():
         validate_definition(schema, "go_causal_trace", trace)
 
 
+def test_amendment_schema_enforces_seed_to_source_disposition_invariant():
+    schema = load_schema()
+    amendment = yaml.safe_load(
+        (TEMPLATE_DIR / "GRAPH_AMENDMENT.yaml").read_text(encoding="utf-8")
+    )
+    source_item = next(
+        item for item in amendment["impact_slice"] if item["go_id"] == amendment["source_go"]
+    )
+    assert amendment["source_disposition"] == source_item["disposition"]
+
+    amendment["impact_seeds"] = [
+        {"kind": "CANDIDATE", "ref": "candidates/GO-002/v1"}
+    ]
+    amendment["source_disposition"] = "REVERIFY"
+    with pytest.raises(ValidationError):
+        validate_definition(schema, "graph_amendment", amendment)
+
+    amendment["impact_seeds"] = [
+        {"kind": "EVIDENCE", "ref": "evidence/GO-002/v1.json"}
+    ]
+    source_item["disposition"] = "REVERIFY"
+    source_item["invalidated_candidate_refs"] = []
+    source_item["invalidated_receipt_refs"] = ["receipts/D2-GO-002-v1.json"]
+    validate_definition(schema, "graph_amendment", amendment)
+
+    amendment["impact_seeds"] = [
+        {"kind": "EVIDENCE", "ref": "evidence/GO-002/v1.json"},
+        {"kind": "CANDIDATE", "ref": "candidates/GO-002/v1"},
+    ]
+    with pytest.raises(ValidationError):
+        validate_definition(schema, "graph_amendment", amendment)
+
+    amendment["impact_seeds"] = [
+        {"kind": "CLAIM_OR_OUTPUT", "ref": "GO-002.output"}
+    ]
+    with pytest.raises(ValidationError):
+        validate_definition(schema, "graph_amendment", amendment)
+
+
 def test_bootstrap_creates_and_validates_complete_run_workspace(tmp_path):
     target = tmp_path / "run"
     env = os.environ.copy()

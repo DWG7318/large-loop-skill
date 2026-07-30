@@ -40,6 +40,15 @@ edges of an affected GO. Classify every GO as `UNAFFECTED`, `REVERIFY`, `REWORK`
 `QUARANTINE`. Historical candidates and receipts stay append-only while invalidated
 references lose current-validity for the amended graph version.
 
+The seed kind sets a minimum source disposition. `CANDIDATE` requires `REWORK` or
+`QUARANTINE` and removes current-validity from the candidate and its D0/D1/D2
+receipts. `EVIDENCE` may use `REVERIFY` and preserve the candidate plus D1 when only
+verification evidence is stale, or choose deeper treatment. `CLAIM_OR_OUTPUT`
+requires `REWORK` or `QUARANTINE` because a changed claim/output cannot retain the
+same current artifact. With multiple seeds, the strictest requirement wins; a
+weaker evidence seed cannot mask a candidate seed. Downstream dispositions remain
+per-GO evidence decisions and never imply full-graph replay.
+
 ## Reactivation
 
 Re-project only affected GOs. A waiting-clear source enters `ACTIVE_GO` directly;

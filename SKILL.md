@@ -95,6 +95,8 @@ instances without adding role types.
 - reachability alone never confirms a causal path; every selected edge carries
   incident evidence, while alternatives remain explicitly excluded;
 - unrelated amendment seeds fail closed;
+- candidate or claim/output seeds require source REWORK/QUARANTINE; an evidence-only
+  seed may use REVERIFY, and multiple seeds apply the strictest source disposition;
 - historical receipts remain append-only while amended current-validity is explicit;
 - causal recovery invalidates only the proven minimum successor slice;
 - no silent graph, role-binding, candidate, or evidence amendment;

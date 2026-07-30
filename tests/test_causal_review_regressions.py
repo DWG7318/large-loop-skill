@@ -112,6 +112,117 @@ def test_unrelated_typed_seed_is_rejected():
         )
 
 
+def test_candidate_seed_forbids_source_reverify_and_preserves_current_state_on_rejection():
+    m = load_model()
+    graph, trace = completed_two_go_incident(m)
+    with pytest.raises(m.GraphError, match="CANDIDATE seed.*REWORK or QUARANTINE"):
+        graph.apply_causal_amendment(
+            trace,
+            impact_seeds=(m.ImpactSeed(m.SEED_CANDIDATE, "candidate-A-v1"),),
+            dispositions={"A": m.REVERIFY, "B": m.REVERIFY},
+            impact_evidence={
+                "A": ("evidence/A-impact.json",),
+                "B": ("evidence/B-impact.json",),
+            },
+            new_graph_version=2,
+        )
+    require_equal(graph.gos["A"].candidate_id, "candidate-A-v1", "rejected candidate")
+    require_equal(graph.gos["A"].d0_receipt_id, "d0-A", "rejected D0")
+    require_equal(graph.gos["A"].d1_receipt_id, "d1-A", "rejected D1")
+    require_equal(graph.gos["A"].d2_receipt_id, "d2-A", "rejected D2")
+
+
+def test_candidate_seed_cannot_be_weakened_by_evidence_or_output_seed():
+    m = load_model()
+    for companion in (
+        m.ImpactSeed(m.SEED_EVIDENCE, "evidence/root.json"),
+        m.ImpactSeed(m.SEED_CLAIM_OR_OUTPUT, "A.out"),
+    ):
+        graph, trace = completed_two_go_incident(m)
+        with pytest.raises(m.GraphError, match="strictest source disposition"):
+            graph.apply_causal_amendment(
+                trace,
+                impact_seeds=(
+                    m.ImpactSeed(m.SEED_CANDIDATE, "candidate-A-v1"),
+                    companion,
+                ),
+                dispositions={"A": m.REVERIFY, "B": m.REVERIFY},
+                impact_evidence={
+                    "A": ("evidence/A-impact.json",),
+                    "B": ("evidence/B-impact.json",),
+                },
+                new_graph_version=2,
+            )
+
+
+def test_candidate_seed_rework_invalidates_source_candidate_and_all_receipts():
+    m = load_model()
+    graph, trace = completed_two_go_incident(m)
+    projection = graph.apply_causal_amendment(
+        trace,
+        impact_seeds=(m.ImpactSeed(m.SEED_CANDIDATE, "candidate-A-v1"),),
+        dispositions={"A": m.REWORK_IMPACT, "B": m.REVERIFY},
+        impact_evidence={
+            "A": ("evidence/A-impact.json",),
+            "B": ("evidence/B-impact.json",),
+        },
+        new_graph_version=2,
+    )
+    source_item = next(item for item in projection.items if item.go_id == "A")
+    require_equal(
+        source_item.invalidated_candidate_refs,
+        ("candidate-A-v1",),
+        "candidate invalidation",
+    )
+    require_equal(
+        source_item.invalidated_receipt_refs,
+        ("d0-A", "d1-A", "d2-A"),
+        "candidate receipt invalidation",
+    )
+    require_equal(graph.gos["A"].candidate_id, None, "current candidate cleared")
+    require_equal(graph.gos["A"].d0_receipt_id, None, "current D0 cleared")
+    require_equal(graph.gos["A"].d1_receipt_id, None, "current D1 cleared")
+    require_equal(graph.gos["A"].d2_receipt_id, None, "current D2 cleared")
+    require_equal(graph.phase("A"), m.REWORK, "candidate reactivation phase")
+
+
+def test_claim_or_output_seed_forbids_reusing_same_current_source_artifact():
+    m = load_model()
+    graph, trace = completed_two_go_incident(m)
+    with pytest.raises(m.GraphError, match="CLAIM_OR_OUTPUT seed.*current artifact"):
+        graph.apply_causal_amendment(
+            trace,
+            impact_seeds=(m.ImpactSeed(m.SEED_CLAIM_OR_OUTPUT, "A.out"),),
+            dispositions={"A": m.REVERIFY, "B": m.REVERIFY},
+            impact_evidence={
+                "A": ("evidence/A-impact.json",),
+                "B": ("evidence/B-impact.json",),
+            },
+            new_graph_version=2,
+        )
+
+
+def test_evidence_seed_allows_source_reverify_with_candidate_and_d1_preserved():
+    m = load_model()
+    graph, trace = completed_two_go_incident(m)
+    projection = graph.apply_causal_amendment(
+        trace,
+        impact_seeds=(m.ImpactSeed(m.SEED_EVIDENCE, "evidence/root.json"),),
+        dispositions={"A": m.REVERIFY, "B": m.REVERIFY},
+        impact_evidence={
+            "A": ("evidence/A-impact.json",),
+            "B": ("evidence/B-impact.json",),
+        },
+        new_graph_version=2,
+    )
+    source_item = next(item for item in projection.items if item.go_id == "A")
+    require_equal(source_item.invalidated_candidate_refs, (), "evidence candidate validity")
+    require_equal(source_item.invalidated_receipt_refs, ("d2-A",), "evidence receipts")
+    require_equal(graph.gos["A"].candidate_id, "candidate-A-v1", "evidence candidate")
+    require_equal(graph.gos["A"].d1_receipt_id, "d1-A", "evidence D1")
+    require_equal(graph.phase("A"), m.VERIFYING, "evidence reactivation phase")
+
+
 def test_explicit_multiple_symptoms_require_confirmed_paths_to_each_go():
     m = load_model()
     graph = m.GoGraph(

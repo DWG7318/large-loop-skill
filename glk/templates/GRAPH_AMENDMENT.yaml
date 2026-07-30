@@ -6,9 +6,11 @@ to_version: 2
 reason: "Verified implementation evidence invalidated one frozen graph assumption"
 causal_trace_ref: TRACE-001
 causal_trace_status: CONFIRMED
+source_go: GO-002
+source_disposition: REWORK
 impact_seeds:
-  - kind: CLAIM_OR_OUTPUT
-    ref: GO-002.output
+  - kind: CANDIDATE
+    ref: candidates/GO-002/v1
 before:
   nodes: ["GO-001", "GO-002", "GO-003"]
 after:
@@ -24,7 +26,10 @@ impact_slice:
   - go_id: GO-002
     disposition: REWORK
     invalidated_candidate_refs: ["candidates/GO-002/v1"]
-    invalidated_receipt_refs: ["receipts/D2-GO-002-v1.json"]
+    invalidated_receipt_refs:
+      - "receipts/D0-GO-002-v1.json"
+      - "receipts/D1-GO-002-v1.json"
+      - "receipts/D2-GO-002-v1.json"
     evidence_refs: ["evidence/amendments/GA-001/GO-002-impact.json"]
   - go_id: GO-003
     disposition: REVERIFY
@@ -32,7 +37,11 @@ impact_slice:
     invalidated_receipt_refs: ["receipts/D2-GO-003-v1.json"]
     evidence_refs: ["evidence/amendments/GA-001/GO-003-impact.json"]
 invalidated_evidence: ["evidence/GO-002/v1.json", "evidence/GO-003/v1.json"]
-invalidated_receipts: ["receipts/D2-GO-002-v1.json", "receipts/D2-GO-003-v1.json"]
+invalidated_receipts:
+  - "receipts/D0-GO-002-v1.json"
+  - "receipts/D1-GO-002-v1.json"
+  - "receipts/D2-GO-002-v1.json"
+  - "receipts/D2-GO-003-v1.json"
 reactivation_projection:
   waiting_go_ids: ["GO-003"]
   active_go_ids: ["GO-002"]

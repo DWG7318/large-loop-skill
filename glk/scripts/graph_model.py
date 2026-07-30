@@ -436,6 +436,7 @@ class GoGraph:
             self._go(go_id)
             if disposition not in IMPACT_DISPOSITIONS - {UNAFFECTED}:
                 raise GraphError("affected GO requires a non-UNAFFECTED disposition")
+        self._assert_source_seed_disposition(trace, tuple(impact_seeds), dispositions)
         if (
             impact_evidence is None
             or set(impact_evidence) != affected
@@ -504,6 +505,32 @@ class GoGraph:
         self.amendment_history.append(projection)
         self._refresh_active_set()
         return projection
+
+    def _assert_source_seed_disposition(
+        self,
+        trace: GoCausalTrace,
+        impact_seeds: Tuple[ImpactSeed, ...],
+        dispositions: Mapping[str, str],
+    ):
+        source_disposition = dispositions[trace.source_go]
+        seed_kinds = {seed.kind for seed in impact_seeds}
+        if SEED_CANDIDATE in seed_kinds and source_disposition not in {
+            REWORK_IMPACT,
+            QUARANTINE,
+        }:
+            raise GraphError(
+                "strictest source disposition required by CANDIDATE seed is "
+                "REWORK or QUARANTINE"
+            )
+        if (
+            SEED_CLAIM_OR_OUTPUT in seed_kinds
+            and seed_kinds.isdisjoint({SEED_CANDIDATE})
+            and source_disposition not in {REWORK_IMPACT, QUARANTINE}
+        ):
+            raise GraphError(
+                "CLAIM_OR_OUTPUT seed cannot retain the same current artifact; "
+                "source must use REWORK or QUARANTINE"
+            )
 
     def _validate_selected_trace(
         self,
