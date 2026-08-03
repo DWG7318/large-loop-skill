@@ -20,8 +20,12 @@ from provenance import (
     request_digest_for,
 )
 from run_state import (
+    CurrentD2Fact,
+    D3Eligibility,
     GraphStateProjection,
+    RunClosureProjection,
     RunStateError,
+    derive_d3_eligibility,
     go_candidate_sha256_from_mapping,
     manifest_closure_sha256_from_mapping,
     project_graph_state,
@@ -114,6 +118,8 @@ class ValidationReport:
     layers: Tuple[ValidationLayer, ...]
     index_head_sha256: str
     graph_state: GraphStateProjection | None = None
+    d3_eligibility: D3Eligibility | None = None
+    run_closure: RunClosureProjection | None = None
 
 
 @dataclass(frozen=True)
@@ -407,12 +413,12 @@ def _layer_five(records, blocked, add_issue):
                 break
 
 
-def _admitted_target_digests(records, blocked):
+def _admitted_target_records(records, blocked):
     by_digest = {record.digest: record for record in records}
     by_type = {}
     for record in records:
         by_type.setdefault(record.value.get("artifact_type"), []).append(record)
-    admitted_digests = set()
+    admitted = {}
     for admission in by_type.get("SUPERVISOR_ADMISSION", ()):
         value = admission.value
         target = by_digest.get(value.get("admitted_artifact_sha256"))
@@ -431,8 +437,12 @@ def _admitted_target_digests(records, blocked):
             or value.get("candidate_sha256") != target.value.get("candidate_sha256")
         ):
             continue
-        admitted_digests.add(target.digest)
-    return frozenset(admitted_digests)
+        admitted.setdefault(target.digest, []).append(admission)
+    return {digest: tuple(items) for digest, items in admitted.items()}
+
+
+def _admitted_target_digests(records, blocked):
+    return frozenset(_admitted_target_records(records, blocked))
 
 
 def _layer_six(records, blocked, add_issue):
@@ -956,8 +966,343 @@ def _layer_eight(records, blocked, holds, topology, add_issue):
         state = candidate_state
     return state
 
+
+def _latest_record(records):
+    return max(
+        records,
+        key=lambda record: (
+            record.value.get("issued_at", ""),
+            record.artifact_ref,
+            record.digest,
+        ),
+    ) if records else None
+
+
+def _same_exact_members(actual, expected):
+    return (
+        isinstance(actual, (list, tuple))
+        and len(actual) == len(expected)
+        and set(actual) == set(expected)
+    )
+
+
+def _layer_nine(records, blocked, holds, package, topology, graph_state, adapter, add_issue):
+    if topology is None or graph_state is None or not topology.explicit:
+        return None, None
+    by_digest = {record.digest: record for record in records}
+    d2_by_go = {}
+    for go_id in topology.required_go_ids:
+        candidates = [
+            record
+            for record in records
+            if record.value.get("artifact_type") == "D2_RECEIPT"
+            and record.artifact_ref not in blocked
+            and record.value.get("go_id") == go_id
+            and record.value.get("graph_id") == topology.graph_id
+            and record.value.get("graph_version") == topology.graph_version
+        ]
+        current = _latest_record(candidates)
+        if current is not None:
+            d2_by_go[go_id] = current
+    d2_facts = {
+        go_id: CurrentD2Fact(
+            go_id=go_id,
+            artifact_sha256=record.digest,
+            candidate_id=record.value.get("candidate_id", ""),
+            candidate_sha256=record.value.get("candidate_sha256", ""),
+            verifier_binding_ref=record.value.get("issuer_binding_ref", ""),
+            execution_context_ref=record.value.get("execution_context_ref", ""),
+            verdict=record.value.get("verdict", ""),
+        )
+        for go_id, record in d2_by_go.items()
+    }
+    contracts = [
+        record
+        for record in records
+        if record.value.get("artifact_type") == "RUN_CONTRACT" and record.artifact_ref not in blocked
+    ]
+    run_contract = _latest_record(contracts)
+    final_candidate = run_contract.value if run_contract is not None else {}
+    expected_seam_claims = tuple(sorted(f"{edge.source}->{edge.target}" for edge in topology.edges))
+    expected_seam_evidence = tuple(
+        sorted({reference for edge in topology.edges for reference in edge.consumption_evidence_refs})
+    )
+    if not expected_seam_claims:
+        expected_seam_claims = ("GRAPH-SEAMS-EMPTY",)
+    if not expected_seam_evidence:
+        expected_seam_evidence = ("evidence/graph/seams-empty.json",)
+    eligibility = derive_d3_eligibility(
+        topology=topology,
+        graph_state=graph_state,
+        current_d2_by_go=d2_facts,
+        admitted_d2_digests=_admitted_target_digests(records, blocked),
+        final_candidate=final_candidate,
+        graph_seam_claims=expected_seam_claims,
+        graph_seam_evidence_refs=expected_seam_evidence,
+    )
+
+    d3_candidates = [
+        record
+        for record in records
+        if record.value.get("artifact_type") == "D3_RECEIPT" and record.artifact_ref not in blocked
+    ]
+    current_d3 = _latest_record(d3_candidates)
+    if current_d3 is None:
+        return eligibility, None
+    d3 = current_d3.value
+    if holds:
+        add_issue("R17_D3_ACTIVE_HOLD", 9, current_d3, ",".join(sorted(holds)), block=True)
+    if not _same_exact_members(d3.get("required_go_ids"), eligibility.required_go_ids):
+        add_issue(
+            "R17_D3_REQUIRED_GO_SET_MISMATCH",
+            9,
+            current_d3,
+            "D3 required GO set differs from the current graph",
+            block=True,
+        )
+    if not _same_exact_members(
+        d3.get("admitted_d2_artifact_sha256s"),
+        eligibility.admitted_d2_artifact_sha256s,
+    ):
+        add_issue(
+            "R17_D3_D2_SET_MISMATCH",
+            9,
+            current_d3,
+            "D3 does not consume the exact current admitted D2 set",
+            block=True,
+        )
+    if (
+        d3.get("graph_id") != eligibility.graph_id
+        or d3.get("graph_version") != eligibility.graph_version
+        or d3.get("graph_sha256") != eligibility.graph_sha256
+    ):
+        add_issue(
+            "R17_D3_GRAPH_DIGEST_MISMATCH",
+            9,
+            current_d3,
+            "D3 graph identity, version, or digest is stale or forged",
+            block=True,
+        )
+    indexed_evidence = {
+        entry.get("path")
+        for entry in package.index_chain[-1].get("evidence_objects", ())
+        if isinstance(entry, Mapping)
+    }
+    if (
+        not _same_exact_members(d3.get("graph_seam_claims"), eligibility.graph_seam_claims)
+        or not _same_exact_members(d3.get("graph_seam_evidence_refs"), eligibility.graph_seam_evidence_refs)
+        or not set(eligibility.graph_seam_evidence_refs).issubset(indexed_evidence)
+    ):
+        add_issue(
+            "R17_D3_GRAPH_SEAM_EVIDENCE_MISSING",
+            9,
+            current_d3,
+            "D3 graph-seam claims and indexed evidence are incomplete",
+            block=True,
+        )
+    if (
+        d3.get("candidate_id") != eligibility.final_candidate_id
+        or d3.get("candidate_sha256") != eligibility.final_candidate_sha256
+    ):
+        add_issue(
+            "R17_D3_FINAL_CANDIDATE_MISMATCH",
+            9,
+            current_d3,
+            "D3 final Run candidate differs from the Run contract",
+            block=True,
+        )
+    verifier_bindings = {
+        record.value.get("role_binding_id")
+        for record in records
+        if record.value.get("artifact_type") == "ROLE_BINDING"
+        and record.artifact_ref not in blocked
+        and record.value.get("role_type") == "RUN_VERIFIER"
+    }
+    if d3.get("issuer_binding_ref") not in verifier_bindings:
+        add_issue(
+            "R18_RUN_VERIFIER_BINDING_INVALID",
+            9,
+            current_d3,
+            "D3 issuer is not the current Run Verifier binding",
+            block=True,
+        )
+    consumed_contexts = {record.value.get("execution_context_ref") for record in d2_by_go.values()}
+    consumed_bindings = {record.value.get("issuer_binding_ref") for record in d2_by_go.values()}
+    for d2_record in d2_by_go.values():
+        for selected in d2_record.value.get("required_cell_tuples", ()):
+            d1_record = by_digest.get(selected.get("d1_artifact_sha256"))
+            if d1_record is not None:
+                consumed_contexts.add(d1_record.value.get("execution_context_ref"))
+                consumed_bindings.add(d1_record.value.get("issuer_binding_ref"))
+    run_verifier_binding = d3.get("issuer_binding_ref")
+    free_string_collision = (
+        d3.get("execution_context_ref") in consumed_contexts
+        or run_verifier_binding in consumed_bindings
+    )
+    if free_string_collision:
+        add_issue(
+            "R18_RUN_VERIFIER_ISOLATION_INVALID",
+            9,
+            current_d3,
+            "Run Verifier context collides with consumed GO Verifier or Checker context",
+            block=True,
+        )
+    else:
+        request = _signed_request(
+            VerifyIsolationRequest,
+            adapter_contract_version=ADAPTER_CONTRACT_VERSION,
+            binding_ref=run_verifier_binding,
+            run_id=d3.get("run_id", ""),
+            scope=_scope(current_d3),
+            artifact_sha256=current_d3.digest,
+            binding_refs=(run_verifier_binding, *tuple(sorted(consumed_bindings))),
+            required_dimensions=(
+                "conversation",
+                "context",
+                "workspace",
+                "runtime_state",
+                "evidence_root",
+                "decision_input",
+            ),
+        )
+        try:
+            ProvenanceEvaluator(adapter).evaluate_isolation(request)
+        except ProvenanceError as error:
+            add_issue(
+                "R18_RUN_VERIFIER_ISOLATION_INVALID",
+                9,
+                current_d3,
+                error.detail,
+                block=True,
+            )
+    return eligibility, current_d3
+
+
+def _layer_ten(records, blocked, eligibility, current_d3, add_issue):
+    if eligibility is None:
+        return None
+    admitted = _admitted_target_records(records, blocked)
+    d3_admitted = current_d3 is not None and current_d3.digest in admitted
+    owners = [
+        record
+        for record in records
+        if record.value.get("artifact_type") == "OWNER_ACCEPTANCE" and record.artifact_ref not in blocked
+    ]
+    owner = _latest_record(owners)
+    owner_valid = False
+    bounded_index_sha256 = None
+    if owner is not None:
+        bounded_index_sha256 = owner.value.get("package_index_sha256")
+        if not eligibility.eligible or (current_d3 is not None and current_d3.artifact_ref in blocked):
+            add_issue(
+                "R18_D3_NOT_ELIGIBLE",
+                10,
+                owner,
+                "Owner Acceptance requires a mechanically eligible D3 input closure",
+                block=True,
+            )
+        elif current_d3 is None or owner.value.get("admitted_d3_artifact_sha256") != current_d3.digest:
+            add_issue(
+                "R18_OWNER_D3_REFERENCE_INVALID",
+                10,
+                owner,
+                "Owner Acceptance does not consume the exact current D3",
+                block=True,
+            )
+        elif current_d3.value.get("verdict") != "D3_PASS":
+            add_issue("R18_D3_NOT_PASS", 10, owner, "Owner cannot accept D3 FAIL or BLOCKED", block=True)
+        elif not d3_admitted:
+            add_issue(
+                "R18_D3_ADMISSION_REQUIRED",
+                10,
+                owner,
+                "Owner Acceptance requires an exact ADMITTED current D3",
+                block=True,
+            )
+        elif (
+            owner.value.get("candidate_id") != current_d3.value.get("candidate_id")
+            or owner.value.get("candidate_sha256") != current_d3.value.get("candidate_sha256")
+        ):
+            add_issue(
+                "R18_OWNER_D3_REFERENCE_INVALID",
+                10,
+                owner,
+                "Owner candidate differs from current D3",
+                block=True,
+            )
+        else:
+            index_record = next(
+                (
+                    record
+                    for record in records
+                    if record.digest == bounded_index_sha256
+                    and record.value.get("artifact_type") == "RUN_PACKAGE_INDEX"
+                ),
+                None,
+            )
+            bounded_digests = {
+                entry.get("sha256")
+                for entry in index_record.value.get("formal_artifacts", ())
+                if isinstance(entry, Mapping)
+            } if index_record is not None else set()
+            admission_digests = {record.digest for record in admitted.get(current_d3.digest, ())}
+            if (
+                index_record is None
+                or current_d3.digest not in bounded_digests
+                or not admission_digests
+                or not admission_digests.issubset(bounded_digests)
+            ):
+                add_issue(
+                    "R18_OWNER_PACKAGE_BOUNDARY_INVALID",
+                    10,
+                    owner,
+                    "Owner Acceptance package boundary does not contain current D3 and admission",
+                    block=True,
+                )
+            else:
+                owner_valid = True
+
+    security_records = [
+        record
+        for record in records
+        if record.value.get("artifact_type") == "SECURITY_HANDOFF" and record.artifact_ref not in blocked
+    ]
+    security = _latest_record(security_records)
+    if security is not None:
+        if (
+            not owner_valid
+            or owner.value.get("owner_verdict") != "LOOP_OWNER_ACCEPTED"
+            or security.value.get("owner_acceptance_sha256") != owner.digest
+        ):
+            add_issue(
+                "R19_SECURITY_HANDOFF_PREMATURE",
+                10,
+                security,
+                "security handoff requires exact accepted Owner Acceptance",
+                block=True,
+            )
+        if security.value.get("status") != "PENDING_LCCODING_AUDIT":
+            add_issue(
+                "R19_SECURITY_STATUS_FORBIDDEN",
+                10,
+                security,
+                "GLK cannot assert that the LCCoding security audit passed",
+                block=True,
+            )
+    return RunClosureProjection(
+        d3_eligible=eligibility.eligible,
+        current_d3_sha256=current_d3.digest if current_d3 is not None else None,
+        d3_admitted=d3_admitted,
+        owner_acceptance_sha256=owner.digest if owner is not None else None,
+        owner_verdict=owner.value.get("owner_verdict") if owner is not None else None,
+        bounded_index_sha256=bounded_index_sha256,
+        security_handoff_sha256=security.digest if security is not None else None,
+        security_status=security.value.get("status") if security is not None else None,
+        lccoding_security_accepted=False,
+    )
+
 def validate_loaded_run(package, adapter):
-    """Derive a frozen eight-layer report from one already integrity-checked package."""
+    """Derive a frozen ten-layer report from one already integrity-checked package."""
     records = _records(package)
     issues = []
     blocked = set()
@@ -986,6 +1331,23 @@ def validate_loaded_run(package, adapter):
     _layer_six(records, blocked, add_issue)
     topology, _ = _layer_seven(records, blocked, add_issue)
     graph_state = _layer_eight(records, blocked, holds, topology, add_issue)
+    d3_eligibility, current_d3 = _layer_nine(
+        records,
+        blocked,
+        holds,
+        package,
+        topology,
+        graph_state,
+        adapter,
+        add_issue,
+    )
+    run_closure = _layer_ten(
+        records,
+        blocked,
+        d3_eligibility,
+        current_d3,
+        add_issue,
+    )
 
     ordered = tuple(sorted(issues, key=lambda issue: (issue.layer, issue.artifact_ref, issue.code)))
     layers = tuple(
@@ -994,7 +1356,7 @@ def validate_loaded_run(package, adapter):
             status="FAIL" if any(issue.layer == layer for issue in ordered) else "PASS",
             issue_count=sum(1 for issue in ordered if issue.layer == layer),
         )
-        for layer in range(1, 9)
+        for layer in range(1, 11)
     )
     return ValidationReport(
         status="FAIL" if ordered else "PASS",
@@ -1003,4 +1365,6 @@ def validate_loaded_run(package, adapter):
         layers=layers,
         index_head_sha256=package.index_head_sha256,
         graph_state=graph_state,
+        d3_eligibility=d3_eligibility,
+        run_closure=run_closure,
     )

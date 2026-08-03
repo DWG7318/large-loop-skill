@@ -185,6 +185,46 @@ class GraphStateProjection:
     applied_event_ids: Tuple[str, ...]
 
 
+@dataclass(frozen=True, order=True)
+class CurrentD2Fact:
+    go_id: str
+    artifact_sha256: str
+    candidate_id: str
+    candidate_sha256: str
+    verifier_binding_ref: str
+    execution_context_ref: str
+    verdict: str
+
+
+@dataclass(frozen=True)
+class D3Eligibility:
+    eligible: bool
+    required_go_ids: Tuple[str, ...]
+    admitted_d2_artifact_sha256s: Tuple[str, ...]
+    graph_id: str
+    graph_version: int
+    graph_sha256: str
+    applied_graph_event_ids: Tuple[str, ...]
+    final_candidate_id: str
+    final_candidate_sha256: str
+    graph_seam_claims: Tuple[str, ...]
+    graph_seam_evidence_refs: Tuple[str, ...]
+    failure_codes: Tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class RunClosureProjection:
+    d3_eligible: bool
+    current_d3_sha256: str | None
+    d3_admitted: bool
+    owner_acceptance_sha256: str | None
+    owner_verdict: str | None
+    bounded_index_sha256: str | None
+    security_handoff_sha256: str | None
+    security_status: str | None
+    lccoding_security_accepted: bool
+
+
 def _required_text(value, code: str, label: str):
     if not isinstance(value, str) or not value:
         raise RunStateError(code, f"{label} is required")
@@ -588,6 +628,88 @@ def project_graph_state(topology, verified_go_ids=(), applied_event_ids=()):
         waiting_go_ids=waiting,
         active_go_ids=active,
         applied_event_ids=tuple(applied_event_ids),
+    )
+
+
+def derive_d3_eligibility(
+    topology,
+    graph_state,
+    current_d2_by_go,
+    admitted_d2_digests,
+    final_candidate,
+    graph_seam_claims,
+    graph_seam_evidence_refs,
+):
+    """Derive immutable D3 input facts without issuing or interpreting a verdict."""
+    if not isinstance(topology, FrozenGraphTopology) or not isinstance(graph_state, GraphStateProjection):
+        raise RunStateError("D3_ELIGIBILITY_INPUT_INVALID", "current graph facts are required")
+    if not isinstance(current_d2_by_go, Mapping):
+        raise RunStateError("D3_ELIGIBILITY_INPUT_INVALID", "current_d2_by_go must be a mapping")
+    required = topology.required_go_ids
+    failures = set()
+    facts = {}
+    for go_id, fact in current_d2_by_go.items():
+        if not isinstance(fact, CurrentD2Fact) or fact.go_id != go_id:
+            raise RunStateError("D3_ELIGIBILITY_INPUT_INVALID", str(go_id))
+        facts[go_id] = fact
+    if set(facts) != set(required):
+        failures.add("R17_D3_REQUIRED_GO_SET_MISMATCH")
+    if not set(required).issubset(graph_state.verified_go_ids):
+        failures.add("R17_D3_GRAPH_EVENTS_INCOMPLETE")
+    if graph_state.graph_sha256 != topology.graph_sha256:
+        failures.add("R17_D3_GRAPH_DIGEST_MISMATCH")
+
+    admitted = set(admitted_d2_digests)
+    selected_digests = []
+    for go_id in required:
+        fact = facts.get(go_id)
+        if fact is None:
+            continue
+        selected_digests.append(fact.artifact_sha256)
+        if fact.verdict != "D2_PASS" or fact.artifact_sha256 not in admitted:
+            failures.add("R17_D3_D2_SET_MISMATCH")
+    if len(selected_digests) != len(required):
+        failures.add("R17_D3_D2_SET_MISMATCH")
+
+    candidate_id = _value(final_candidate, "candidate_id")
+    candidate_sha256 = _value(final_candidate, "candidate_sha256")
+    try:
+        _required_text(candidate_id, "D3_FINAL_CANDIDATE_INVALID", "candidate_id")
+        _required_hash(candidate_sha256, "D3_FINAL_CANDIDATE_INVALID", "candidate_sha256")
+    except RunStateError:
+        failures.add("D3_FINAL_CANDIDATE_INVALID")
+        candidate_id = candidate_id or ""
+        candidate_sha256 = candidate_sha256 or ""
+    try:
+        seam_claims = _sorted_texts(
+            tuple(graph_seam_claims),
+            "R17_D3_GRAPH_SEAM_EVIDENCE_MISSING",
+            "graph_seam_claims",
+            allow_empty=False,
+        )
+        seam_evidence = _sorted_texts(
+            tuple(graph_seam_evidence_refs),
+            "R17_D3_GRAPH_SEAM_EVIDENCE_MISSING",
+            "graph_seam_evidence_refs",
+            allow_empty=False,
+        )
+    except RunStateError:
+        failures.add("R17_D3_GRAPH_SEAM_EVIDENCE_MISSING")
+        seam_claims = ()
+        seam_evidence = ()
+    return D3Eligibility(
+        eligible=not failures,
+        required_go_ids=required,
+        admitted_d2_artifact_sha256s=tuple(selected_digests),
+        graph_id=topology.graph_id,
+        graph_version=topology.graph_version,
+        graph_sha256=topology.graph_sha256,
+        applied_graph_event_ids=graph_state.applied_event_ids,
+        final_candidate_id=candidate_id,
+        final_candidate_sha256=candidate_sha256,
+        graph_seam_claims=seam_claims,
+        graph_seam_evidence_refs=seam_evidence,
+        failure_codes=tuple(sorted(failures)),
     )
 
 
