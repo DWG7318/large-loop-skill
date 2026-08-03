@@ -224,6 +224,10 @@ class Go:
     d0_receipt_id: Optional[str] = None
     d1_receipt_id: Optional[str] = None
     d2_receipt_id: Optional[str] = None
+    d2_receipt_sha256: Optional[str] = None
+    d2_admission_id: Optional[str] = None
+    admitted_d2_sha256: Optional[str] = None
+    graph_event_id: Optional[str] = None
     checker_context_ref: Optional[str] = None
     verifier_context_ref: Optional[str] = None
     reactivation_phase: Optional[str] = None
@@ -497,6 +501,10 @@ class GoGraph:
             go.phase = None
             go.waiting = []
             go.d2_receipt_id = None
+            go.d2_receipt_sha256 = None
+            go.d2_admission_id = None
+            go.admitted_d2_sha256 = None
+            go.graph_event_id = None
             go.verifier_context_ref = None
             if disposition == REVERIFY:
                 go.reactivation_phase = VERIFYING
@@ -812,6 +820,10 @@ class GoGraph:
         go.d0_receipt_id = d0_receipt_id
         go.d1_receipt_id = None
         go.d2_receipt_id = None
+        go.d2_receipt_sha256 = None
+        go.d2_admission_id = None
+        go.admitted_d2_sha256 = None
+        go.graph_event_id = None
         go.checker_context_ref = None
         go.verifier_context_ref = None
         go.go_candidate_closure_sha256 = None
@@ -863,6 +875,75 @@ class GoGraph:
             raise GraphError("GO Verifier must be independent from the Checker")
         go.d2_receipt_id = d2_receipt_id
         go.verifier_context_ref = verifier_context_ref
+        go.state = GO_VERIFIED
+        go.phase = None
+        go.waiting = []
+        self._refresh_active_set()
+
+    def record_d2_verdict(
+        self,
+        go_id: str,
+        candidate_id: str,
+        d2_receipt_id: str,
+        d2_receipt_sha256: str,
+        verifier_context_ref: str,
+        go_candidate_closure_sha256: Optional[str] = None,
+    ):
+        """Record a formal 3.0 D2 verdict without applying graph control."""
+        go = self._go(go_id)
+        if not go.d1_receipt_id:
+            raise GraphError("D2 requires a valid D1 PASS receipt")
+        self._require_active_phase(go, {VERIFYING})
+        self._require_candidate(go, candidate_id)
+        if go.required_cell_ids:
+            if not go.go_candidate_closure_sha256:
+                raise GraphError("D2 requires a current exact GO candidate closure")
+            if go_candidate_closure_sha256 != go.go_candidate_closure_sha256:
+                raise GraphError("D2 must bind the current exact GO candidate closure")
+        if not d2_receipt_id or not verifier_context_ref:
+            raise GraphError("D2 receipt and GO Verifier context are required")
+        if verifier_context_ref == go.checker_context_ref:
+            raise GraphError("GO Verifier must be independent from the Checker")
+        if (
+            not isinstance(d2_receipt_sha256, str)
+            or len(d2_receipt_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in d2_receipt_sha256)
+        ):
+            raise GraphError("D2 receipt sha256 is required")
+        go.d2_receipt_id = d2_receipt_id
+        go.d2_receipt_sha256 = d2_receipt_sha256
+        go.verifier_context_ref = verifier_context_ref
+        go.d2_admission_id = None
+        go.admitted_d2_sha256 = None
+        go.graph_event_id = None
+
+    def admit_d2(self, go_id: str, d2_receipt_sha256: str, admission_id: str):
+        """Mechanically bind one exact D2 digest without changing GO state."""
+        go = self._go(go_id)
+        self._require_active_phase(go, {VERIFYING})
+        if not admission_id or d2_receipt_sha256 != go.d2_receipt_sha256:
+            raise GraphError("D2 admission must bind the exact current D2 digest")
+        go.d2_admission_id = admission_id
+        go.admitted_d2_sha256 = d2_receipt_sha256
+
+    def apply_d2_graph_event(
+        self,
+        go_id: str,
+        d2_receipt_sha256: str,
+        admission_id: str,
+        graph_event_id: str,
+    ):
+        """Apply successor release only after exact D2 admission and a distinct event."""
+        go = self._go(go_id)
+        self._require_active_phase(go, {VERIFYING})
+        if (
+            not graph_event_id
+            or admission_id != go.d2_admission_id
+            or d2_receipt_sha256 != go.admitted_d2_sha256
+            or d2_receipt_sha256 != go.d2_receipt_sha256
+        ):
+            raise GraphError("graph event requires the exact admitted current D2")
+        go.graph_event_id = graph_event_id
         go.state = GO_VERIFIED
         go.phase = None
         go.waiting = []

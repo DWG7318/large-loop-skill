@@ -20,8 +20,12 @@ from provenance import (
     request_digest_for,
 )
 from run_state import (
+    GraphStateProjection,
+    RunStateError,
     go_candidate_sha256_from_mapping,
     manifest_closure_sha256_from_mapping,
+    project_graph_state,
+    recompute_graph_topology,
 )
 
 
@@ -109,6 +113,7 @@ class ValidationReport:
     holds: Tuple[str, ...]
     layers: Tuple[ValidationLayer, ...]
     index_head_sha256: str
+    graph_state: GraphStateProjection | None = None
 
 
 @dataclass(frozen=True)
@@ -402,12 +407,11 @@ def _layer_five(records, blocked, add_issue):
                 break
 
 
-def _layer_six(records, blocked, add_issue):
+def _admitted_target_digests(records, blocked):
     by_digest = {record.digest: record for record in records}
     by_type = {}
     for record in records:
         by_type.setdefault(record.value.get("artifact_type"), []).append(record)
-
     admitted_digests = set()
     for admission in by_type.get("SUPERVISOR_ADMISSION", ()):
         value = admission.value
@@ -428,6 +432,15 @@ def _layer_six(records, blocked, add_issue):
         ):
             continue
         admitted_digests.add(target.digest)
+    return frozenset(admitted_digests)
+
+
+def _layer_six(records, blocked, add_issue):
+    by_digest = {record.digest: record for record in records}
+    by_type = {}
+    for record in records:
+        by_type.setdefault(record.value.get("artifact_type"), []).append(record)
+    admitted_digests = _admitted_target_digests(records, blocked)
 
     manifests_by_go = {}
     for record in by_type.get("CELL_MANIFEST", ()):
@@ -679,8 +692,272 @@ def _layer_six(records, blocked, add_issue):
                 code = "R28_SUPERSEDED_CLOSURE_FOR_D2" if has_superseded_generation else "R14_CELL_TUPLE_SET_MISMATCH"
                 add_issue(code, 6, d2_record, "D2 does not consume the exact current D1 tuple set", block=True)
 
+
+def _layer_seven(records, blocked, add_issue):
+    baselines = [
+        record
+        for record in records
+        if record.value.get("artifact_type") == "GRAPH_BASELINE" and record.artifact_ref not in blocked
+    ]
+    if not baselines:
+        return None, None
+    if len(baselines) != 1:
+        current = min(baselines, key=lambda record: (record.artifact_ref, record.digest))
+        add_issue("GRAPH_BASELINE_CARDINALITY_INVALID", 7, current, "exactly one current graph baseline is required", block=True)
+        return None, current
+    current = baselines[0]
+    fallback_go_ids = tuple(
+        sorted(
+            {
+                record.value.get("go_id")
+                for record in records
+                if record.value.get("artifact_type") == "CELL_MANIFEST" and record.value.get("go_id")
+            }
+        )
+    )
+    try:
+        topology = recompute_graph_topology(current.value, fallback_go_ids=fallback_go_ids)
+    except RunStateError as error:
+        add_issue(error.code, 7, current, error.detail, block=True)
+        return None, current
+
+    node_ids = {node.go_id for node in topology.nodes}
+    artifact_go_ids = {
+        record.value.get("go_id")
+        for record in records
+        if record.value.get("artifact_type") in {"CELL_MANIFEST", "GO_CANDIDATE_CLOSURE", "D2_RECEIPT"}
+        and record.value.get("go_id")
+        and record.artifact_ref not in blocked
+    }
+    if not artifact_go_ids.issubset(node_ids):
+        add_issue(
+            "GRAPH_GO_ARTIFACT_COVERAGE_INVALID",
+            7,
+            current,
+            "a GO-scoped artifact is outside the current graph",
+            block=True,
+        )
+        return None, current
+    if topology.explicit and current.value.get("candidate_sha256") != topology.graph_sha256:
+        add_issue("GRAPH_DIGEST_MISMATCH", 7, current, "baseline candidate does not bind the recomputed graph", block=True)
+        return None, current
+
+    initial = project_graph_state(topology)
+    if topology.explicit and (
+        tuple(current.value.get("waiting_go_ids", ())) != initial.waiting_go_ids
+        or tuple(current.value.get("active_go_ids", ())) != initial.active_go_ids
+    ):
+        add_issue(
+            "GRAPH_BASELINE_STATE_MISMATCH",
+            7,
+            current,
+            "self-reported WAITING/ACTIVE sets differ from recomputation",
+            block=True,
+        )
+        return None, current
+    return topology, current
+
+
+def _ordered_graph_events(events, add_issue):
+    if not events:
+        return ()
+    event_digests = {record.digest for record in events}
+    roots = []
+    children = {}
+    for record in events:
+        prior = record.value.get("prior_event_sha256")
+        if prior is None:
+            roots.append(record)
+            continue
+        if prior not in event_digests:
+            add_issue("GRAPH_EVENT_CHAIN_INVALID", 8, record, "prior graph event is unresolved", block=True)
+            return None
+        children.setdefault(prior, []).append(record)
+    if len(roots) != 1 or any(len(items) != 1 for items in children.values()):
+        representative = min(events, key=lambda record: (record.artifact_ref, record.digest))
+        add_issue("GRAPH_EVENT_CHAIN_INVALID", 8, representative, "graph event ledger has multiple roots or a fork", block=True)
+        return None
+    ordered = []
+    current = roots[0]
+    visited = set()
+    while current is not None:
+        if current.digest in visited:
+            add_issue("GRAPH_EVENT_CHAIN_INVALID", 8, current, "graph event ledger contains a cycle", block=True)
+            return None
+        visited.add(current.digest)
+        ordered.append(current)
+        descendants = children.get(current.digest, ())
+        current = descendants[0] if descendants else None
+    if visited != event_digests:
+        representative = min(events, key=lambda record: (record.artifact_ref, record.digest))
+        add_issue("GRAPH_EVENT_CHAIN_INVALID", 8, representative, "graph event ledger is disconnected", block=True)
+        return None
+    return tuple(ordered)
+
+
+def _layer_eight(records, blocked, holds, topology, add_issue):
+    if topology is None:
+        return None
+    state = project_graph_state(topology)
+    if not topology.explicit:
+        return state
+
+    by_digest = {record.digest: record for record in records}
+    events = [
+        record
+        for record in records
+        if record.value.get("artifact_type") == "GRAPH_EVENT" and record.artifact_ref not in blocked
+    ]
+    ordered_events = _ordered_graph_events(events, add_issue)
+    if ordered_events is None:
+        return state
+    if holds and ordered_events:
+        add_issue("GRAPH_EVENT_HOLD_ACTIVE", 8, ordered_events[0], ",".join(sorted(holds)), block=True)
+        return state
+
+    d2_records = [
+        record
+        for record in records
+        if record.value.get("artifact_type") == "D2_RECEIPT"
+        and record.artifact_ref not in blocked
+        and record.value.get("graph_id") == topology.graph_id
+        and record.value.get("graph_version") == topology.graph_version
+    ]
+    current_d2_by_go = {}
+    for record in d2_records:
+        go_id = record.value.get("go_id")
+        existing = current_d2_by_go.get(go_id)
+        if existing is None or (
+            record.value.get("issued_at", ""),
+            record.artifact_ref,
+            record.digest,
+        ) > (
+            existing.value.get("issued_at", ""),
+            existing.artifact_ref,
+            existing.digest,
+        ):
+            current_d2_by_go[go_id] = record
+    admitted_digests = _admitted_target_digests(records, blocked)
+    node_by_id = {node.go_id: node for node in topology.nodes}
+    verified = set()
+    applied_event_ids = []
+
+    for event_record in ordered_events:
+        event = event_record.value
+        if (
+            event.get("run_id") != topology.run_id
+            or event.get("graph_id") != topology.graph_id
+            or event.get("graph_version") != topology.graph_version
+            or event.get("candidate_id") != topology.baseline_candidate_id
+            or event.get("candidate_sha256") != topology.graph_sha256
+        ):
+            add_issue(
+                "GRAPH_EVENT_GRAPH_BINDING_INVALID",
+                8,
+                event_record,
+                "graph event does not bind the current graph identity, version, and digest",
+                block=True,
+            )
+            continue
+        trigger = by_digest.get(event.get("trigger_artifact_sha256"))
+        if (
+            trigger is None
+            or trigger.artifact_ref in blocked
+            or trigger.value.get("artifact_type") != "D2_RECEIPT"
+            or event.get("trigger_artifact_ref") != trigger.relative_path
+            or event.get("event_type") != "SUCCESSOR_RELEASE"
+            or trigger.value.get("verdict") != "D2_PASS"
+        ):
+            add_issue(
+                "GRAPH_EVENT_TRIGGER_INVALID",
+                8,
+                event_record,
+                "successor release requires one exact D2 PASS trigger",
+                block=True,
+            )
+            continue
+        go_id = trigger.value.get("go_id")
+        if current_d2_by_go.get(go_id) is not trigger:
+            add_issue(
+                "GRAPH_EVENT_STALE_GENERATION",
+                8,
+                event_record,
+                "graph event targets a superseded D2 generation",
+                block=True,
+            )
+            continue
+        if trigger.digest not in admitted_digests:
+            add_issue(
+                "GRAPH_EVENT_D2_ADMISSION_REQUIRED",
+                8,
+                event_record,
+                "successor release requires an exact ADMITTED D2",
+                block=True,
+            )
+            continue
+        if go_id not in node_by_id or go_id in verified or go_id not in state.active_go_ids:
+            add_issue(
+                "GRAPH_EVENT_RELEASE_INVALID",
+                8,
+                event_record,
+                "graph event targets an unknown, waiting, or already released GO",
+                block=True,
+            )
+            continue
+        node = node_by_id[go_id]
+        if (
+            trigger.value.get("go_claim_sha256") != node.go_claim_sha256
+            or trigger.value.get("acceptance_contract_sha256") != node.acceptance_contract_sha256
+        ):
+            add_issue(
+                "D2_GO_CONTRACT_MISMATCH",
+                8,
+                trigger,
+                "D2 claim or acceptance digest differs from the current GO contract",
+                block=True,
+            )
+            continue
+        selected_d1 = [
+            by_digest.get(item.get("d1_artifact_sha256"))
+            for item in trigger.value.get("required_cell_tuples", ())
+        ]
+        if any(
+            record is None
+            or record.value.get("artifact_type") != "D1_RECEIPT"
+            or record.value.get("execution_context_ref") == trigger.value.get("execution_context_ref")
+            for record in selected_d1
+        ):
+            add_issue(
+                "D2_VERIFIER_ISOLATION_INVALID",
+                8,
+                trigger,
+                "GO Verifier context is not isolated from every consumed Checker D1",
+                block=True,
+            )
+            continue
+
+        candidate_verified = verified | {go_id}
+        candidate_event_ids = tuple(applied_event_ids + [event.get("event_id")])
+        candidate_state = project_graph_state(topology, candidate_verified, candidate_event_ids)
+        if (
+            tuple(event.get("waiting_go_ids", ())) != candidate_state.waiting_go_ids
+            or tuple(event.get("active_go_ids", ())) != candidate_state.active_go_ids
+        ):
+            add_issue(
+                "GRAPH_EVENT_PROJECTION_MISMATCH",
+                8,
+                event_record,
+                "event WAITING/ACTIVE claims differ from maximal-safe recomputation",
+                block=True,
+            )
+            continue
+        verified = candidate_verified
+        applied_event_ids.append(event.get("event_id"))
+        state = candidate_state
+    return state
+
 def validate_loaded_run(package, adapter):
-    """Derive a frozen six-layer report from one already integrity-checked package."""
+    """Derive a frozen eight-layer report from one already integrity-checked package."""
     records = _records(package)
     issues = []
     blocked = set()
@@ -707,6 +984,8 @@ def validate_loaded_run(package, adapter):
     _layer_four(records, blocked, adapter, add_issue, holds)
     _layer_five(records, blocked, add_issue)
     _layer_six(records, blocked, add_issue)
+    topology, _ = _layer_seven(records, blocked, add_issue)
+    graph_state = _layer_eight(records, blocked, holds, topology, add_issue)
 
     ordered = tuple(sorted(issues, key=lambda issue: (issue.layer, issue.artifact_ref, issue.code)))
     layers = tuple(
@@ -715,7 +994,7 @@ def validate_loaded_run(package, adapter):
             status="FAIL" if any(issue.layer == layer for issue in ordered) else "PASS",
             issue_count=sum(1 for issue in ordered if issue.layer == layer),
         )
-        for layer in range(1, 7)
+        for layer in range(1, 9)
     )
     return ValidationReport(
         status="FAIL" if ordered else "PASS",
@@ -723,4 +1002,5 @@ def validate_loaded_run(package, adapter):
         holds=tuple(sorted(holds)),
         layers=layers,
         index_head_sha256=package.index_head_sha256,
+        graph_state=graph_state,
     )
