@@ -1,13 +1,16 @@
-schema_version: 2.4.0
+schema_version: 3.0.0
+artifact_type: OWNER_ACCEPTANCE
+artifact_id: OWNER-ACCEPTANCE-RUN-001-V1
 run_id: RUN-001
-candidate_id: CANDIDATE-RUN-001
-candidate_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
-entry_points: ["README.md"]
-roles: ["Run Supervisor", "Worker", "Checker", "GO Verifier", "Run Verifier", "Owner"]
-steps: ["Exercise the frozen Run Feature"]
-expected_visible_outcomes: ["The Run Feature behaves as accepted"]
-known_limitations: ["Project-wide security closure remains outside GLK"]
-d3_covered_invisible_risks: ["Graph seam composition"]
-owner_binding_ref: ROLE-OWNER-RUN-001
-owner_verdict: PENDING
-issued_at: "1970-01-01T00:00:00Z"
+graph_id: GRAPH-RUN-001
+graph_version: 1
+candidate_id: CANDIDATE-RUN-001-V1
+candidate_sha256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+issuer_binding_ref: ROLE-OWNER-RUN-001
+execution_context_ref: CONTEXT-OWNER-RUN-001
+evidence_refs: ["evidence/RUN-001/owner-acceptance-v1.json"]
+provenance_ref: attestations/OWNER-ACCEPTANCE-RUN-001-V1.json
+issued_at: "2026-08-03T01:15:00Z"
+admitted_d3_artifact_sha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeec"
+package_index_sha256: "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc"
+owner_verdict: LOOP_OWNER_ACCEPTED

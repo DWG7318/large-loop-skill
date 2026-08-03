@@ -1,9 +1,18 @@
-schema_version: 2.4.0
+schema_version: 3.0.0
+artifact_type: SECURITY_HANDOFF
+artifact_id: SECURITY-HANDOFF-RUN-001-V1
 run_id: RUN-001
-candidate_id: CANDIDATE-RUN-001
-candidate_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+graph_id: GRAPH-RUN-001
+graph_version: 1
+candidate_id: CANDIDATE-RUN-001-V1
+candidate_sha256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+issuer_binding_ref: ROLE-RUN-001-SUPERVISOR
+execution_context_ref: CONTEXT-RUN-001-SUPERVISOR
+evidence_refs: ["evidence/RUN-001/security-handoff-v1.json"]
+provenance_ref: attestations/SECURITY-HANDOFF-RUN-001-V1.json
+issued_at: "2026-08-03T01:16:00Z"
+owner_acceptance_sha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed"
 scope: ["Run-local accepted candidate for centralized project audit"]
 required_auditor_binding: LCCODING-SECURITY-AUDITOR
 status: PENDING_LCCODING_AUDIT
 post_security_acceptance_requirement: true
-issued_at: "1970-01-01T00:00:00Z"

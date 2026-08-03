@@ -1,0 +1,24 @@
+schema_version: 3.0.0
+artifact_type: GO_CANDIDATE_CLOSURE
+artifact_id: GO-CANDIDATE-CLOSURE-GO-001-V1
+run_id: RUN-001
+graph_id: GRAPH-RUN-001
+graph_version: 1
+candidate_id: CANDIDATE-GO-001-V1
+candidate_sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+issuer_binding_ref: ROLE-WORKER-GO-001
+execution_context_ref: CONTEXT-WORKER-GO-001
+evidence_refs: ["evidence/GO-001/candidate-closure-v1.json"]
+provenance_ref: attestations/GO-CANDIDATE-CLOSURE-GO-001-V1.json
+issued_at: "2026-08-03T01:07:00Z"
+go_id: GO-001
+manifest_id: CELL-MANIFEST-GO-001
+manifest_version: 1
+manifest_closure_sha256: "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddda"
+selected_cells:
+  - cell_id: CELL-001
+    candidate_id: CANDIDATE-CELL-001-V1
+    candidate_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaf"
+    d0_artifact_sha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeea"
+    d1_artifact_sha256: "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa"
+go_candidate_generation: 1

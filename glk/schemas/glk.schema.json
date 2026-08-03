@@ -16,6 +16,41 @@
       "items": {"type": "string", "minLength": 1},
       "uniqueItems": true
     },
+    "non_empty_string_array_300": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "utc_timestamp_300": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?!1970-01-01T00:00:00Z$)[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$"
+    },
+    "artifact_envelope_300": {
+      "type": "object",
+      "required": [
+        "schema_version", "artifact_type", "artifact_id", "run_id",
+        "graph_id", "graph_version", "candidate_id", "candidate_sha256",
+        "issuer_binding_ref", "execution_context_ref", "evidence_refs",
+        "provenance_ref", "issued_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "3.0.0"},
+        "artifact_type": {"$ref": "#/$defs/id"},
+        "artifact_id": {"$ref": "#/$defs/id"},
+        "run_id": {"$ref": "#/$defs/id"},
+        "graph_id": {"$ref": "#/$defs/id"},
+        "graph_version": {"type": "integer", "minimum": 1},
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "candidate_sha256": {"$ref": "#/$defs/hash"},
+        "issuer_binding_ref": {"$ref": "#/$defs/id"},
+        "execution_context_ref": {"$ref": "#/$defs/id"},
+        "evidence_refs": {"$ref": "#/$defs/string_array"},
+        "provenance_ref": {"$ref": "#/$defs/id"},
+        "issued_at": {"$ref": "#/$defs/utc_timestamp_300"}
+      }
+    },
     "dependency_edge": {
       "type": "object",
       "additionalProperties": false,
@@ -99,7 +134,7 @@
         "evidence_refs": {"$ref": "#/$defs/string_array"}
       }
     },
-    "role_binding": {
+    "role_binding_240_historical": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -123,6 +158,37 @@
         "evidence_root": {"$ref": "#/$defs/id"},
         "created_at": {"$ref": "#/$defs/id"}
       }
+    },
+    "role_binding_300": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "role_binding_id", "role_type", "instance_id", "capability_profile_id",
+        "conversation_ref", "workspace_ref", "evidence_root"
+      ],
+      "properties": {
+        "artifact_type": {"const": "ROLE_BINDING"},
+        "role_binding_id": {"$ref": "#/$defs/id"},
+        "role_type": {
+          "enum": [
+            "RUN_SUPERVISOR", "WORKER", "CHECKER",
+            "GO_VERIFIER", "RUN_VERIFIER", "OWNER"
+          ]
+        },
+        "go_id": {"type": ["string", "null"]},
+        "instance_id": {"$ref": "#/$defs/id"},
+        "capability_profile_id": {"$ref": "#/$defs/id"},
+        "conversation_ref": {"$ref": "#/$defs/id"},
+        "workspace_ref": {"$ref": "#/$defs/id"},
+        "evidence_root": {"$ref": "#/$defs/id"}
+      }
+    },
+    "role_binding": {
+      "oneOf": [
+        {"$ref": "#/$defs/role_binding_240_historical"},
+        {"$ref": "#/$defs/role_binding_300"}
+      ]
     },
     "waiting_reason": {
       "type": "object",
@@ -467,7 +533,399 @@
         "issued_at": {"$ref": "#/$defs/id"}
       }
     },
-    "owner_acceptance": {
+    "glk_method_lock": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "canonical_repository", "invocation", "commit_sha", "release_tag",
+        "method_version", "schema_bundle_sha256", "skill_package_sha256",
+        "validator_version", "validator_sha256", "adapter_profile_id",
+        "adapter_contract_version"
+      ],
+      "properties": {
+        "artifact_type": {"const": "GLK_METHOD_LOCK"},
+        "canonical_repository": {"const": "https://github.com/DWG7318/large-loop-skill"},
+        "invocation": {"const": "graph-loop-skill"},
+        "commit_sha": {"$ref": "#/$defs/hash"},
+        "release_tag": {"const": "v3.0.0"},
+        "method_version": {"const": "3.0.0"},
+        "schema_bundle_sha256": {"$ref": "#/$defs/hash"},
+        "skill_package_sha256": {"$ref": "#/$defs/hash"},
+        "validator_version": {"const": "3.0.0"},
+        "validator_sha256": {"$ref": "#/$defs/hash"},
+        "adapter_profile_id": {"$ref": "#/$defs/id"},
+        "adapter_contract_version": {"const": "1.0"}
+      }
+    },
+    "provenance_adapter_profile": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "profile_id", "adapter_contract_version", "allowed_operations",
+        "trust_root_refs", "technical_verdicts_forbidden"
+      ],
+      "properties": {
+        "artifact_type": {"const": "PROVENANCE_ADAPTER_PROFILE"},
+        "profile_id": {"$ref": "#/$defs/id"},
+        "adapter_contract_version": {"const": "1.0"},
+        "allowed_operations": {
+          "const": [
+            "resolve_binding", "verify_issuance",
+            "verify_isolation", "check_liveness"
+          ]
+        },
+        "trust_root_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "technical_verdicts_forbidden": {"const": true}
+      }
+    },
+    "cell_manifest_entry_300": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cell_id", "cell_contract_sha256", "required"],
+      "properties": {
+        "cell_id": {"$ref": "#/$defs/id"},
+        "cell_contract_sha256": {"$ref": "#/$defs/hash"},
+        "required": {"type": "boolean"}
+      }
+    },
+    "cell_manifest": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "manifest_id", "manifest_version", "go_id", "go_contract_sha256",
+        "required_cells", "closure_sha256", "prior_manifest_sha256"
+      ],
+      "properties": {
+        "artifact_type": {"const": "CELL_MANIFEST"},
+        "manifest_id": {"$ref": "#/$defs/id"},
+        "manifest_version": {"type": "integer", "minimum": 1},
+        "go_id": {"$ref": "#/$defs/id"},
+        "go_contract_sha256": {"$ref": "#/$defs/hash"},
+        "required_cells": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/cell_manifest_entry_300"},
+          "minItems": 1
+        },
+        "closure_sha256": {"$ref": "#/$defs/hash"},
+        "prior_manifest_sha256": {
+          "oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]
+        }
+      }
+    },
+    "cell_manifest_amendment": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "manifest_id", "manifest_version", "prior_manifest_sha256",
+        "change_kind", "changed_cell_ids", "authority_evidence_refs"
+      ],
+      "properties": {
+        "artifact_type": {"const": "CELL_MANIFEST_AMENDMENT"},
+        "manifest_id": {"$ref": "#/$defs/id"},
+        "manifest_version": {"type": "integer", "minimum": 2},
+        "prior_manifest_sha256": {"$ref": "#/$defs/hash"},
+        "change_kind": {"enum": ["ADD_CELL", "REMOVE_CELL", "REPLACE_CONTRACT"]},
+        "changed_cell_ids": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "authority_evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"}
+      }
+    },
+    "d0_receipt": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "go_id", "cell_id", "manifest_id", "manifest_version",
+        "manifest_closure_sha256", "cell_contract_sha256", "outcome",
+        "dispatch_admission_refs"
+      ],
+      "properties": {
+        "artifact_type": {"const": "D0_RECEIPT"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "cell_id": {"$ref": "#/$defs/id"},
+        "manifest_id": {"$ref": "#/$defs/id"},
+        "manifest_version": {"type": "integer", "minimum": 1},
+        "manifest_closure_sha256": {"$ref": "#/$defs/hash"},
+        "cell_contract_sha256": {"$ref": "#/$defs/hash"},
+        "outcome": {"enum": ["D0_PASS", "D0_FAIL", "D0_BLOCKED"]},
+        "dispatch_admission_refs": {"$ref": "#/$defs/non_empty_string_array_300"}
+      }
+    },
+    "d1_receipt": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "go_id", "cell_id", "manifest_id", "manifest_version",
+        "manifest_closure_sha256", "cell_contract_sha256",
+        "d0_artifact_sha256", "verdict"
+      ],
+      "properties": {
+        "artifact_type": {"const": "D1_RECEIPT"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "cell_id": {"$ref": "#/$defs/id"},
+        "manifest_id": {"$ref": "#/$defs/id"},
+        "manifest_version": {"type": "integer", "minimum": 1},
+        "manifest_closure_sha256": {"$ref": "#/$defs/hash"},
+        "cell_contract_sha256": {"$ref": "#/$defs/hash"},
+        "d0_artifact_sha256": {"$ref": "#/$defs/hash"},
+        "verdict": {"enum": ["D1_PASS", "D1_FAIL", "D1_BLOCKED"]}
+      }
+    },
+    "selected_cell_300": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cell_id", "candidate_id", "candidate_sha256",
+        "d0_artifact_sha256", "d1_artifact_sha256"
+      ],
+      "properties": {
+        "cell_id": {"$ref": "#/$defs/id"},
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "candidate_sha256": {"$ref": "#/$defs/hash"},
+        "d0_artifact_sha256": {"$ref": "#/$defs/hash"},
+        "d1_artifact_sha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "go_candidate_closure": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "go_id", "manifest_id", "manifest_version", "manifest_closure_sha256",
+        "selected_cells", "go_candidate_generation"
+      ],
+      "properties": {
+        "artifact_type": {"const": "GO_CANDIDATE_CLOSURE"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "manifest_id": {"$ref": "#/$defs/id"},
+        "manifest_version": {"type": "integer", "minimum": 1},
+        "manifest_closure_sha256": {"$ref": "#/$defs/hash"},
+        "selected_cells": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/selected_cell_300"},
+          "minItems": 1
+        },
+        "go_candidate_generation": {"type": "integer", "minimum": 1}
+      }
+    },
+    "supervisor_admission": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "admission_id", "admitted_artifact_ref", "admitted_artifact_sha256",
+        "validator_version", "validator_sha256", "validation_report_sha256",
+        "package_index_sha256", "decision", "failure_codes"
+      ],
+      "properties": {
+        "artifact_type": {"const": "SUPERVISOR_ADMISSION"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "admission_id": {"$ref": "#/$defs/id"},
+        "admitted_artifact_ref": {"$ref": "#/$defs/id"},
+        "admitted_artifact_sha256": {"$ref": "#/$defs/hash"},
+        "validator_version": {"$ref": "#/$defs/id"},
+        "validator_sha256": {"$ref": "#/$defs/hash"},
+        "validation_report_sha256": {"$ref": "#/$defs/hash"},
+        "package_index_sha256": {"$ref": "#/$defs/hash"},
+        "decision": {"enum": ["ADMITTED", "REJECTED"]},
+        "failure_codes": {"$ref": "#/$defs/string_array"}
+      }
+    },
+    "preflight_admission": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "preflight_id", "validation_report_sha256", "preflight_report_sha256",
+        "simulation_report_sha256", "decision", "failure_codes"
+      ],
+      "properties": {
+        "artifact_type": {"const": "PREFLIGHT_ADMISSION"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "preflight_id": {"$ref": "#/$defs/id"},
+        "validation_report_sha256": {"$ref": "#/$defs/hash"},
+        "preflight_report_sha256": {"$ref": "#/$defs/hash"},
+        "simulation_report_sha256": {"$ref": "#/$defs/hash"},
+        "decision": {"enum": ["PREFLIGHT_ADMITTED", "PREFLIGHT_REJECTED"]},
+        "failure_codes": {"$ref": "#/$defs/string_array"}
+      }
+    },
+    "indexed_object_300": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/id"},
+        "sha256": {"$ref": "#/$defs/hash"},
+        "artifact_type": {"$ref": "#/$defs/id"}
+      }
+    },
+    "run_package_index": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "index_id", "index_version", "prior_index_sha256",
+        "formal_artifacts", "evidence_objects", "ledger_heads"
+      ],
+      "properties": {
+        "artifact_type": {"const": "RUN_PACKAGE_INDEX"},
+        "index_id": {"$ref": "#/$defs/id"},
+        "index_version": {"type": "integer", "minimum": 1},
+        "prior_index_sha256": {
+          "oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]
+        },
+        "formal_artifacts": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/indexed_object_300"},
+          "minItems": 1
+        },
+        "evidence_objects": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/indexed_object_300"},
+          "minItems": 1
+        },
+        "ledger_heads": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"$ref": "#/$defs/hash"}
+        }
+      }
+    },
+    "d2_receipt": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "go_id", "go_candidate_closure_sha256", "manifest_id",
+        "manifest_version", "manifest_closure_sha256", "required_cell_tuples",
+        "go_claim_sha256", "acceptance_contract_sha256", "verdict"
+      ],
+      "properties": {
+        "artifact_type": {"const": "D2_RECEIPT"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "go_candidate_closure_sha256": {"$ref": "#/$defs/hash"},
+        "manifest_id": {"$ref": "#/$defs/id"},
+        "manifest_version": {"type": "integer", "minimum": 1},
+        "manifest_closure_sha256": {"$ref": "#/$defs/hash"},
+        "required_cell_tuples": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/selected_cell_300"},
+          "minItems": 1
+        },
+        "go_claim_sha256": {"$ref": "#/$defs/hash"},
+        "acceptance_contract_sha256": {"$ref": "#/$defs/hash"},
+        "verdict": {"enum": ["D2_PASS", "D2_FAIL", "D2_BLOCKED"]}
+      }
+    },
+    "graph_event": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "event_id", "event_type", "trigger_artifact_ref",
+        "trigger_artifact_sha256", "prior_event_sha256",
+        "waiting_go_ids", "active_go_ids"
+      ],
+      "properties": {
+        "artifact_type": {"const": "GRAPH_EVENT"},
+        "event_id": {"$ref": "#/$defs/id"},
+        "event_type": {
+          "enum": [
+            "SUCCESSOR_RELEASE", "WAITING_REASON_ADDED",
+            "WAITING_REASON_REMOVED", "ACTIVE_SET_RECOMPUTED",
+            "RUN_HOLD", "FORMAL_RESOLUTION_RECORDED",
+            "GRAPH_AMENDMENT_RECORDED", "EVIDENCE_INVALIDATED",
+            "GO_REACTIVATED"
+          ]
+        },
+        "trigger_artifact_ref": {"$ref": "#/$defs/id"},
+        "trigger_artifact_sha256": {"$ref": "#/$defs/hash"},
+        "prior_event_sha256": {
+          "oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]
+        },
+        "waiting_go_ids": {"$ref": "#/$defs/string_array"},
+        "active_go_ids": {"$ref": "#/$defs/string_array"}
+      }
+    },
+    "monitor_control": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "monitor_id", "monitor_version", "prior_monitor_sha256", "monitor_key",
+        "supervisor_task_ref", "callback_target", "observation_deadline",
+        "liveness_attestation_refs", "monitor_state"
+      ],
+      "properties": {
+        "artifact_type": {"const": "MONITOR_CONTROL"},
+        "monitor_id": {"$ref": "#/$defs/id"},
+        "monitor_version": {"type": "integer", "minimum": 1},
+        "prior_monitor_sha256": {
+          "oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]
+        },
+        "monitor_key": {"$ref": "#/$defs/id"},
+        "supervisor_task_ref": {"$ref": "#/$defs/id"},
+        "callback_target": {"$ref": "#/$defs/id"},
+        "observation_deadline": {"$ref": "#/$defs/utc_timestamp_300"},
+        "liveness_attestation_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "monitor_state": {"enum": ["MONITOR_ACTIVE", "MONITOR_HELD", "MONITOR_CLOSED"]}
+      }
+    },
+    "d3_receipt": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "required_go_ids", "admitted_d2_artifact_sha256s", "graph_sha256",
+        "graph_seam_claims", "graph_seam_evidence_refs", "run_feature_sha256",
+        "acceptance_claim_sha256", "verdict"
+      ],
+      "properties": {
+        "artifact_type": {"const": "D3_RECEIPT"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "required_go_ids": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "admitted_d2_artifact_sha256s": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/hash"},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "graph_sha256": {"$ref": "#/$defs/hash"},
+        "graph_seam_claims": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "graph_seam_evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "run_feature_sha256": {"$ref": "#/$defs/hash"},
+        "acceptance_claim_sha256": {"$ref": "#/$defs/hash"},
+        "verdict": {"enum": ["D3_PASS", "D3_FAIL", "D3_BLOCKED"]}
+      }
+    },
+    "owner_acceptance_300": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "admitted_d3_artifact_sha256", "package_index_sha256", "owner_verdict"
+      ],
+      "properties": {
+        "artifact_type": {"const": "OWNER_ACCEPTANCE"},
+        "admitted_d3_artifact_sha256": {"$ref": "#/$defs/hash"},
+        "package_index_sha256": {"$ref": "#/$defs/hash"},
+        "owner_verdict": {
+          "enum": [
+            "LOOP_OWNER_ACCEPTED", "LOOP_PRODUCT_REWORK",
+            "PRODUCT_DEFINITION_CHANGE", "NEW_FEATURE_REQUEST"
+          ]
+        }
+      }
+    },
+    "owner_acceptance_240_historical": {
       "type": "object",
       "additionalProperties": false,
       "required": ["schema_version", "run_id", "candidate_id", "candidate_sha256", "entry_points", "roles", "steps", "expected_visible_outcomes", "known_limitations", "d3_covered_invisible_risks", "owner_binding_ref", "owner_verdict", "issued_at"],
@@ -487,7 +945,30 @@
         "issued_at": {"$ref": "#/$defs/id"}
       }
     },
-    "security_handoff": {
+    "owner_acceptance": {
+      "oneOf": [
+        {"$ref": "#/$defs/owner_acceptance_240_historical"},
+        {"$ref": "#/$defs/owner_acceptance_300"}
+      ]
+    },
+    "security_handoff_300": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "owner_acceptance_sha256", "scope", "required_auditor_binding",
+        "status", "post_security_acceptance_requirement"
+      ],
+      "properties": {
+        "artifact_type": {"const": "SECURITY_HANDOFF"},
+        "owner_acceptance_sha256": {"$ref": "#/$defs/hash"},
+        "scope": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "required_auditor_binding": {"$ref": "#/$defs/id"},
+        "status": {"enum": ["PENDING_LCCODING_AUDIT", "ACCEPTED_BY_LCCODING"]},
+        "post_security_acceptance_requirement": {"const": true}
+      }
+    },
+    "security_handoff_240_historical": {
       "type": "object",
       "additionalProperties": false,
       "required": ["schema_version", "run_id", "candidate_id", "candidate_sha256", "scope", "required_auditor_binding", "status", "post_security_acceptance_requirement", "issued_at"],
@@ -502,6 +983,12 @@
         "post_security_acceptance_requirement": {"const": true},
         "issued_at": {"$ref": "#/$defs/id"}
       }
+    },
+    "security_handoff": {
+      "oneOf": [
+        {"$ref": "#/$defs/security_handoff_240_historical"},
+        {"$ref": "#/$defs/security_handoff_300"}
+      ]
     }
   }
 }

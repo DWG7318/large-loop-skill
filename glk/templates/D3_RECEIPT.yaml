@@ -1,0 +1,22 @@
+schema_version: 3.0.0
+artifact_type: D3_RECEIPT
+artifact_id: D3-RUN-001-V1
+run_id: RUN-001
+graph_id: GRAPH-RUN-001
+graph_version: 1
+candidate_id: CANDIDATE-RUN-001-V1
+candidate_sha256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+issuer_binding_ref: ROLE-RUN-VERIFIER-RUN-001
+execution_context_ref: CONTEXT-RUN-VERIFIER-RUN-001
+evidence_refs: ["evidence/RUN-001/d3-v1.json"]
+provenance_ref: attestations/D3-RUN-001-V1.json
+issued_at: "2026-08-03T01:14:00Z"
+required_go_ids: ["GO-001"]
+admitted_d2_artifact_sha256s:
+  - "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeb"
+graph_sha256: "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+graph_seam_claims: ["GRAPH-SEAMS-COMPLETE"]
+graph_seam_evidence_refs: ["evidence/RUN-001/graph-seams.json"]
+run_feature_sha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+acceptance_claim_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+verdict: D3_PASS

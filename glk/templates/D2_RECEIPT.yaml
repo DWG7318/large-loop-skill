@@ -1,0 +1,27 @@
+schema_version: 3.0.0
+artifact_type: D2_RECEIPT
+artifact_id: D2-GO-001-V1
+run_id: RUN-001
+graph_id: GRAPH-RUN-001
+graph_version: 1
+candidate_id: CANDIDATE-GO-001-V1
+candidate_sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+issuer_binding_ref: ROLE-GO-VERIFIER-GO-001
+execution_context_ref: CONTEXT-GO-VERIFIER-GO-001
+evidence_refs: ["evidence/GO-001/d2-v1.json"]
+provenance_ref: attestations/D2-GO-001-V1.json
+issued_at: "2026-08-03T01:11:00Z"
+go_id: GO-001
+go_candidate_closure_sha256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccb"
+manifest_id: CELL-MANIFEST-GO-001
+manifest_version: 1
+manifest_closure_sha256: "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddda"
+required_cell_tuples:
+  - cell_id: CELL-001
+    candidate_id: CANDIDATE-CELL-001-V1
+    candidate_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaf"
+    d0_artifact_sha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeea"
+    d1_artifact_sha256: "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa"
+go_claim_sha256: "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddb"
+acceptance_contract_sha256: "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddc"
+verdict: D2_PASS
