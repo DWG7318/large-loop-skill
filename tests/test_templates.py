@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -234,7 +235,7 @@ def test_amendment_schema_enforces_seed_to_source_disposition_invariant():
         validate_definition(schema, "graph_amendment", amendment)
 
 
-def test_bootstrap_creates_and_validates_complete_run_workspace(tmp_path):
+def test_bootstrap_creates_only_an_incomplete_draft_scaffold(tmp_path):
     target = tmp_path / "run"
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
@@ -247,8 +248,25 @@ def test_bootstrap_creates_and_validates_complete_run_workspace(tmp_path):
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "PASS" in result.stdout
-    for filename in TEMPLATES:
-        assert (target / "contracts" / filename).exists()
-    for dirname in ["candidates", "evidence", "receipts", "amendments"]:
-        assert (target / dirname).is_dir()
+    output = json.loads(result.stdout)
+    assert output["status"] == "DRAFT_SCAFFOLD"
+    assert output["formal_execution_eligible"] is False
+    assert not {"PASS", "READY", "ACCEPTED"} & set(json.dumps(output).split())
+    draft_path = target / "draft" / "DRAFT_SCAFFOLD.json"
+    draft = json.loads(draft_path.read_text(encoding="utf-8"))
+    assert draft["state"] == "DRAFT_SCAFFOLD"
+    assert draft["run_id"] == "UNRESOLVED"
+    assert draft["graph_id"] == "UNRESOLVED"
+    assert draft["formal_execution_eligible"] is False
+    assert not any((target / "contracts").glob("*"))
+    assert not any((target / "indexes").glob("*"))
+    formal_roots = {
+        "contracts", "bindings", "graph", "manifests", "closures", "receipts",
+        "admissions", "indexes", "events", "controls", "acceptance", "handoffs",
+        "attestations",
+    }
+    assert all((target / root).is_dir() for root in formal_roots)
+    serialized = json.dumps(draft, sort_keys=True)
+    assert "1970-01-01T00:00:00Z" not in serialized
+    assert re.search(r"\b[0-9a-f]{64}\b", serialized) is None
+    assert not any(token in serialized for token in ('"PASS"', '"READY"', '"ACCEPTED"'))
