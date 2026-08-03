@@ -19,6 +19,10 @@ from provenance import (
     VerifyIssuanceRequest,
     request_digest_for,
 )
+from run_state import (
+    go_candidate_sha256_from_mapping,
+    manifest_closure_sha256_from_mapping,
+)
 
 
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schemas" / "glk.schema.json"
@@ -111,6 +115,7 @@ class ValidationReport:
 class _ArtifactRecord:
     digest: str
     value: Mapping
+    relative_path: str | None = None
 
     @property
     def artifact_ref(self):
@@ -143,11 +148,17 @@ def _records(package):
     )
     if any(not hasattr(package, field) for field in required):
         raise TypeError("incomplete LoadedRunPackage")
+    head = package.index_chain[-1]
+    path_by_digest = {
+        entry.get("sha256"): entry.get("path")
+        for entry in head.get("formal_artifacts", ())
+        if isinstance(entry, Mapping)
+    }
     records = []
     for digest, value in package.artifacts_by_digest.items():
         if not isinstance(digest, str) or len(digest) != 64 or not isinstance(value, Mapping):
             raise TypeError("invalid immutable package subject")
-        records.append(_ArtifactRecord(digest=digest, value=value))
+        records.append(_ArtifactRecord(digest=digest, value=value, relative_path=path_by_digest.get(digest)))
     return tuple(sorted(records, key=lambda record: (record.artifact_ref, record.digest)))
 
 
@@ -391,8 +402,285 @@ def _layer_five(records, blocked, add_issue):
                 break
 
 
+def _layer_six(records, blocked, add_issue):
+    by_digest = {record.digest: record for record in records}
+    by_type = {}
+    for record in records:
+        by_type.setdefault(record.value.get("artifact_type"), []).append(record)
+
+    admitted_digests = set()
+    for admission in by_type.get("SUPERVISOR_ADMISSION", ()):
+        value = admission.value
+        target = by_digest.get(value.get("admitted_artifact_sha256"))
+        target_ref = value.get("admitted_artifact_ref")
+        if (
+            admission.artifact_ref in blocked
+            or value.get("decision") != "ADMITTED"
+            or target is None
+            or target.artifact_ref in blocked
+            or not isinstance(target_ref, str)
+            or target_ref != target.relative_path
+            or value.get("run_id") != target.value.get("run_id")
+            or value.get("graph_id") != target.value.get("graph_id")
+            or value.get("graph_version") != target.value.get("graph_version")
+            or value.get("candidate_id") != target.value.get("candidate_id")
+            or value.get("candidate_sha256") != target.value.get("candidate_sha256")
+        ):
+            continue
+        admitted_digests.add(target.digest)
+
+    manifests_by_go = {}
+    for record in by_type.get("CELL_MANIFEST", ()):
+        if record.artifact_ref not in blocked:
+            manifests_by_go.setdefault(record.value.get("go_id"), []).append(record)
+
+    for go_id, manifest_records in sorted(manifests_by_go.items(), key=lambda item: str(item[0])):
+        manifest_identities = {}
+        for record in manifest_records:
+            identity = (record.value.get("manifest_id"), record.value.get("manifest_version"))
+            manifest_identities.setdefault(identity, []).append(record)
+        forked = [
+            candidates
+            for candidates in manifest_identities.values()
+            if len({candidate.digest for candidate in candidates}) > 1
+        ]
+        if forked:
+            for candidates in sorted(
+                forked,
+                key=lambda items: (
+                    str(items[0].value.get("manifest_id")),
+                    str(items[0].value.get("manifest_version")),
+                ),
+            ):
+                representative = min(candidates, key=lambda record: (record.artifact_ref, record.digest))
+                add_issue(
+                    "CELL_MANIFEST_FORK",
+                    6,
+                    representative,
+                    "multiple manifest digests claim the same manifest identity and version",
+                    block=True,
+                )
+            continue
+        current = max(
+            manifest_records,
+            key=lambda record: (record.value.get("manifest_version", 0), record.value.get("issued_at", ""), record.artifact_ref),
+        )
+        manifest = current.value
+        version = manifest.get("manifest_version")
+        expected_manifest_hash = manifest_closure_sha256_from_mapping(manifest)
+        if manifest.get("closure_sha256") != expected_manifest_hash:
+            add_issue(
+                "R16_MANIFEST_CLOSURE_HASH_INVALID",
+                6,
+                current,
+                "CELL manifest closure_sha256 does not match canonical fields",
+                block=True,
+            )
+            continue
+
+        if version == 1:
+            if manifest.get("prior_manifest_sha256") is not None:
+                add_issue("R15_UNAMENDED_MANIFEST_CHANGE", 6, current, "version 1 has prior manifest", block=True)
+                continue
+        elif isinstance(version, int) and version > 1:
+            prior_digest = manifest.get("prior_manifest_sha256")
+            prior = by_digest.get(prior_digest)
+            amendments = [
+                record
+                for record in by_type.get("CELL_MANIFEST_AMENDMENT", ())
+                if record.artifact_ref not in blocked
+                and record.value.get("manifest_id") == manifest.get("manifest_id")
+                and record.value.get("manifest_version") == version
+                and record.value.get("prior_manifest_sha256") == prior_digest
+            ]
+            if (
+                prior is None
+                or prior.value.get("artifact_type") != "CELL_MANIFEST"
+                or prior.value.get("go_id") != go_id
+                or prior.value.get("manifest_version") != version - 1
+                or not amendments
+            ):
+                add_issue(
+                    "R15_UNAMENDED_MANIFEST_CHANGE",
+                    6,
+                    current,
+                    "manifest version lacks exact prior manifest and frozen amendment",
+                    block=True,
+                )
+                continue
+
+        required_entries = [entry for entry in manifest.get("required_cells", ()) if entry.get("required")]
+        required_ids = tuple(sorted(entry.get("cell_id") for entry in required_entries))
+        if not required_ids or len(set(required_ids)) != len(required_ids):
+            add_issue("R14_CELL_TUPLE_SET_MISMATCH", 6, current, "required CELL registry is empty or duplicated", block=True)
+            continue
+        contracts = {entry.get("cell_id"): entry.get("cell_contract_sha256") for entry in required_entries}
+
+        scoped_d1 = [
+            record
+            for record in by_type.get("D1_RECEIPT", ())
+            if record.artifact_ref not in blocked
+            and record.value.get("go_id") == go_id
+            and record.value.get("manifest_id") == manifest.get("manifest_id")
+            and record.value.get("manifest_version") == version
+        ]
+        wrong_manifest_d1 = [
+            record for record in scoped_d1 if record.value.get("manifest_closure_sha256") != manifest.get("closure_sha256")
+        ]
+        if wrong_manifest_d1:
+            for record in wrong_manifest_d1:
+                add_issue(
+                    "R16_D1_FUTURE_CLOSURE_BINDING",
+                    6,
+                    record,
+                    "D1 must bind the current manifest, never a later GO closure",
+                    block=True,
+                )
+            continue
+
+        latest_d1 = {}
+        for record in scoped_d1:
+            cell_id = record.value.get("cell_id")
+            existing = latest_d1.get(cell_id)
+            if existing is None or (
+                record.value.get("issued_at", ""),
+                record.artifact_ref,
+                record.digest,
+            ) > (
+                existing.value.get("issued_at", ""),
+                existing.artifact_ref,
+                existing.digest,
+            ):
+                latest_d1[cell_id] = record
+
+        expected_tuples = {}
+        missing_d1_admission = set()
+        missing_d0_admission = set()
+        for cell_id, d1_record in latest_d1.items():
+            d1 = d1_record.value
+            if d1_record.digest not in admitted_digests:
+                missing_d1_admission.add(cell_id)
+                continue
+            d0_record = by_digest.get(d1.get("d0_artifact_sha256"))
+            if d0_record is None or d0_record.artifact_ref in blocked or d0_record.value.get("artifact_type") != "D0_RECEIPT":
+                continue
+            if d0_record.digest not in admitted_digests:
+                missing_d0_admission.add(cell_id)
+                continue
+            d0 = d0_record.value
+            if (
+                cell_id not in contracts
+                or d0.get("cell_id") != cell_id
+                or d0.get("manifest_id") != manifest.get("manifest_id")
+                or d0.get("manifest_version") != version
+                or d0.get("manifest_closure_sha256") != manifest.get("closure_sha256")
+                or d0.get("cell_contract_sha256") != contracts[cell_id]
+                or d1.get("cell_contract_sha256") != contracts[cell_id]
+                or d0.get("candidate_id") != d1.get("candidate_id")
+                or d0.get("candidate_sha256") != d1.get("candidate_sha256")
+                or d0.get("outcome") != "D0_PASS"
+                or d1.get("verdict") != "D1_PASS"
+            ):
+                continue
+            expected_tuples[cell_id] = {
+                "cell_id": cell_id,
+                "candidate_id": d0.get("candidate_id"),
+                "candidate_sha256": d0.get("candidate_sha256"),
+                "d0_artifact_sha256": d0_record.digest,
+                "d1_artifact_sha256": d1_record.digest,
+            }
+
+        d2_records = [
+            record
+            for record in by_type.get("D2_RECEIPT", ())
+            if record.artifact_ref not in blocked and record.value.get("go_id") == go_id
+        ]
+        for d2_record in d2_records:
+            if missing_d1_admission:
+                add_issue(
+                    "R13_D1_ADMISSION_REQUIRED",
+                    6,
+                    d2_record,
+                    "D2 requires an exact ADMITTED Supervisor admission for every current D1",
+                    block=True,
+                )
+                continue
+            if missing_d0_admission:
+                add_issue(
+                    "R13_D0_ADMISSION_REQUIRED",
+                    6,
+                    d2_record,
+                    "D2 requires an exact ADMITTED Supervisor admission for every current D0",
+                    block=True,
+                )
+                continue
+            if set(expected_tuples) != set(required_ids):
+                add_issue(
+                    "R13_PREMATURE_D2_INCOMPLETE_D1_SET",
+                    6,
+                    d2_record,
+                    "D2 requires one current D1 PASS for every required CELL",
+                    block=True,
+                )
+                continue
+            closure_record = by_digest.get(d2_record.value.get("go_candidate_closure_sha256"))
+            if closure_record is None or closure_record.value.get("artifact_type") != "GO_CANDIDATE_CLOSURE":
+                add_issue("R14_CELL_TUPLE_SET_MISMATCH", 6, d2_record, "D2 closure is unresolved", block=True)
+                continue
+            if closure_record.digest not in admitted_digests:
+                add_issue(
+                    "R13_CLOSURE_ADMISSION_REQUIRED",
+                    6,
+                    d2_record,
+                    "D2 requires an exact ADMITTED Supervisor admission for the GO closure",
+                    block=True,
+                )
+                continue
+            closure = closure_record.value
+            if (
+                closure.get("manifest_id") != manifest.get("manifest_id")
+                or closure.get("manifest_version") != version
+                or closure.get("manifest_closure_sha256") != manifest.get("closure_sha256")
+            ):
+                add_issue(
+                    "R16_GO_CLOSURE_MANIFEST_BINDING_INVALID",
+                    6,
+                    closure_record,
+                    "GO closure does not bind the current manifest",
+                    block=True,
+                )
+                continue
+            selected = tuple(closure.get("selected_cells", ()))
+            selected_ids = tuple(item.get("cell_id") for item in selected)
+            if len(selected_ids) != len(required_ids) or len(set(selected_ids)) != len(selected_ids) or set(selected_ids) != set(required_ids):
+                add_issue(
+                    "R14_CELL_TUPLE_SET_MISMATCH",
+                    6,
+                    closure_record,
+                    "GO closure CELL registry differs from the manifest",
+                    block=True,
+                )
+                continue
+            if closure.get("candidate_sha256") != go_candidate_sha256_from_mapping(manifest, selected):
+                add_issue(
+                    "R16_GO_CLOSURE_HASH_INVALID",
+                    6,
+                    closure_record,
+                    "GO candidate hash does not match the selected tuple set",
+                    block=True,
+                )
+                continue
+            actual_tuples = {item.get("cell_id"): _thaw(item) for item in selected}
+            if actual_tuples != expected_tuples:
+                has_superseded_generation = any(
+                    sum(1 for record in scoped_d1 if record.value.get("cell_id") == cell_id) > 1
+                    for cell_id in required_ids
+                )
+                code = "R28_SUPERSEDED_CLOSURE_FOR_D2" if has_superseded_generation else "R14_CELL_TUPLE_SET_MISMATCH"
+                add_issue(code, 6, d2_record, "D2 does not consume the exact current D1 tuple set", block=True)
+
 def validate_loaded_run(package, adapter):
-    """Derive a frozen five-layer report from one already integrity-checked package."""
+    """Derive a frozen six-layer report from one already integrity-checked package."""
     records = _records(package)
     issues = []
     blocked = set()
@@ -418,6 +706,7 @@ def validate_loaded_run(package, adapter):
     _layer_three(records, blocked, add_issue)
     _layer_four(records, blocked, adapter, add_issue, holds)
     _layer_five(records, blocked, add_issue)
+    _layer_six(records, blocked, add_issue)
 
     ordered = tuple(sorted(issues, key=lambda issue: (issue.layer, issue.artifact_ref, issue.code)))
     layers = tuple(
@@ -426,7 +715,7 @@ def validate_loaded_run(package, adapter):
             status="FAIL" if any(issue.layer == layer for issue in ordered) else "PASS",
             issue_count=sum(1 for issue in ordered if issue.layer == layer),
         )
-        for layer in range(1, 6)
+        for layer in range(1, 7)
     )
     return ValidationReport(
         status="FAIL" if ordered else "PASS",

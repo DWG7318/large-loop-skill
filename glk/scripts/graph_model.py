@@ -228,6 +228,13 @@ class Go:
     verifier_context_ref: Optional[str] = None
     reactivation_phase: Optional[str] = None
     resolution: Optional[FormalResolution] = None
+    cell_manifest_id: Optional[str] = None
+    cell_manifest_version: Optional[int] = None
+    cell_manifest_sha256: Optional[str] = None
+    required_cell_ids: Tuple[str, ...] = ()
+    d0_receipt_ids_by_cell: Dict[str, str] = field(default_factory=dict)
+    d1_receipt_ids_by_cell: Dict[str, str] = field(default_factory=dict)
+    go_candidate_closure_sha256: Optional[str] = None
 
     def __post_init__(self):
         if not self.go_id:
@@ -732,6 +739,70 @@ class GoGraph:
         go.constraints.remove(constraint)
         self._refresh_active_set()
 
+    def bind_cell_manifest(
+        self,
+        go_id: str,
+        manifest_id: str,
+        manifest_version: int,
+        manifest_sha256: str,
+        required_cell_ids: Iterable[str],
+    ):
+        go = self._go(go_id)
+        cells = tuple(sorted(required_cell_ids))
+        if not manifest_id or not isinstance(manifest_version, int) or manifest_version < 1:
+            raise GraphError("CELL manifest identity and positive version are required")
+        if len(manifest_sha256) != 64:
+            raise GraphError("CELL manifest sha256 is required")
+        if not cells or len(set(cells)) != len(cells) or any(not cell_id for cell_id in cells):
+            raise GraphError("CELL manifest requires a unique non-empty required CELL set")
+        if go.cell_manifest_version is not None and manifest_version <= go.cell_manifest_version:
+            raise GraphError("CELL manifest amendment version must increase")
+        go.cell_manifest_id = manifest_id
+        go.cell_manifest_version = manifest_version
+        go.cell_manifest_sha256 = manifest_sha256
+        go.required_cell_ids = cells
+        go.d0_receipt_ids_by_cell = {}
+        go.d1_receipt_ids_by_cell = {}
+        go.go_candidate_closure_sha256 = None
+
+    def record_cell_d1(
+        self,
+        go_id: str,
+        manifest_sha256: str,
+        cell_id: str,
+        d0_receipt_id: str,
+        d1_receipt_id: str,
+    ):
+        go = self._go(go_id)
+        if not go.cell_manifest_sha256 or manifest_sha256 != go.cell_manifest_sha256:
+            raise GraphError("CELL D1 must bind the current CELL manifest")
+        if cell_id not in go.required_cell_ids:
+            raise GraphError("CELL D1 is not in the required CELL set")
+        if not d0_receipt_id or not d1_receipt_id:
+            raise GraphError("CELL D0 and D1 receipt identities are required")
+        go.d0_receipt_ids_by_cell[cell_id] = d0_receipt_id
+        go.d1_receipt_ids_by_cell[cell_id] = d1_receipt_id
+        go.go_candidate_closure_sha256 = None
+
+    def record_candidate_closure(
+        self,
+        go_id: str,
+        manifest_sha256: str,
+        selected_cell_ids: Iterable[str],
+        closure_sha256: str,
+    ):
+        go = self._go(go_id)
+        selected = tuple(sorted(selected_cell_ids))
+        if not go.cell_manifest_sha256 or manifest_sha256 != go.cell_manifest_sha256:
+            raise GraphError("GO candidate closure must bind the current CELL manifest")
+        if selected != go.required_cell_ids:
+            raise GraphError("GO candidate closure requires the exact required CELL set")
+        if set(go.d1_receipt_ids_by_cell) != set(go.required_cell_ids):
+            raise GraphError("GO candidate closure requires every required CELL D1")
+        if len(closure_sha256) != 64:
+            raise GraphError("GO candidate closure sha256 is required")
+        go.go_candidate_closure_sha256 = closure_sha256
+
     def start_checking(self, go_id: str, candidate_id: str, d0_receipt_id: str):
         go = self._go(go_id)
         self._require_active_phase(go, {IMPLEMENTING, REWORK})
@@ -743,6 +814,7 @@ class GoGraph:
         go.d2_receipt_id = None
         go.checker_context_ref = None
         go.verifier_context_ref = None
+        go.go_candidate_closure_sha256 = None
         go.phase = CHECKING
 
     def d1_pass(
@@ -773,12 +845,18 @@ class GoGraph:
         candidate_id: str,
         d2_receipt_id: str,
         verifier_context_ref: str,
+        go_candidate_closure_sha256: Optional[str] = None,
     ):
         go = self._go(go_id)
         if not go.d1_receipt_id:
             raise GraphError("D2 requires a valid D1 PASS receipt")
         self._require_active_phase(go, {VERIFYING})
         self._require_candidate(go, candidate_id)
+        if go.required_cell_ids:
+            if not go.go_candidate_closure_sha256:
+                raise GraphError("D2 requires a current exact GO candidate closure")
+            if go_candidate_closure_sha256 != go.go_candidate_closure_sha256:
+                raise GraphError("D2 must bind the current exact GO candidate closure")
         if not d2_receipt_id or not verifier_context_ref:
             raise GraphError("D2 receipt and GO Verifier context are required")
         if verifier_context_ref == go.checker_context_ref:

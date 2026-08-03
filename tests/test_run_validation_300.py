@@ -121,6 +121,32 @@ def _candidate_hash(candidate_id):
     return hashlib.sha256(candidate_id.encode("utf-8")).hexdigest()
 
 
+def _manifest_closure_sha256_300(manifest):
+    payload = {
+        "run_id": manifest["run_id"],
+        "graph_id": manifest["graph_id"],
+        "graph_version": manifest["graph_version"],
+        "go_id": manifest["go_id"],
+        "manifest_id": manifest["manifest_id"],
+        "manifest_version": manifest["manifest_version"],
+        "go_contract_sha256": manifest["go_contract_sha256"],
+        "required_cells": sorted(manifest["required_cells"], key=lambda cell: cell["cell_id"]),
+        "prior_manifest_sha256": manifest["prior_manifest_sha256"],
+    }
+    return _candidate_hash(json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True))
+
+
+def _go_candidate_sha256_300(manifest, selected_cells):
+    payload = {
+        "go_id": manifest["go_id"],
+        "manifest_id": manifest["manifest_id"],
+        "manifest_version": manifest["manifest_version"],
+        "manifest_closure_sha256": manifest["closure_sha256"],
+        "selected_cells": sorted(selected_cells, key=lambda item: item["cell_id"]),
+    }
+    return _candidate_hash(json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True))
+
+
 def _all_formal_paths(root):
     return tuple(
         sorted(
@@ -232,6 +258,66 @@ def _materialize_referenced_evidence(root):
             write_json(path, {"subject": reference, "result": "PASS"})
 
 
+def _admission_for_target(root, target_path):
+    target_ref = target_path.relative_to(root).as_posix()
+    for path in _all_formal_paths(root):
+        value = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if value.get("artifact_type") == "SUPERVISOR_ADMISSION" and value.get("admitted_artifact_ref") == target_ref:
+            return path, value
+    return None
+
+
+def _add_supervisor_admission(root, target_path, *, suffix, issued_at):
+    target = yaml.safe_load(target_path.read_text(encoding="utf-8"))
+    admission_id = f"SUPERVISOR-ADMISSION-{suffix}"
+    evidence_ref = _add_evidence(root, f"evidence/admissions/{admission_id}.json", admission_id)
+    admission = copy.deepcopy(_template("SUPERVISOR_ADMISSION"))
+    admission.update(
+        {
+            "artifact_id": admission_id,
+            "candidate_id": target["candidate_id"],
+            "candidate_sha256": target["candidate_sha256"],
+            "issuer_binding_ref": "ROLE-RUN-001-SUPERVISOR",
+            "execution_context_ref": "CONTEXT-RUN-001-SUPERVISOR",
+            "evidence_refs": [evidence_ref],
+            "provenance_ref": f"attestations/{admission_id}.json",
+            "issued_at": issued_at,
+            "admission_id": admission_id,
+            "admitted_artifact_ref": target_path.relative_to(root).as_posix(),
+            "admitted_artifact_sha256": sha256_file(target_path),
+            "decision": "ADMITTED",
+            "failure_codes": [],
+        }
+    )
+    path = root / "admissions" / f"{admission_id}.json"
+    write_json(path, admission)
+    return path, admission
+
+
+def _ensure_supervisor_admission(root, target_path, *, suffix=None, issued_at="2026-08-03T03:40:00Z"):
+    existing = _admission_for_target(root, target_path)
+    if existing is not None:
+        return existing
+    return _add_supervisor_admission(
+        root,
+        target_path,
+        suffix=suffix or yaml.safe_load(target_path.read_text(encoding="utf-8"))["artifact_id"],
+        issued_at=issued_at,
+    )
+
+
+def _sync_supervisor_admission(root, target_path):
+    path, admission = _ensure_supervisor_admission(root, target_path)
+    target = yaml.safe_load(target_path.read_text(encoding="utf-8"))
+    admission["candidate_id"] = target["candidate_id"]
+    admission["candidate_sha256"] = target["candidate_sha256"]
+    admission["admitted_artifact_sha256"] = sha256_file(target_path)
+    admission["decision"] = "ADMITTED"
+    admission["failure_codes"] = []
+    write_json(path, admission)
+    return path
+
+
 def _add_role_binding(root, role_ref, role_type, ordinal):
     template = _template("ROLE_BINDING")
     artifact_id = f"ROLE-BINDING-{role_type}-{ordinal}-V1"
@@ -319,7 +405,7 @@ def _prepare_validation_fixture(tmp_path):
             "required": True,
         }
     ]
-    manifest["closure_sha256"] = "d" * 64
+    manifest["closure_sha256"] = _manifest_closure_sha256_300(manifest)
     _write_artifact(manifest_path, manifest)
 
     d0_path, d0 = _artifact(fixture.root, "D0_RECEIPT")
@@ -366,6 +452,8 @@ def _prepare_validation_fixture(tmp_path):
     closure_path, closure = _artifact(fixture.root, "GO_CANDIDATE_CLOSURE")
     closure.update(
         {
+            "candidate_id": "CANDIDATE-GO-001-G1",
+            "candidate_sha256": _go_candidate_sha256_300(manifest, [selected_cell]),
             "go_id": "GO-001",
             "manifest_id": manifest["manifest_id"],
             "manifest_version": manifest["manifest_version"],
@@ -379,6 +467,8 @@ def _prepare_validation_fixture(tmp_path):
     d2_path, d2 = _artifact(fixture.root, "D2_RECEIPT")
     d2.update(
         {
+            "candidate_id": closure["candidate_id"],
+            "candidate_sha256": closure["candidate_sha256"],
             "go_id": "GO-001",
             "go_candidate_closure_sha256": closure_digest,
             "manifest_id": manifest["manifest_id"],
@@ -422,6 +512,25 @@ def _prepare_validation_fixture(tmp_path):
     owner["admitted_d3_artifact_sha256"] = d3_digest
     _write_artifact(owner_path, owner)
 
+    _add_supervisor_admission(
+        fixture.root,
+        d0_path,
+        suffix="D0-GO-001-CELL-001-V1",
+        issued_at="2026-08-03T03:40:00Z",
+    )
+    _add_supervisor_admission(
+        fixture.root,
+        d1_path,
+        suffix="D1-GO-001-CELL-001-V1",
+        issued_at="2026-08-03T03:41:00Z",
+    )
+    _add_supervisor_admission(
+        fixture.root,
+        closure_path,
+        suffix="CLOSURE-GO-001-V1",
+        issued_at="2026-08-03T03:42:00Z",
+    )
+
     _materialize_referenced_evidence(fixture.root)
     _reindex(fixture)
     return fixture
@@ -442,14 +551,26 @@ def _refresh_lineage(fixture, *, keep_d1_reference=False):
     }
     closure_path, closure = _artifact(fixture.root, "GO_CANDIDATE_CLOSURE")
     closure["selected_cells"] = [selected]
+    manifest = _artifact(fixture.root, "CELL_MANIFEST")[1]
+    closure["candidate_sha256"] = _go_candidate_sha256_300(manifest, [selected])
     _write_artifact(closure_path, closure)
     d2_path, d2 = _artifact(fixture.root, "D2_RECEIPT")
+    d2["candidate_id"] = closure["candidate_id"]
+    d2["candidate_sha256"] = closure["candidate_sha256"]
     d2["go_candidate_closure_sha256"] = sha256_file(closure_path)
     d2["required_cell_tuples"] = [selected]
     _write_artifact(d2_path, d2)
     d2_digest = sha256_file(d2_path)
-    admission_path, admission = _artifact(fixture.root, "SUPERVISOR_ADMISSION")
+    _sync_supervisor_admission(fixture.root, d0_path)
+    _sync_supervisor_admission(fixture.root, d1_path)
+    _sync_supervisor_admission(fixture.root, closure_path)
+    d2_admission = _admission_for_target(fixture.root, d2_path)
+    if d2_admission is None:
+        pytest.fail("fixture D2 admission is missing")
+    admission_path, admission = d2_admission
     admission["admitted_artifact_sha256"] = d2_digest
+    admission["candidate_id"] = d2["candidate_id"]
+    admission["candidate_sha256"] = d2["candidate_sha256"]
     _write_artifact(admission_path, admission)
     event_path, event = _artifact(fixture.root, "GRAPH_EVENT")
     event["trigger_artifact_sha256"] = d2_digest
