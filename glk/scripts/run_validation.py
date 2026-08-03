@@ -20,9 +20,11 @@ from provenance import (
     VerifyIssuanceRequest,
     request_digest_for,
 )
+from run_control import RUN_AUTHORITY_HOLD
 from run_state import (
     CurrentD2Fact,
     D3Eligibility,
+    FrozenGraphTopology,
     GraphStateProjection,
     RunClosureProjection,
     RunStateError,
@@ -138,6 +140,7 @@ class ValidationReport:
     graph_state: GraphStateProjection | None = None
     d3_eligibility: D3Eligibility | None = None
     run_closure: RunClosureProjection | None = None
+    graph_topology: FrozenGraphTopology | None = None
 
 
 @dataclass(frozen=True)
@@ -411,7 +414,7 @@ def _layer_four(records, blocked, adapter, add_issue, holds):
                 add_issue("R09_UNTRUSTED_ROLE_STRING", 4, record, error.detail, block=True)
             elif artifact_type in TECHNICAL_TYPES and error.code in PROVEN_AUTHORITY_ERROR_CODES:
                 add_issue(_authority_code(artifact_type), 4, record, error.detail, block=True)
-                holds.add("RUN_AUTHORITY_HOLD")
+                holds.add(RUN_AUTHORITY_HOLD)
             else:
                 add_issue("AUTHORITY_PROVENANCE_INVALID", 4, record, error.detail, block=True)
             continue
@@ -1476,4 +1479,5 @@ def validate_loaded_run(package, adapter):
         graph_state=graph_state,
         d3_eligibility=d3_eligibility,
         run_closure=run_closure,
+        graph_topology=topology,
     )
