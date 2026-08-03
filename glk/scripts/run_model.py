@@ -1,5 +1,22 @@
 from dataclasses import dataclass
-from typing import Dict, Set
+from typing import Dict, Set, Tuple
+
+
+ROLE_TYPES = (
+    "RUN_SUPERVISOR",
+    "WORKER",
+    "CHECKER",
+    "GO_VERIFIER",
+    "RUN_VERIFIER",
+    "OWNER",
+)
+
+TECHNICAL_RECEIPT_TYPES = (
+    "D0_RECEIPT",
+    "D1_RECEIPT",
+    "D2_RECEIPT",
+    "D3_RECEIPT",
+)
 
 
 class RunBindingError(ValueError):
@@ -15,11 +32,59 @@ class RoleBinding:
     context_id: str
     workspace_id: str
     evidence_root: str
+    capability_profile_id: str = "CAPABILITY-PROFILE-LEGACY"
 
     def __post_init__(self):
+        if self.role_type not in ROLE_TYPES:
+            raise RunBindingError(f"unknown role_type: {self.role_type}")
         for name, value in self.__dict__.items():
             if not value:
                 raise RunBindingError(f"{name} is required")
+
+
+@dataclass(frozen=True)
+class RoleCapabilityProfile:
+    profile_id: str
+    role_type: str
+    issuable_artifact_types: Tuple[str, ...]
+    held_issuance_artifact_types: Tuple[str, ...]
+    invocable_issuance_artifact_types: Tuple[str, ...]
+
+    def __post_init__(self):
+        if not self.profile_id:
+            raise RunBindingError("profile_id is required")
+        if self.role_type not in ROLE_TYPES:
+            raise RunBindingError(f"unknown role_type: {self.role_type}")
+        for name in (
+            "issuable_artifact_types",
+            "held_issuance_artifact_types",
+            "invocable_issuance_artifact_types",
+        ):
+            values = getattr(self, name)
+            if not isinstance(values, tuple) or len(values) != len(set(values)):
+                raise RunBindingError(f"{name} must be a unique tuple")
+            if any(not isinstance(value, str) or not value for value in values):
+                raise RunBindingError(f"{name} contains an invalid artifact type")
+
+
+def supervisor_technical_capabilities(profile: RoleCapabilityProfile) -> Tuple[str, ...]:
+    if profile.role_type != "RUN_SUPERVISOR":
+        return ()
+    claimed = (
+        set(profile.issuable_artifact_types)
+        | set(profile.held_issuance_artifact_types)
+        | set(profile.invocable_issuance_artifact_types)
+    )
+    return tuple(sorted(claimed & set(TECHNICAL_RECEIPT_TYPES)))
+
+
+def enforce_supervisor_capability_exclusion(profile: RoleCapabilityProfile) -> None:
+    forbidden = supervisor_technical_capabilities(profile)
+    if forbidden:
+        raise RunBindingError(
+            "Run Supervisor cannot issue, hold, or invoke technical receipt capabilities: "
+            + ", ".join(forbidden)
+        )
 
 
 class RunSupervisorRegistry:
