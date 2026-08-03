@@ -1,4 +1,5 @@
 import dataclasses
+import hashlib
 import json
 import re
 from collections.abc import Mapping
@@ -93,6 +94,23 @@ UTC_TIMESTAMP = re.compile(
     r"^(?!1970-01-01T00:00:00Z$)[0-9]{4}-(0[1-9]|1[0-2])-"
     r"(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$"
 )
+RUN_VALIDATOR_VERSION = "3.0.0"
+REPOSITORY_VALIDATION_SCOPE = "REPOSITORY_DISTRIBUTION"
+RUN_VALIDATION_SCOPE = "RUN_PACKAGE"
+_VALIDATOR_CONTRACT = {
+    "scope": RUN_VALIDATION_SCOPE,
+    "version": RUN_VALIDATOR_VERSION,
+    "layers": tuple(range(1, 11)),
+    "authority": "DERIVED_NON_AUTHORITATIVE",
+}
+RUN_VALIDATOR_DIGEST = hashlib.sha256(
+    json.dumps(
+        _VALIDATOR_CONTRACT,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -132,6 +150,97 @@ class _ArtifactRecord:
     def artifact_ref(self):
         raw = self.value.get("artifact_id")
         return raw if isinstance(raw, str) and raw else f"digest:{self.digest}"
+
+
+def _output_digest(value):
+    return hashlib.sha256(
+        json.dumps(
+            value,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def add_report_digest(value):
+    payload = dict(value)
+    payload.pop("report_digest", None)
+    payload["report_digest"] = _output_digest(payload)
+    return payload
+
+
+def _derived_formal_state(report):
+    graph_state = report.graph_state
+    closure = report.run_closure
+    return {
+        "projection_kind": "DERIVED_NON_AUTHORITATIVE",
+        "technical_status": report.status,
+        "graph": None
+        if graph_state is None
+        else {
+            "graph_sha256": graph_state.graph_sha256,
+            "verified_go_ids": list(graph_state.verified_go_ids),
+            "waiting_go_ids": list(graph_state.waiting_go_ids),
+            "active_go_ids": list(graph_state.active_go_ids),
+            "applied_event_ids": list(graph_state.applied_event_ids),
+        },
+        "d3_eligible": bool(report.d3_eligibility and report.d3_eligibility.eligible),
+        "d3_admitted": bool(closure and closure.d3_admitted),
+        "owner_accepted": bool(closure and closure.owner_verdict == "LOOP_OWNER_ACCEPTED"),
+        "security_handoff_present": bool(closure and closure.security_handoff_sha256),
+        "security_status": closure.security_status if closure is not None else None,
+        "lccoding_security_accepted": False,
+    }
+
+
+def build_run_validation_output(
+    package,
+    report,
+    *,
+    trusted_conformance_environment,
+    adapter_profile_id,
+):
+    contracts = package.artifacts_by_type.get("RUN_CONTRACT", ())
+    contract = contracts[0] if contracts else {}
+    trusted = trusted_conformance_environment is True
+    conformance_status = (
+        "TRUSTED_CONFORMANCE_ENVIRONMENT"
+        if trusted
+        else "UNTRUSTED_CONFORMANCE_ENVIRONMENT"
+    )
+    status = "PASS" if report.status == "PASS" and trusted else "FAIL"
+    payload = {
+        "scope": RUN_VALIDATION_SCOPE,
+        "scope_boundaries": {
+            "validate_glk": REPOSITORY_VALIDATION_SCOPE,
+            "validate_run": RUN_VALIDATION_SCOPE,
+        },
+        "status": status,
+        "technical_validation_status": report.status,
+        "report_authority": "DERIVED_NON_AUTHORITATIVE",
+        "requested_transition": "VALIDATE_CURRENT_RUN_PACKAGE",
+        "validator": {
+            "version": RUN_VALIDATOR_VERSION,
+            "digest": RUN_VALIDATOR_DIGEST,
+        },
+        "package": {
+            "root": package.root.as_posix(),
+            "run_id": contract.get("run_id"),
+            "graph_id": contract.get("graph_id"),
+            "index_head_sha256": package.index_head_sha256,
+        },
+        "conformance_environment": {
+            "profile_id": adapter_profile_id,
+            "trusted": trusted,
+            "status": conformance_status,
+        },
+        "layers": [dataclasses.asdict(layer) for layer in report.layers],
+        "issues": [dataclasses.asdict(issue) for issue in report.issues],
+        "holds": list(report.holds),
+        "formal_state": _derived_formal_state(report),
+    }
+    return add_report_digest(payload)
 
 
 def _thaw(value):
