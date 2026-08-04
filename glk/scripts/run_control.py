@@ -30,6 +30,9 @@ PROGRESS_FIELDS = (
     "current_holds",
     "graph_version",
     "cell_manifest_versions",
+    "cell_plan_versions",
+    "capacity_profile_version",
+    "cumulative_load_version",
 )
 FORBIDDEN_MONITOR_FIELDS = frozenset(
     {
@@ -132,6 +135,9 @@ class ProgressProjection:
     current_holds: Tuple[str, ...]
     graph_version: int
     cell_manifest_versions: Tuple[Tuple[str, str, int], ...]
+    cell_plan_versions: Tuple[Tuple[str, str, int], ...]
+    capacity_profile_version: int | None
+    cumulative_load_version: int | None
     required_go_ids_input: InitVar[Tuple[str, ...]]
     verified_go_ids_input: InitVar[Tuple[str, ...]]
     required_cell_ids_input: InitVar[Tuple[Tuple[str, str], ...]]
@@ -610,6 +616,27 @@ def derive_progress(package, validation_report, liveness, control_holds):
             for go_id, manifest in manifests.items()
         )
     )
+    plan_versions = tuple(
+        sorted(
+            (
+                item.get("go_id"),
+                item.get("plan_id"),
+                item.get("plan_version"),
+            )
+            for item in package.artifacts_by_type.get("CELL_WORK_ESTIMATE", ())
+            if item.get("go_id") in required_go_ids
+        )
+    )
+    capacity_versions = tuple(
+        item.get("profile_version")
+        for item in package.artifacts_by_type.get("DEVICE_CAPACITY_PROFILE", ())
+        if isinstance(item.get("profile_version"), int)
+    )
+    load_versions = tuple(
+        item.get("load_version")
+        for item in package.artifacts_by_type.get("CUMULATIVE_ENGINEERING_LOAD", ())
+        if isinstance(item.get("load_version"), int)
+    )
     holds = tuple(
         sorted(set(validation_report.holds) | set(control_holds.current_holds))
     )
@@ -626,6 +653,9 @@ def derive_progress(package, validation_report, liveness, control_holds):
         current_holds=holds,
         graph_version=topology.graph_version,
         cell_manifest_versions=manifest_versions,
+        cell_plan_versions=plan_versions,
+        capacity_profile_version=max(capacity_versions) if capacity_versions else None,
+        cumulative_load_version=max(load_versions) if load_versions else None,
         required_go_ids_input=required_go_ids,
         verified_go_ids_input=verified_go_ids,
         required_cell_ids_input=required_cells,
