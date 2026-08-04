@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple
 
+from method_lock import SUPPLY_CHAIN_CONFLICT, verify_method_lock
 from provenance import (
     ADAPTER_CONTRACT_VERSION,
     AuthorityScope,
@@ -116,6 +117,7 @@ class PreflightReport:
     required_role_types: Tuple[str, ...]
     readiness_receipt_count: int
     readiness_observation_digest: str
+    method_lock_report_digest: str | None
     current_holds: Tuple[str, ...]
     simulation_report_digest: str | None
     report_digest: str
@@ -590,6 +592,7 @@ def derive_preflight_report(
     *,
     current_holds,
     observation_deadline,
+    installation_descriptors=None,
 ):
     failures = []
     locks = package.artifacts_by_type.get("GLK_METHOD_LOCK", ())
@@ -624,6 +627,20 @@ def derive_preflight_report(
     ):
         failures.append("ADAPTER_PROFILE_INVALID")
 
+    method_lock_report_digest = None
+    declared_installations = tuple(installation_descriptors or ())
+    if actual_lock is None or profile is None or not declared_installations:
+        failures.append(SUPPLY_CHAIN_CONFLICT)
+    else:
+        method_lock_report = verify_method_lock(
+            actual_lock,
+            profile,
+            declared_installations,
+        )
+        method_lock_report_digest = method_lock_report.report_digest
+        if method_lock_report.status != "PASS":
+            failures.append(SUPPLY_CHAIN_CONFLICT)
+
     bindings = package.artifacts_by_type.get("ROLE_BINDING", ())
     bound_roles = {binding.get("role_type") for binding in bindings}
     if bound_roles != set(REQUIRED_ROLE_TYPES):
@@ -657,6 +674,7 @@ def derive_preflight_report(
         "required_role_types": REQUIRED_ROLE_TYPES,
         "readiness_receipt_count": readiness_count,
         "readiness_observation_digest": readiness_observation_digest,
+        "method_lock_report_digest": method_lock_report_digest,
         "current_holds": holds,
         "simulation_report_digest": (
             simulation_report.report_digest if simulation_report is not None else None

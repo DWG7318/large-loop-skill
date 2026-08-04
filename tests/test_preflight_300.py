@@ -276,7 +276,12 @@ def test_simulation_rehearses_full_gates_and_never_mutates_formal_ledger(tmp_pat
 
 
 def test_preflight_pass_is_adapter_verified_derived_and_cannot_advance_run(tmp_path):
-    module, case, loaded, validation_report, simulation, adapter = _valid_inputs(tmp_path)
+    import test_supply_chain_300 as supply_chain
+
+    method_module = supply_chain.load_method_lock()
+    module, loaded, validation_report, simulation, adapter, descriptor = (
+        supply_chain._locked_preflight_case(tmp_path, method_module)
+    )
     report = module.derive_preflight_report(
         loaded,
         validation_report,
@@ -285,6 +290,7 @@ def test_preflight_pass_is_adapter_verified_derived_and_cannot_advance_run(tmp_p
         simulation,
         current_holds=(),
         observation_deadline="2026-08-03T23:59:59Z",
+        installation_descriptors=(descriptor,),
     )
     require_equal(report.status, "PREFLIGHT_PASS", "preflight status")
     require_equal(report.failure_codes, (), "preflight failures")
@@ -301,7 +307,7 @@ def test_preflight_pass_is_adapter_verified_derived_and_cannot_advance_run(tmp_p
     serialized = json.dumps(dataclasses.asdict(report), sort_keys=True)
     for forbidden in ("artifact_type", "issuer_binding_ref", "decision", "verdict"):
         require(f'"{forbidden}"' not in serialized, f"derived preflight exposed {forbidden}")
-    require(not any((case.root / "admissions").glob("*PREFLIGHT*")), "preflight issued its own admission")
+    require(not any((loaded.root / "admissions").glob("*PREFLIGHT*")), "preflight issued its own admission")
 
 
 @pytest.mark.parametrize(
