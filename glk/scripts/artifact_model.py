@@ -76,6 +76,28 @@ FORMAL_TYPES: Mapping[str, ArtifactAuthority] = MappingProxyType(
         "D2_RECEIPT": _authority("D2_RECEIPT", "GO_VERIFIER"),
         "GRAPH_EVENT": _authority("GRAPH_EVENT", "RUN_SUPERVISOR"),
         "MONITOR_CONTROL": _authority("MONITOR_CONTROL", "RUN_SUPERVISOR"),
+        "WORKER_CHECKER_WAKE_BINDING": _authority(
+            "WORKER_CHECKER_WAKE_BINDING", "RUN_SUPERVISOR"
+        ),
+        "WAKE_ATTEMPT": _authority("WAKE_ATTEMPT", "WORKER"),
+        "WAKE_ACK": _authority("WAKE_ACK", "CHECKER"),
+        "PENDING_WAKE": _authority("PENDING_WAKE", "WORKER"),
+        "DEVICE_CAPACITY_PROFILE": _authority(
+            "DEVICE_CAPACITY_PROFILE", "RUN_SUPERVISOR"
+        ),
+        "CUMULATIVE_ENGINEERING_LOAD": _authority(
+            "CUMULATIVE_ENGINEERING_LOAD", "RUN_SUPERVISOR"
+        ),
+        "CELL_WORK_ESTIMATE": _authority(
+            "CELL_WORK_ESTIMATE", "RUN_SUPERVISOR"
+        ),
+        "CELL_CAPACITY_GATE": _authority(
+            "CELL_CAPACITY_GATE", "RUN_SUPERVISOR"
+        ),
+        "CELL_PLAN_AMENDMENT": _authority(
+            "CELL_PLAN_AMENDMENT", "RUN_SUPERVISOR"
+        ),
+        "CELL_SCOPE_EXCEEDED": _authority("CELL_SCOPE_EXCEEDED", "WORKER"),
         "D3_RECEIPT": _authority("D3_RECEIPT", "RUN_VERIFIER"),
         "OWNER_ACCEPTANCE": _authority("OWNER_ACCEPTANCE", "OWNER"),
         "SECURITY_HANDOFF": _authority("SECURITY_HANDOFF", "RUN_SUPERVISOR"),

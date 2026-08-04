@@ -1,0 +1,25 @@
+schema_version: 3.0.0
+artifact_type: PENDING_WAKE
+artifact_id: PENDING-WAKE-GO-001-CELL-001-R1
+run_id: RUN-001
+graph_id: GRAPH-RUN-001
+graph_version: 1
+candidate_id: PENDING-WAKE-GO-001-CELL-001-R1
+candidate_sha256: "7777777777777777777777777777777777777777777777777777777777777777"
+issuer_binding_ref: ROLE-WORKER-GO-001
+execution_context_ref: CONTEXT-WORKER-GO-001
+evidence_refs: ["evidence/wake/pending.json"]
+provenance_ref: attestations/PENDING-WAKE.json
+issued_at: "2026-08-04T01:06:00Z"
+wake_binding_id: WAKE-BINDING-GO-001-CELL-001-R1
+pending_key: PENDING-WAKE/GO-001-CELL-001-R1
+heartbeat_key: GLK-WAKE/GO-001-CELL-001-R1
+go_id: GO-001
+cell_id: CELL-001
+round_id: ROUND-01
+worker_binding_ref: ROLE-WORKER-GO-001
+checker_binding_ref: ROLE-CHECKER-GO-001
+message_sha256: "5555555555555555555555555555555555555555555555555555555555555555"
+attempt_refs: ["controls/WAKE-ATTEMPT-L1.json", "controls/WAKE-ATTEMPT-L2.json", "controls/WAKE-ATTEMPT-L3.json"]
+state: OPEN
+consumption_evidence_refs: []

@@ -785,7 +785,7 @@
         "active_go_ids": {"$ref": "#/$defs/string_array"}
       }
     },
-    "monitor_control": {
+    "monitor_control_300_historical": {
       "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
       "type": "object",
       "unevaluatedProperties": false,
@@ -807,6 +807,312 @@
         "observation_deadline": {"$ref": "#/$defs/utc_timestamp_300"},
         "liveness_attestation_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
         "monitor_state": {"enum": ["MONITOR_ACTIVE", "MONITOR_HELD", "MONITOR_CLOSED"]}
+      }
+    },
+    "monitor_control_310": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "monitor_id", "monitor_version", "prior_monitor_sha256", "monitor_key",
+        "patrol_conversation_ref", "patrol_host_id", "patrol_heartbeat_ref",
+        "patrol_model", "patrol_reasoning_effort", "project_difficulty",
+        "patrol_interval_minutes", "callback_target", "observation_deadline",
+        "liveness_attestation_refs", "monitor_state"
+      ],
+      "properties": {
+        "artifact_type": {"const": "MONITOR_CONTROL"},
+        "monitor_id": {"$ref": "#/$defs/id"},
+        "monitor_version": {"type": "integer", "minimum": 1},
+        "prior_monitor_sha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "monitor_key": {"$ref": "#/$defs/id"},
+        "patrol_conversation_ref": {"$ref": "#/$defs/id"},
+        "patrol_host_id": {"$ref": "#/$defs/id"},
+        "patrol_heartbeat_ref": {"$ref": "#/$defs/id"},
+        "patrol_model": {"const": "gpt-5.6-luna"},
+        "patrol_reasoning_effort": {"const": "xhigh"},
+        "project_difficulty": {"enum": ["HIGH", "MEDIUM", "LOW"]},
+        "patrol_interval_minutes": {"enum": [10, 15, 30]},
+        "callback_target": {"$ref": "#/$defs/id"},
+        "observation_deadline": {"$ref": "#/$defs/utc_timestamp_300"},
+        "liveness_attestation_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "monitor_state": {"enum": ["MONITOR_ACTIVE", "MONITOR_HELD", "MONITOR_CLOSED"]}
+      }
+    },
+    "monitor_control": {
+      "oneOf": [
+        {"$ref": "#/$defs/monitor_control_300_historical"},
+        {"$ref": "#/$defs/monitor_control_310"}
+      ]
+    },
+    "worker_checker_wake_binding": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "wake_binding_id", "go_id", "cell_id", "round_id", "cell_ordinal",
+        "required_cell_count", "manifest_id", "manifest_version", "plan_id",
+        "plan_version", "worker_binding_ref", "worker_thread_id", "worker_host_id",
+        "checker_binding_ref", "checker_thread_id", "checker_host_id",
+        "capability_profile_sha256", "capacity_gate_sha256", "frozen_at"
+      ],
+      "properties": {
+        "artifact_type": {"const": "WORKER_CHECKER_WAKE_BINDING"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "wake_binding_id": {"$ref": "#/$defs/id"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "cell_id": {"$ref": "#/$defs/id"},
+        "round_id": {"$ref": "#/$defs/id"},
+        "cell_ordinal": {"type": "integer", "minimum": 1},
+        "required_cell_count": {"type": "integer", "minimum": 1},
+        "manifest_id": {"$ref": "#/$defs/id"},
+        "manifest_version": {"type": "integer", "minimum": 1},
+        "plan_id": {"$ref": "#/$defs/id"},
+        "plan_version": {"type": "integer", "minimum": 1},
+        "worker_binding_ref": {"$ref": "#/$defs/id"},
+        "worker_thread_id": {"$ref": "#/$defs/id"},
+        "worker_host_id": {"$ref": "#/$defs/id"},
+        "checker_binding_ref": {"$ref": "#/$defs/id"},
+        "checker_thread_id": {"$ref": "#/$defs/id"},
+        "checker_host_id": {"$ref": "#/$defs/id"},
+        "capability_profile_sha256": {"$ref": "#/$defs/hash"},
+        "capacity_gate_sha256": {"$ref": "#/$defs/hash"},
+        "frozen_at": {"$ref": "#/$defs/utc_timestamp_300"}
+      }
+    },
+    "wake_attempt": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "wake_binding_id", "go_id", "cell_id", "round_id", "level", "message",
+        "message_sha256", "started_at", "timeout_seconds", "outcome", "error_codes"
+      ],
+      "properties": {
+        "artifact_type": {"const": "WAKE_ATTEMPT"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "wake_binding_id": {"$ref": "#/$defs/id"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "cell_id": {"$ref": "#/$defs/id"},
+        "round_id": {"$ref": "#/$defs/id"},
+        "level": {"type": "integer", "minimum": 1, "maximum": 3},
+        "message": {"type": "string", "minLength": 1},
+        "message_sha256": {"$ref": "#/$defs/hash"},
+        "started_at": {"$ref": "#/$defs/utc_timestamp_300"},
+        "timeout_seconds": {"type": "integer", "minimum": 0, "maximum": 120},
+        "outcome": {"enum": ["ACKNOWLEDGED", "PROCESSING_OBSERVED", "FAILED"]},
+        "error_codes": {"$ref": "#/$defs/string_array"}
+      }
+    },
+    "wake_ack": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "wake_binding_id", "go_id", "cell_id", "round_id", "checker_binding_ref",
+        "checker_thread_id", "checker_host_id", "ack_status", "acknowledged_at"
+      ],
+      "properties": {
+        "artifact_type": {"const": "WAKE_ACK"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "wake_binding_id": {"$ref": "#/$defs/id"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "cell_id": {"$ref": "#/$defs/id"},
+        "round_id": {"$ref": "#/$defs/id"},
+        "checker_binding_ref": {"$ref": "#/$defs/id"},
+        "checker_thread_id": {"$ref": "#/$defs/id"},
+        "checker_host_id": {"$ref": "#/$defs/id"},
+        "ack_status": {"const": "WAKE_ACK"},
+        "acknowledged_at": {"$ref": "#/$defs/utc_timestamp_300"}
+      }
+    },
+    "pending_wake": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "wake_binding_id", "pending_key", "heartbeat_key", "go_id", "cell_id",
+        "round_id", "worker_binding_ref", "checker_binding_ref", "message_sha256",
+        "attempt_refs", "state", "consumption_evidence_refs"
+      ],
+      "properties": {
+        "artifact_type": {"const": "PENDING_WAKE"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "wake_binding_id": {"$ref": "#/$defs/id"},
+        "pending_key": {"$ref": "#/$defs/id"},
+        "heartbeat_key": {"$ref": "#/$defs/id"},
+        "go_id": {"$ref": "#/$defs/id"},
+        "cell_id": {"$ref": "#/$defs/id"},
+        "round_id": {"$ref": "#/$defs/id"},
+        "worker_binding_ref": {"$ref": "#/$defs/id"},
+        "checker_binding_ref": {"$ref": "#/$defs/id"},
+        "message_sha256": {"$ref": "#/$defs/hash"},
+        "attempt_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 3, "maxItems": 3, "uniqueItems": true},
+        "state": {"enum": ["OPEN", "CONSUMED"]},
+        "consumption_evidence_refs": {"$ref": "#/$defs/string_array"}
+      }
+    },
+    "device_capacity_profile": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "profile_id", "profile_version", "prior_profile_sha256", "observed_at",
+        "fresh_until", "logical_cpu_count", "safe_cpu_concurrency", "available_ram_mb",
+        "gpu_applicability", "gpu_count", "available_vram_mb", "available_disk_mb",
+        "io_mb_s", "network_applicability", "external_service_slots", "max_processes",
+        "permitted_ports", "safe_parallel_commands", "command_durations_seconds",
+        "context_budget_tokens", "evidence_budget_mb", "units_explicit", "provenance_verified"
+      ],
+      "properties": {
+        "artifact_type": {"const": "DEVICE_CAPACITY_PROFILE"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "profile_id": {"$ref": "#/$defs/id"},
+        "profile_version": {"type": "integer", "minimum": 1},
+        "prior_profile_sha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "observed_at": {"$ref": "#/$defs/utc_timestamp_300"},
+        "fresh_until": {"$ref": "#/$defs/utc_timestamp_300"},
+        "logical_cpu_count": {"type": "integer", "minimum": 1},
+        "safe_cpu_concurrency": {"type": "integer", "minimum": 1},
+        "available_ram_mb": {"type": "integer", "minimum": 1},
+        "gpu_applicability": {"enum": ["AVAILABLE", "NOT_APPLICABLE"]},
+        "gpu_count": {"type": "integer", "minimum": 0},
+        "available_vram_mb": {"type": "integer", "minimum": 0},
+        "available_disk_mb": {"type": "integer", "minimum": 1},
+        "io_mb_s": {"type": "integer", "minimum": 1},
+        "network_applicability": {"enum": ["AVAILABLE", "RESTRICTED", "NOT_APPLICABLE"]},
+        "external_service_slots": {"type": "integer", "minimum": 0},
+        "max_processes": {"type": "integer", "minimum": 1},
+        "permitted_ports": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 65535}, "uniqueItems": true},
+        "safe_parallel_commands": {"type": "integer", "minimum": 1},
+        "command_durations_seconds": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "integer", "minimum": 1}},
+        "context_budget_tokens": {"type": "integer", "minimum": 1},
+        "evidence_budget_mb": {"type": "integer", "minimum": 1},
+        "units_explicit": {"const": true},
+        "provenance_verified": {"const": true}
+      }
+    },
+    "cumulative_engineering_load": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "load_id", "load_version", "prior_load_sha256", "profile_id", "profile_version",
+        "accepted_baseline_ref", "regression_case_count", "regression_duration_seconds",
+        "observed_memory_peak_mb", "file_count", "dependency_count", "evidence_size_mb",
+        "context_recovery_seconds", "active_resource_reservations", "boundary_kind"
+      ],
+      "properties": {
+        "artifact_type": {"const": "CUMULATIVE_ENGINEERING_LOAD"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "load_id": {"$ref": "#/$defs/id"},
+        "load_version": {"type": "integer", "minimum": 1},
+        "prior_load_sha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "profile_id": {"$ref": "#/$defs/id"},
+        "profile_version": {"type": "integer", "minimum": 1},
+        "accepted_baseline_ref": {"$ref": "#/$defs/id"},
+        "regression_case_count": {"type": "integer", "minimum": 0},
+        "regression_duration_seconds": {"type": "integer", "minimum": 0},
+        "observed_memory_peak_mb": {"type": "integer", "minimum": 0},
+        "file_count": {"type": "integer", "minimum": 0},
+        "dependency_count": {"type": "integer", "minimum": 0},
+        "evidence_size_mb": {"type": "integer", "minimum": 0},
+        "context_recovery_seconds": {"type": "integer", "minimum": 0},
+        "active_resource_reservations": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "integer", "minimum": 0}},
+        "boundary_kind": {"enum": ["RUN", "GO", "LEVEL", "GRAPH", "ESTIMATE_DEVIATION"]}
+      }
+    },
+    "capacity_vector_310": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu_slots", "ram_mb", "gpu_count", "vram_mb", "disk_mb", "io_mb_s", "processes", "ports", "parallel_commands", "duration_seconds", "context_tokens", "evidence_mb", "external_service_slots"],
+      "properties": {
+        "cpu_slots": {"type": "integer", "minimum": 0},
+        "ram_mb": {"type": "integer", "minimum": 0},
+        "gpu_count": {"type": "integer", "minimum": 0},
+        "vram_mb": {"type": "integer", "minimum": 0},
+        "disk_mb": {"type": "integer", "minimum": 0},
+        "io_mb_s": {"type": "integer", "minimum": 0},
+        "processes": {"type": "integer", "minimum": 0},
+        "ports": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 65535}, "uniqueItems": true},
+        "parallel_commands": {"type": "integer", "minimum": 0},
+        "duration_seconds": {"type": "integer", "minimum": 0},
+        "context_tokens": {"type": "integer", "minimum": 0},
+        "evidence_mb": {"type": "integer", "minimum": 0},
+        "external_service_slots": {"type": "integer", "minimum": 0}
+      }
+    },
+    "cell_work_estimate": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "estimate_id", "go_id", "cell_id", "plan_id", "plan_version", "go_outcome_ref",
+        "acceptance_refs", "implementation_scope_refs", "input_dependency_refs",
+        "expected_artifact_refs", "build_test_matrix", "checker_reproduction_refs",
+        "regression_refs", "evidence_hash_cleanup_refs", "context_refs", "external_tool_refs",
+        "rollback_retry_count", "cumulative_coupling_score", "cost_vector",
+        "includes_full_regression", "dispatched"
+      ],
+      "properties": {
+        "artifact_type": {"const": "CELL_WORK_ESTIMATE"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "estimate_id": {"$ref": "#/$defs/id"}, "go_id": {"$ref": "#/$defs/id"},
+        "cell_id": {"$ref": "#/$defs/id"}, "plan_id": {"$ref": "#/$defs/id"},
+        "plan_version": {"type": "integer", "minimum": 1}, "go_outcome_ref": {"$ref": "#/$defs/id"},
+        "acceptance_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "implementation_scope_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "input_dependency_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "expected_artifact_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "build_test_matrix": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "checker_reproduction_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "regression_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "evidence_hash_cleanup_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "context_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "external_tool_refs": {"$ref": "#/$defs/string_array"},
+        "rollback_retry_count": {"type": "integer", "minimum": 0},
+        "cumulative_coupling_score": {"type": "integer", "minimum": 0},
+        "cost_vector": {"$ref": "#/$defs/capacity_vector_310"},
+        "includes_full_regression": {"type": "boolean"}, "dispatched": {"type": "boolean"}
+      }
+    },
+    "cell_capacity_gate": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}], "type": "object", "unevaluatedProperties": false,
+      "required": ["gate_id", "estimate_id", "plan_version", "profile_id", "profile_version", "load_id", "load_version", "result", "reasons", "evaluated_at", "dispatch_authorized"],
+      "properties": {
+        "artifact_type": {"const": "CELL_CAPACITY_GATE"}, "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"}, "gate_id": {"$ref": "#/$defs/id"},
+        "estimate_id": {"$ref": "#/$defs/id"}, "plan_version": {"type": "integer", "minimum": 1},
+        "profile_id": {"$ref": "#/$defs/id"}, "profile_version": {"type": "integer", "minimum": 1},
+        "load_id": {"$ref": "#/$defs/id"}, "load_version": {"type": "integer", "minimum": 1},
+        "result": {"enum": ["PASS", "SPLIT_REQUIRED", "CAPACITY_BLOCKED"]},
+        "reasons": {"$ref": "#/$defs/string_array"}, "evaluated_at": {"$ref": "#/$defs/utc_timestamp_300"},
+        "dispatch_authorized": {"type": "boolean"}
+      }
+    },
+    "cell_plan_amendment": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}], "type": "object", "unevaluatedProperties": false,
+      "required": ["amendment_id", "go_id", "parent_cell_id", "successor_cell_ids", "go_outcome_ref", "acceptance_refs", "plan_version", "manifest_version", "dispatch_timing", "defect_codes", "reevaluate_undispatched_cell_ids"],
+      "properties": {
+        "artifact_type": {"const": "CELL_PLAN_AMENDMENT"}, "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"}, "amendment_id": {"$ref": "#/$defs/id"},
+        "go_id": {"$ref": "#/$defs/id"}, "parent_cell_id": {"$ref": "#/$defs/id"},
+        "successor_cell_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}, "minItems": 2, "uniqueItems": true},
+        "go_outcome_ref": {"$ref": "#/$defs/id"}, "acceptance_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "plan_version": {"type": "integer", "minimum": 2}, "manifest_version": {"type": "integer", "minimum": 2},
+        "dispatch_timing": {"enum": ["PRE_DISPATCH", "POST_DISPATCH"]},
+        "defect_codes": {"type": "array", "items": {"enum": ["POST_DISPATCH_CELL_SPLIT", "CELL_OVERSIZE_SEVERE"]}, "uniqueItems": true},
+        "reevaluate_undispatched_cell_ids": {"$ref": "#/$defs/string_array"}
+      }
+    },
+    "cell_scope_exceeded": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}], "type": "object", "unevaluatedProperties": false,
+      "required": ["signal_id", "actor_role", "go_id", "cell_id", "plan_id", "plan_version", "checkpoint_refs", "actual_scope_evidence_refs", "authorized_action"],
+      "properties": {
+        "artifact_type": {"const": "CELL_SCOPE_EXCEEDED"}, "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"}, "signal_id": {"$ref": "#/$defs/id"},
+        "actor_role": {"const": "WORKER"}, "go_id": {"$ref": "#/$defs/id"}, "cell_id": {"$ref": "#/$defs/id"},
+        "plan_id": {"$ref": "#/$defs/id"}, "plan_version": {"type": "integer", "minimum": 1},
+        "checkpoint_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "actual_scope_evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "authorized_action": {"const": "RETURN_TO_ORIGINAL_CHECKER_AND_PLANNING_AUTHORITY"}
       }
     },
     "d3_receipt": {

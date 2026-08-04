@@ -38,7 +38,20 @@ from run_state import (
 
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schemas" / "glk.schema.json"
 TECHNICAL_TYPES = ("D0_RECEIPT", "D1_RECEIPT", "D2_RECEIPT", "D3_RECEIPT")
-REQUIRES_EVIDENCE = TECHNICAL_TYPES + ("SUPERVISOR_ADMISSION", "PREFLIGHT_ADMISSION")
+REQUIRES_EVIDENCE = TECHNICAL_TYPES + (
+    "SUPERVISOR_ADMISSION",
+    "PREFLIGHT_ADMISSION",
+    "WORKER_CHECKER_WAKE_BINDING",
+    "WAKE_ATTEMPT",
+    "WAKE_ACK",
+    "PENDING_WAKE",
+    "DEVICE_CAPACITY_PROFILE",
+    "CUMULATIVE_ENGINEERING_LOAD",
+    "CELL_WORK_ESTIMATE",
+    "CELL_CAPACITY_GATE",
+    "CELL_PLAN_AMENDMENT",
+    "CELL_SCOPE_EXCEEDED",
+)
 ROLE_AUTHORITIES = frozenset(
     {"RUN_SUPERVISOR", "WORKER", "CHECKER", "GO_VERIFIER", "RUN_VERIFIER", "OWNER"}
 )
@@ -66,6 +79,16 @@ SCHEMA_DEF_BY_TYPE = {
     "D2_RECEIPT": "d2_receipt",
     "GRAPH_EVENT": "graph_event",
     "MONITOR_CONTROL": "monitor_control",
+    "WORKER_CHECKER_WAKE_BINDING": "worker_checker_wake_binding",
+    "WAKE_ATTEMPT": "wake_attempt",
+    "WAKE_ACK": "wake_ack",
+    "PENDING_WAKE": "pending_wake",
+    "DEVICE_CAPACITY_PROFILE": "device_capacity_profile",
+    "CUMULATIVE_ENGINEERING_LOAD": "cumulative_engineering_load",
+    "CELL_WORK_ESTIMATE": "cell_work_estimate",
+    "CELL_CAPACITY_GATE": "cell_capacity_gate",
+    "CELL_PLAN_AMENDMENT": "cell_plan_amendment",
+    "CELL_SCOPE_EXCEEDED": "cell_scope_exceeded",
     "D3_RECEIPT": "d3_receipt",
     "OWNER_ACCEPTANCE": "owner_acceptance_300",
     "SECURITY_HANDOFF": "security_handoff_300",
@@ -141,6 +164,21 @@ class ValidationReport:
     d3_eligibility: D3Eligibility | None = None
     run_closure: RunClosureProjection | None = None
     graph_topology: FrozenGraphTopology | None = None
+
+
+@dataclass(frozen=True, order=True)
+class OperationalControlIssue:
+    code: str
+    artifact_ref: str
+    detail: str
+
+
+@dataclass(frozen=True)
+class OperationalControlReport:
+    status: str
+    issues: Tuple[OperationalControlIssue, ...]
+    applicable: bool
+    projection_kind: str = "DERIVED_NON_AUTHORITATIVE"
 
 
 @dataclass(frozen=True)
@@ -323,6 +361,159 @@ def _schema_issue(record, schema):
         path = "/".join(str(item) for item in first.absolute_path) or "$"
         return ValidationIssue("SCHEMA_INVALID", 1, record.artifact_ref, f"{path}: {first.message}")
     return None
+
+
+def validate_operational_controls(package):
+    """Validate 3.1 operational-control lineage without issuing a technical verdict."""
+    new_types = {
+        "WORKER_CHECKER_WAKE_BINDING",
+        "WAKE_ATTEMPT",
+        "WAKE_ACK",
+        "PENDING_WAKE",
+        "DEVICE_CAPACITY_PROFILE",
+        "CUMULATIVE_ENGINEERING_LOAD",
+        "CELL_WORK_ESTIMATE",
+        "CELL_CAPACITY_GATE",
+        "CELL_PLAN_AMENDMENT",
+        "CELL_SCOPE_EXCEEDED",
+    }
+    applicable = any(package.artifacts_by_type.get(name, ()) for name in new_types)
+    if not applicable:
+        return OperationalControlReport("NOT_APPLICABLE", (), False)
+
+    issues = []
+
+    def add(code, value, detail):
+        issues.append(
+            OperationalControlIssue(
+                code,
+                value.get("artifact_id", "OPERATIONAL-CONTROL"),
+                str(detail),
+            )
+        )
+
+    digest_by_identity = {
+        id(value): digest for digest, value in package.artifacts_by_digest.items()
+    }
+    head = package.index_chain[-1] if package.index_chain else {}
+    value_by_path = {}
+    for entry in head.get("formal_artifacts", ()):
+        digest = entry.get("sha256")
+        value = package.artifacts_by_digest.get(digest)
+        if value is not None:
+            value_by_path[entry.get("path")] = value
+
+    monitors = tuple(
+        value
+        for value in package.artifacts_by_type.get("MONITOR_CONTROL", ())
+        if value.get("patrol_conversation_ref") is not None
+    )
+    if len(monitors) != 1:
+        add("PATROL_DUPLICATE", monitors[0] if monitors else {}, "exactly one patrol control required")
+    else:
+        monitor = monitors[0]
+        expected_interval = {"HIGH": 10, "MEDIUM": 15, "LOW": 30}.get(
+            monitor.get("project_difficulty")
+        )
+        if (
+            monitor.get("patrol_model") != "gpt-5.6-luna"
+            or monitor.get("patrol_reasoning_effort") != "xhigh"
+            or monitor.get("patrol_interval_minutes") != expected_interval
+            or not monitor.get("patrol_conversation_ref")
+            or not monitor.get("patrol_heartbeat_ref")
+        ):
+            add("PATROL_BINDING_INVALID", monitor, "model, effort, interval, or identity")
+
+    profiles = tuple(package.artifacts_by_type.get("DEVICE_CAPACITY_PROFILE", ()))
+    loads = tuple(package.artifacts_by_type.get("CUMULATIVE_ENGINEERING_LOAD", ()))
+    if len(profiles) != 1:
+        add("DEVICE_CAPACITY_CURRENT_HEAD_INVALID", profiles[0] if profiles else {}, len(profiles))
+    if len(loads) != 1:
+        add("CUMULATIVE_LOAD_CURRENT_HEAD_INVALID", loads[0] if loads else {}, len(loads))
+    current_profile = profiles[0] if len(profiles) == 1 else None
+    current_load = loads[0] if len(loads) == 1 else None
+    if current_profile is not None and current_load is not None and (
+        current_load.get("profile_id") != current_profile.get("profile_id")
+        or current_load.get("profile_version") != current_profile.get("profile_version")
+    ):
+        add("CUMULATIVE_LOAD_PROFILE_MISMATCH", current_load, "profile lineage")
+
+    estimates = {
+        value.get("estimate_id"): value
+        for value in package.artifacts_by_type.get("CELL_WORK_ESTIMATE", ())
+    }
+    gates = tuple(package.artifacts_by_type.get("CELL_CAPACITY_GATE", ()))
+    gate_by_digest = {
+        digest_by_identity.get(id(value)): value for value in gates
+    }
+    for gate in gates:
+        estimate = estimates.get(gate.get("estimate_id"))
+        if estimate is None or gate.get("plan_version") != estimate.get("plan_version"):
+            add("CELL_CAPACITY_LINEAGE_INVALID", gate, "estimate or plan version")
+        if current_profile is not None and (
+            gate.get("profile_id") != current_profile.get("profile_id")
+            or gate.get("profile_version") != current_profile.get("profile_version")
+        ):
+            add("CELL_CAPACITY_LINEAGE_INVALID", gate, "profile version")
+        if current_load is not None and (
+            gate.get("load_id") != current_load.get("load_id")
+            or gate.get("load_version") != current_load.get("load_version")
+        ):
+            add("CELL_CAPACITY_LINEAGE_INVALID", gate, "load version")
+        if (gate.get("result") == "PASS") != (gate.get("dispatch_authorized") is True):
+            add("CELL_CAPACITY_DECISION_INVALID", gate, "dispatch_authorized contradicts result")
+
+    wake_bindings = tuple(package.artifacts_by_type.get("WORKER_CHECKER_WAKE_BINDING", ()))
+    wake_by_id = {value.get("wake_binding_id"): value for value in wake_bindings}
+    if len(wake_by_id) != len(wake_bindings):
+        add("WAKE_BINDING_DUPLICATE", wake_bindings[0] if wake_bindings else {}, "identity")
+    for binding in wake_bindings:
+        gate = gate_by_digest.get(binding.get("capacity_gate_sha256"))
+        if gate is None or gate.get("result") != "PASS" or gate.get("dispatch_authorized") is not True:
+            add("CELL_CAPACITY_NOT_PASS", binding, "wake/dispatch lacks exact PASS gate")
+
+    attempts = tuple(package.artifacts_by_type.get("WAKE_ATTEMPT", ()))
+    attempts_by_path = {
+        path: value for path, value in value_by_path.items() if value.get("artifact_type") == "WAKE_ATTEMPT"
+    }
+    for attempt in attempts:
+        if attempt.get("wake_binding_id") not in wake_by_id:
+            add("WAKE_BINDING_MISMATCH", attempt, "unknown wake binding")
+    for ack in package.artifacts_by_type.get("WAKE_ACK", ()):
+        binding = wake_by_id.get(ack.get("wake_binding_id"))
+        if binding is None or any(
+            ack.get(field) != binding.get(field)
+            for field in ("go_id", "cell_id", "round_id")
+        ) or ack.get("checker_binding_ref") != binding.get("checker_binding_ref"):
+            add("WAKE_ACK_SCOPE_MISMATCH", ack, "ACK does not bind frozen scope")
+    for pending in package.artifacts_by_type.get("PENDING_WAKE", ()):
+        selected = tuple(attempts_by_path.get(path) for path in pending.get("attempt_refs", ()))
+        binding = wake_by_id.get(pending.get("wake_binding_id"))
+        valid = (
+            binding is not None
+            and len(selected) == 3
+            and all(value is not None for value in selected)
+            and {value.get("level") for value in selected} == {1, 2, 3}
+            and all(value.get("wake_binding_id") == pending.get("wake_binding_id") for value in selected)
+            and all(value.get("message_sha256") == pending.get("message_sha256") for value in selected)
+        )
+        if not valid:
+            add("PENDING_WAKE_ATTEMPTS_INVALID", pending, "requires exact Levels 1-3 and message")
+
+    for amendment in package.artifacts_by_type.get("CELL_PLAN_AMENDMENT", ()):
+        successors = tuple(amendment.get("successor_cell_ids", ()))
+        codes = set(amendment.get("defect_codes", ()))
+        if amendment.get("dispatch_timing") == "POST_DISPATCH":
+            if "POST_DISPATCH_CELL_SPLIT" not in codes:
+                add("POST_DISPATCH_CELL_SPLIT_MISSING", amendment, "post-dispatch split")
+            if len(successors) >= 3 and (
+                "CELL_OVERSIZE_SEVERE" not in codes
+                or not amendment.get("reevaluate_undispatched_cell_ids")
+            ):
+                add("CELL_OVERSIZE_SEVERE_MISSING", amendment, len(successors))
+
+    ordered = tuple(sorted(set(issues)))
+    return OperationalControlReport("FAIL" if ordered else "PASS", ordered, True)
 
 
 def _layer_three(records, blocked, add_issue):
@@ -1414,7 +1605,7 @@ def _layer_ten(records, blocked, eligibility, current_d3, add_issue):
     )
 
 def validate_loaded_run(package, adapter):
-    """Derive a frozen ten-layer report from one already integrity-checked package."""
+    """Derive ten technical layers plus the applicable 3.1 operational-control gate."""
     records = _records(package)
     issues = []
     blocked = set()
@@ -1460,15 +1651,22 @@ def validate_loaded_run(package, adapter):
         current_d3,
         add_issue,
     )
+    operational_controls = validate_operational_controls(package)
+    if operational_controls.applicable:
+        issues.extend(
+            ValidationIssue(issue.code, 11, issue.artifact_ref, issue.detail)
+            for issue in operational_controls.issues
+        )
 
     ordered = tuple(sorted(issues, key=lambda issue: (issue.layer, issue.artifact_ref, issue.code)))
+    layer_numbers = range(1, 12) if operational_controls.applicable else range(1, 11)
     layers = tuple(
         ValidationLayer(
             layer=layer,
             status="FAIL" if any(issue.layer == layer for issue in ordered) else "PASS",
             issue_count=sum(1 for issue in ordered if issue.layer == layer),
         )
-        for layer in range(1, 11)
+        for layer in layer_numbers
     )
     return ValidationReport(
         status="FAIL" if ordered else "PASS",

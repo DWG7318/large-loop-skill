@@ -342,8 +342,9 @@ def test_R23_monitor_binds_exact_current_liveness_attestation_set(tmp_path, muta
     _, loaded = _reload_control_case(case)
     projection = control.advance_monitor_control(
         loaded,
-        existing_supervisor_task_ref="task/RUN-001/SUPERVISOR",
-        existing_callback_target="callback/RUN-001/SUPERVISOR",
+        existing_patrol_conversation_ref="task/RUN-001/PATROL",
+        existing_patrol_heartbeat_ref="heartbeat/RUN-001/PATROL",
+        existing_callback_target="callback/RUN-001/PATROL",
     )
     require_equal(projection.status, "MONITOR_HELD", f"{mutation} monitor state")
     require(
@@ -365,8 +366,9 @@ def test_R23_monitor_control_has_one_append_only_head_and_reuses_existing_task(t
     _, loaded = _reload_control_case(case)
     projection = control.advance_monitor_control(
         loaded,
-        existing_supervisor_task_ref="task/RUN-001/SUPERVISOR",
-        existing_callback_target="callback/RUN-001/SUPERVISOR",
+        existing_patrol_conversation_ref="task/RUN-001/PATROL",
+        existing_patrol_heartbeat_ref="heartbeat/RUN-001/PATROL",
+        existing_callback_target="callback/RUN-001/PATROL",
     )
     require_equal(projection.status, "MONITOR_ACTIVE", "valid monitor chain")
     require_equal(projection.head_sha256, sha256_file(second_path), "monitor head")
@@ -402,7 +404,7 @@ def test_R23_monitor_control_rejects_duplicate_fork_task_and_cron(
             label="SECOND-TASK-V2",
             version=2,
             prior_digest=first_digest,
-            supervisor_task_ref="task/RUN-001/SECOND-SUPERVISOR",
+            patrol_conversation_ref="task/RUN-001/SECOND-PATROL",
         )
     elif mutation == "CRON":
         first["cron_expression"] = "* * * * *"
@@ -413,8 +415,9 @@ def test_R23_monitor_control_rejects_duplicate_fork_task_and_cron(
     _, loaded = _reload_control_case(case)
     projection = control.advance_monitor_control(
         loaded,
-        existing_supervisor_task_ref="task/RUN-001/SUPERVISOR",
-        existing_callback_target="callback/RUN-001/SUPERVISOR",
+        existing_patrol_conversation_ref="task/RUN-001/PATROL",
+        existing_patrol_heartbeat_ref="heartbeat/RUN-001/PATROL",
+        existing_callback_target="callback/RUN-001/PATROL",
     )
     require_equal(projection.status, "MONITOR_HELD", f"{mutation} monitor state")
     require(expected_code in {issue.code for issue in projection.issues}, expected_code)

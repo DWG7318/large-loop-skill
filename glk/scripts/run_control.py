@@ -84,7 +84,8 @@ class MonitorControlProjection:
     status: str
     monitor_key: str | None
     head_sha256: str | None
-    supervisor_task_ref: str | None
+    patrol_conversation_ref: str | None
+    patrol_heartbeat_ref: str | None
     callback_target: str | None
     observation_deadline: str | None
     issues: Tuple[MonitorIssue, ...]
@@ -355,8 +356,10 @@ def _monitor_key(run_id):
 def advance_monitor_control(
     package,
     *,
-    existing_supervisor_task_ref,
-    existing_callback_target,
+    existing_patrol_conversation_ref=None,
+    existing_patrol_heartbeat_ref=None,
+    existing_callback_target=None,
+    existing_supervisor_task_ref=None,
 ):
     controls = tuple(package.artifacts_by_type.get("MONITOR_CONTROL", ()))
     issues = []
@@ -373,13 +376,19 @@ def advance_monitor_control(
             None,
             None,
             None,
+            None,
             tuple(issues),
             (RUN_MONITOR_HOLD,),
         )
 
     digests = {_artifact_digest(package, control): control for control in controls}
     run_ids = {control.get("run_id") for control in controls}
-    expected_key = _monitor_key(next(iter(run_ids))) if len(run_ids) == 1 else None
+    modern_patrol = any(control.get("patrol_conversation_ref") for control in controls)
+    expected_key = (
+        f"{next(iter(run_ids))}-RUN-PATROL"
+        if len(run_ids) == 1 and modern_patrol
+        else _monitor_key(next(iter(run_ids))) if len(run_ids) == 1 else None
+    )
     if expected_key is None or any(
         control.get("monitor_key") != expected_key for control in controls
     ):
@@ -391,8 +400,22 @@ def advance_monitor_control(
         forbidden = FORBIDDEN_MONITOR_FIELDS & set(control)
         if forbidden:
             add("MONITOR_CRON_FORBIDDEN", control, ",".join(sorted(forbidden)))
-        if control.get("supervisor_task_ref") != existing_supervisor_task_ref:
-            add("MONITOR_SECOND_VISIBLE_TASK", control, "Supervisor task reference changed")
+        if modern_patrol:
+            if control.get("patrol_conversation_ref") != existing_patrol_conversation_ref:
+                add("MONITOR_SECOND_VISIBLE_TASK", control, "patrol conversation reference changed")
+            if control.get("patrol_heartbeat_ref") != existing_patrol_heartbeat_ref:
+                add("PATROL_HEARTBEAT_DUPLICATE", control, "patrol heartbeat reference changed")
+            expected_interval = {"HIGH": 10, "MEDIUM": 15, "LOW": 30}.get(
+                control.get("project_difficulty")
+            )
+            if (
+                control.get("patrol_model") != "gpt-5.6-luna"
+                or control.get("patrol_reasoning_effort") != "xhigh"
+                or control.get("patrol_interval_minutes") != expected_interval
+            ):
+                add("PATROL_BINDING_INVALID", control, "patrol model, effort, or interval")
+        elif control.get("supervisor_task_ref") != existing_supervisor_task_ref:
+            add("MONITOR_SECOND_VISIBLE_TASK", control, "historical Supervisor task reference changed")
         if control.get("callback_target") != existing_callback_target:
             add("MONITOR_CALLBACK_INVALID", control, "callback target changed")
 
@@ -484,7 +507,8 @@ def advance_monitor_control(
         status="MONITOR_HELD" if ordered_issues else head.get("monitor_state", "MONITOR_HELD"),
         monitor_key=expected_key,
         head_sha256=heads[0] if len(heads) == 1 else None,
-        supervisor_task_ref=head.get("supervisor_task_ref") if head is not None else None,
+        patrol_conversation_ref=head.get("patrol_conversation_ref") if head is not None else None,
+        patrol_heartbeat_ref=head.get("patrol_heartbeat_ref") if head is not None else None,
         callback_target=head.get("callback_target") if head is not None else None,
         observation_deadline=head.get("observation_deadline") if head is not None else None,
         issues=ordered_issues,
