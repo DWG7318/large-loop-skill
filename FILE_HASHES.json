@@ -18,9 +18,9 @@
     "docs/superpowers/plans/2026-07-29-glk-2.3.1.md": "7325f91de72c5a013906a4cd08638cb1dcea5a82cc0aa5465d583bd971ef23f1",
     "docs/superpowers/plans/2026-07-30-glk-2.4.0.md": "f84ef4dcba65ef0cbb23a6f107da112f85d480fc4f56dea807edaafb5643f1f3",
     "docs/superpowers/plans/2026-08-03-glk-3.0.0-authority-and-run-validation-implementation.md": "1151eeb70e1600065d1df80cfd5d5354cbf235721ac5bc9a6e3d117061844a57",
-    "docs/superpowers/plans/2026-08-04-glk-3.1.0-worker-wake-patrol-and-progress-implementation.md": "6e8f48a91815f9fd126a721a77f5944b0b67d61c0105c82d454905825a51ff0d",
+    "docs/superpowers/plans/2026-08-04-glk-3.1.0-worker-wake-patrol-and-progress-implementation.md": "a99473e648f460ec4dd39193cd5884d054282facce53317de65abfd56e8c2547",
     "docs/superpowers/specs/2026-08-03-glk-3.0.0-authority-and-run-validation-design.md": "2b512f432901aa113992177162241d51863c5d6f31b8ab8e196bdd89d14d7ab0",
-    "docs/superpowers/specs/2026-08-04-glk-3.1.0-worker-wake-patrol-and-progress-design.md": "57050ecddf77fcdce3914e801dd8e1ffd6e7701c55dd746553ead371d8dc1bfa",
+    "docs/superpowers/specs/2026-08-04-glk-3.1.0-worker-wake-patrol-and-progress-design.md": "46c64fc731eb99e190146faf93864b86fff80bae5d277536ecf3d9b0546d8170",
     "glk/SKILL.md": "dc7f27bf8dfab2787ce309cebb80d18850d38bcff07233d1a044ad7a877ddd62",
     "glk/examples/README.md": "70ade3891f5654b3609fc4e2eade7117ec61a2e359a1f94583531587d03de8c1",
     "glk/examples/appointment-run.yaml": "866da58356e624e7bb8e7bcea854016f2e958fcfd4015be8c7ef25bd310cee16",
@@ -49,12 +49,13 @@
     "glk/scripts/provenance.py": "8fff8088b18b432f018f213279ce24620c42a1627f191e6bdcf320cfa92fc73e",
     "glk/scripts/repository.py": "8f8ca4b4e107cfe11331b100ebd244febc60ea06d5567ee5b1ceabdbf000a264",
     "glk/scripts/run_control.py": "1e7c39dbdad61bb43ba1317d40d3ae9e35daa4ce9cec743b3b0c7d8126b6b6d4",
-    "glk/scripts/run_model.py": "63163b53526b63059cb11515a58872deaca798a11a3bfe411953ce6b23bdc0a5",
+    "glk/scripts/run_model.py": "8fc1af0caa868f1c62f2196ca54798334d6bb00555dcf0b310674e5c896b848c",
     "glk/scripts/run_package.py": "0a52fc0c42c889aed83bc392231d225b5cd2be785bfa559b1a42276c1c61cc24",
     "glk/scripts/run_state.py": "94999aab91eb4ccd88ae9e7f6aad4ad977c51b9586aba06b781bc287bde0a85e",
     "glk/scripts/run_validation.py": "9851376d200e2d7618d36e5b84d6327ccd6bfb89c01b6b48254c4d17184eb3b8",
     "glk/scripts/validate_glk.py": "b349f31f8a5931fb52dab31022878844cfe896feb38073181931b29b1c69915c",
     "glk/scripts/validate_run.py": "88041600346478c50d087b66e87373b088cd0605282a85914566309aab1d23c6",
+    "glk/scripts/worker_wake.py": "790d35a844df079fd7b38db0f626a6e485107b2de97d9706b7d7b739a5541956",
     "glk/templates/CELL_MANIFEST.yaml": "f59ffe2ed52aef2582cab68a53f1fee647735f4269359a084e4394c04f2e1f5a",
     "glk/templates/CELL_MANIFEST_AMENDMENT.yaml": "a2ee4f3ed7d7211b5787022ba7d3474ab3b2a1ae57dcb26248faec3a4b2d9fb2",
     "glk/templates/D0_RECEIPT.yaml": "9b8f49b0af61cb8e4de0ae68b97db603a6cfa8c65c5c23e52b315629bdb7b974",
@@ -97,7 +98,8 @@
     "tests/test_supply_chain_300.py": "e6abaa4bb5dca0d97a304b26e4dab63b289a23b5574fe8920b97003216dc6d52",
     "tests/test_templates.py": "73df8f3d5bb84003788604a447b5e5b532f6060fa1a1403b4da0ff03b68980e9",
     "tests/test_validate_run_cli_300.py": "f925c12a76567023392fc286f100e5eddf2e6963a1da1fa95bfbd6446d5e6f73",
-    "tests/test_validator.py": "b05ba2fc5fc4d9d5c646a94a7aecea9f956dbb5b8d4e233e37a9e38bd847b2d6"
+    "tests/test_validator.py": "b05ba2fc5fc4d9d5c646a94a7aecea9f956dbb5b8d4e233e37a9e38bd847b2d6",
+    "tests/test_worker_wake_310.py": "fdc12b9b477b6b53dc65e681f76a49ee8bcb9e4448b8dc6ab178caa582aced7d"
   },
   "version": "3.0.0"
 }
