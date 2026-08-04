@@ -49,6 +49,7 @@ class RoleCapabilityProfile:
     issuable_artifact_types: Tuple[str, ...]
     held_issuance_artifact_types: Tuple[str, ...]
     invocable_issuance_artifact_types: Tuple[str, ...]
+    operational_capabilities: Tuple[str, ...] = ()
 
     def __post_init__(self):
         if not self.profile_id:
@@ -59,12 +60,13 @@ class RoleCapabilityProfile:
             "issuable_artifact_types",
             "held_issuance_artifact_types",
             "invocable_issuance_artifact_types",
+            "operational_capabilities",
         ):
             values = getattr(self, name)
             if not isinstance(values, tuple) or len(values) != len(set(values)):
                 raise RunBindingError(f"{name} must be a unique tuple")
             if any(not isinstance(value, str) or not value for value in values):
-                raise RunBindingError(f"{name} contains an invalid artifact type")
+                raise RunBindingError(f"{name} contains an invalid capability")
 
 
 def supervisor_technical_capabilities(profile: RoleCapabilityProfile) -> Tuple[str, ...]:
