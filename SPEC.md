@@ -1,9 +1,12 @@
-# GLK Standard Specification 2.4.0
+# GLK Standard Specification 3.0.0
 
 ## 1. Identity
 
 Graph Loop Skill (GLK) governs one bounded engineering Run represented honestly as
 a directed acyclic GO Execution Graph.
+
+Canonical repository: `https://github.com/DWG7318/large-loop-skill`.
+Canonical invocation: `graph-loop-skill`.
 
 GLK owns:
 
@@ -208,10 +211,10 @@ consumption_evidence_refs
 These bindings explain which frozen producer claim or output the successor actually
 consumes. They do not turn a call graph, data-flow graph, module graph, or file
 relationship into a GO edge. An edge without all three bindings may be read as
-historical 2.3.1 scheduling evidence, but it cannot participate in 2.4.0 causal
+historical scheduling evidence, but it cannot participate in 3.0.0 causal
 recovery.
 
-For a 2.4.0 causal trace, every incoming dependency of the source and traversed
+For a 3.0.0 causal trace, every incoming dependency of the source and traversed
 path targets must have this contract. An `unbound incoming dependency` fails causal
 recovery closed because it cannot be excluded with evidence; ordinary legacy
 scheduling may continue without claiming a causal result.
@@ -450,3 +453,175 @@ A GLK Run completes only when all Required GO claims are resolved under the froz
 graph, terminal coverage is complete, D3 passes on the final candidate, evidence and
 candidate identities are synchronized, the Owner signs `LOOP_OWNER_ACCEPTED`, and
 the LCCoding security handoff is emitted.
+
+## 18. Breaking 3.0 authority contract
+
+The 2.4 formal-use freeze prohibits starting a new formal 2.4 Run. Historical 2.4
+packages remain immutable and readable for audit or migration classification, but
+their free-form bindings, mixed receipts, and template-level pass claims cannot
+establish 3.0 current evidence.
+
+GLK 3.0 separates these append-only artifacts and authorities:
+
+| Artifact | Sole authority | Meaning |
+|---|---|---|
+| D0 | Worker | exact CELL candidate production evidence |
+| D1 | Checker | independent verdict on exact CELL candidate/D0 |
+| Supervisor admission | Run Supervisor | mechanical admission of an exact digest |
+| D2 | GO Verifier | exact GO closure verdict |
+| Graph event | Run Supervisor | dependency release and active-set recomputation |
+| D3 | Run Verifier | exact required GO/D2 and graph-seam verdict |
+| Owner Acceptance | Owner | bounded Run decision on admitted current D3 |
+
+The Run Supervisor cannot issue, hold an issuance capability for, or invoke D0-D3.
+An admission cannot alter a technical verdict, and a D2 receipt cannot carry graph
+control.
+
+## 19. CELL manifest and GO closure
+
+Each GO freezes one versioned `CELL_MANIFEST` with the exact required CELL set,
+contract digests, closure hash, prior-manifest digest, and amendment reference when
+applicable. Adding, deleting, or replacing a CELL contract requires a frozen
+amendment; historical manifests are never rewritten.
+
+D1 binds the current CELL manifest, CELL contract, exact candidate/D0, Checker
+context, evidence, provenance, and expiry. It does not bind the future GO closure.
+Only after all required CELLs have current admitted D0 and D1 PASS artifacts may the
+designated Worker derive `GO_CANDIDATE_CLOSURE`. That closure selects the exact CELL
+candidate, D0, and D1 digests and derives the GO candidate generation/hash consumed
+by D2.
+
+If one CELL changes, only that CELL requires new D0/D1 when the remaining D1
+artifacts retain identical manifest version, contract, candidate, evidence,
+provenance, expiry, and impact facts. Any selected tuple change invalidates the old
+GO closure. A single-CELL GO follows the same rule without a bypass.
+
+## 20. Run package and validation scopes
+
+`RUN_PACKAGE_INDEX` is a versioned append-only control artifact with
+`index_version`, `prior_index_sha256`, and current ledger heads. It does not list
+itself as a formal inventory item and is not an oracle. The loader independently
+scans declared formal and evidence roots, recomputes digests, rejects omitted or
+extra objects, path escape, symlinks, duplicate digests, forks, and multiple heads,
+then deep-freezes the loaded subject.
+
+Repository and Run validation are separate products:
+
+```text
+validate_glk -> REPOSITORY_DISTRIBUTION
+validate_run -> RUN_PACKAGE
+```
+
+`validate_run` loads once and applies ten validation layers:
+
+1. serialization and schema;
+2. package and index integrity;
+3. Run/Graph/GO/CELL/reference identity;
+4. adapter-backed provenance, authority, capability, and isolation;
+5. candidate, digest, admission, and receipt lineage;
+6. CELL manifest and GO candidate closure;
+7. recomputed graph identity, coverage, predecessors, and acyclicity;
+8. D2 admission and independent graph events;
+9. D3 closure, graph seams, and Run Verifier isolation;
+10. Owner Acceptance and post-acceptance security handoff.
+
+The validator never trusts a self-reported verdict, actor, timestamp, acyclicity
+flag, receipt list, or graph digest when it can recompute the fact.
+
+## 21. Provenance adapter boundary
+
+GLK defines exactly four abstract adapter operations:
+
+```text
+resolve_binding
+verify_issuance
+verify_isolation
+check_liveness
+```
+
+Requests and results bind contract version, request digest, role binding, Run and
+scope, artifact digest, status, evidence reference, and observation time. A trusted
+adapter must attest role capability, issuance, required isolation dimensions, and
+liveness. Free role or context strings are never sufficient.
+
+GLK does not implement sessions, credentials, key custody, production issuance,
+Broker services, replay, checkpoints, or Agent runtime provenance. LCagent or an
+external trusted execution environment owns those implementations. GLK owns only
+the abstract evidence contract and adapter interface.
+
+## 22. Preflight and no-side-effect simulation
+
+Bootstrap creates only a `DRAFT_SCAFFOLD` with unresolved values. It cannot create
+current formal evidence or claim that a Run is complete.
+
+Formal preflight requires the exact method lock, one canonical declared
+installation, complete six-role bindings and capabilities, trusted adapter-backed
+readiness evidence, a ten-layer valid package, a successful no-side-effect
+simulation, and no active hold. `PREFLIGHT_REPORT` and `SIMULATION_REPORT` are
+derived non-authoritative projections. Only a separate Supervisor admission may
+record a mechanical gate result.
+
+Simulation uses a separate simulation root and must prove that formal ledger and
+index digests are unchanged. It rehearses every technical receipt followed by its
+independent admission, graph-event release, liveness failure, architecture hold,
+Owner gate, and maximal-safe fork activation.
+
+## 23. Liveness, monitor, and architecture stops
+
+Read failure, missing evidence, or stale observation never implies health. A role
+whose observation deadline expires becomes unreachable. `MONITOR_CONTROL` has one
+deterministic key and one append-only head, binds the exact indexed liveness
+attestations for all current roles and the current adapter profile, and references
+the existing Supervisor task/callback. It cannot create another task or schedule a
+cron job.
+
+A proven technical authority violation immediately produces `RUN_AUTHORITY_HOLD`.
+Two consecutive HIGH architecture findings on the same path produce
+`RUN_ARCHITECTURE_HOLD`, even when findings from another path are interleaved.
+Recovery is limited to frozen amendment plus revalidation, or sealing the Run and
+starting a new Run. Local rework cannot clear an architecture hold.
+
+## 24. Formal and derived objects
+
+Formal artifacts are append-only objects with one issuer and indexed lineage.
+Validation, preflight, simulation, liveness, migration, and progress reports are
+derived non-authoritative objects. They do not participate in technical verdicts,
+cannot be indexed as receipts, and cannot advance state by themselves.
+
+Formal progress reports both `required GO/D2` completion and `required CELL/D1`
+completion, including exact counts and IDs, active GO IDs, typed waiting reasons,
+blocked or unreachable role bindings, current holds, graph version, and CELL
+manifest versions.
+
+## 25. Method lock and migration
+
+Every formal Run binds `GLK_METHOD_LOCK` to:
+
+```text
+https://github.com/DWG7318/large-loop-skill
+graph-loop-skill
+3.0.0
+exact commit and release tag
+schema and Skill bundle digests
+real Run validator source-bundle digest
+adapter profile and contract version
+```
+
+Preflight inspects only caller-declared installation roots. Missing, duplicate,
+stale, or conflicting installations produce `GLK_SUPPLY_CHAIN_CONFLICT`; it does
+not scan undeclared roots or fetch a remote repository.
+
+Migration may preserve compatible GO topology, actual-consumption edges, causal
+traces, and amendment history. Contracts and bindings require revalidation. Mixed
+mutable receipts and sample bootstrap pass claims are excluded from the current
+formal model. An unproven 2.4 receipt remains historical-only and can never become
+3.0 current evidence through a migration report.
+
+## 26. External ownership boundary
+
+LCCoding owns project lifecycle, product-definition routing, centralized security
+audit, and delivery policy. LCagent or a trusted execution environment owns session,
+credential, issuance, replay/checkpoint, Broker, and runtime provenance mechanisms.
+GLK remains a lightweight engineering method: it defines GO-DAG authority,
+dependency unlock, maximal-safe activation, evidence contracts, and fail-closed
+validation without implementing those external systems.

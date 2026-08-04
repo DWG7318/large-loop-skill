@@ -1,4 +1,4 @@
-schema_version: 2.4.0
+schema_version: 3.0.0
 trace_id: TRACE-001
 incident_id: INCIDENT-001
 graph_id: GRAPH-001
@@ -28,4 +28,4 @@ excluded_edges:
     consumption_evidence_refs: ["evidence/edges/GO-001-GO-002.json"]
 stopping_reason: "confirmed source reached"
 confirmation_status: CONFIRMED
-issued_at: "1970-01-01T00:00:00Z"
+issued_at: "2026-08-03T06:00:00Z"

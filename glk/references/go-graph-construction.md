@@ -1,5 +1,7 @@
 # GO Graph Construction
 
+This reference defines the GLK 3.0.0 GO-DAG construction contract.
+
 Build the minimum GO set that covers the frozen Run Feature. Every GO has one
 primary claim, explicit scope, acceptance, evidence, predecessors, conflict keys,
 and candidate binding.
@@ -25,3 +27,10 @@ Validate:
 
 Freeze the result as a versioned `GRAPH_BASELINE` with a graph hash before product
 implementation begins.
+
+The Run validator recomputes node uniqueness, edge endpoint coverage, predecessor
+equivalence, required-GO coverage, topological acyclicity, and current graph digest
+from actual objects. A self-reported acyclicity flag is descriptive only.
+
+Actual-consumption bindings support causal slicing but never turn a call graph,
+data-flow graph, or file dependency graph into the GO DAG.

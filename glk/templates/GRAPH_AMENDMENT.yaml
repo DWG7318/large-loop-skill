@@ -1,4 +1,4 @@
-schema_version: 2.4.0
+schema_version: 3.0.0
 amendment_id: GA-001
 graph_id: GRAPH-001
 from_version: 1
@@ -48,4 +48,4 @@ reactivation_projection:
   unchanged_go_ids: ["GO-001"]
 rollback: "Restore graph version 1 and quarantine version 2 candidates"
 authority_binding_ref: ROLE-RUN-001-SUPERVISOR
-issued_at: "1970-01-01T00:00:00Z"
+issued_at: "2026-08-03T06:10:00Z"

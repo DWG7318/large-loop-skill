@@ -1,40 +1,33 @@
 ---
 name: graph-loop-skill
-description: Use for one frozen engineering Run whose independently verifiable GO outcomes form a directed acyclic GO execution graph that cannot be represented honestly as a strict line or stable Chain/Stage plan.
-version: 2.4.0
+description: Govern one frozen engineering Run whose independently verifiable GO outcomes form a dependency DAG with maximal-safe parallel activation.
+version: 3.0.0
 ---
 
-# Graph Loop Skill (GLK) 2.4.0
+# Graph Loop Skill (GLK) 3.0.0
 
-## Mandatory load chain
+Canonical repository: https://github.com/DWG7318/large-loop-skill
 
-Before formal execution, read `SPEC.md` completely. Then read the relevant files
-under `glk/references/` and use the versioned templates plus
-`glk/schemas/glk.schema.json`.
+## Authority order
 
-Authority order is:
+Read `SPEC.md` completely, then the relevant files under `glk/references/`, the
+versioned templates, and `glk/schemas/glk.schema.json`.
 
 ```text
-Owner decisions
--> frozen RUN_CONTRACT
+Owner and LCCoding gateway decisions
+-> frozen RUN_CONTRACT and GLK_METHOD_LOCK
 -> SPEC.md
--> relevant references
--> templates and executable schema
+-> references
+-> executable schema and templates
 -> examples
 ```
 
-Missing or conflicting authority is `GLK_CONTRACT_BLOCKED`; fail closed.
+Missing, conflicting, stale, or unverifiable authority fails closed.
 
-## Canonical identity
+## Method identity
 
-GLK governs one bounded Run as a directed acyclic GO-to-GO execution graph. Nodes
-are independently verifiable GO outcomes. Edges are mandatory D2
-completion-precedence relations. GLK is not a Workflow, Code Graph, business graph,
-dependency inventory, Chain map, or Stage plan.
-
-## Six roles
-
-GLK has exactly:
+GLK governs one bounded Run as a GO-to-GO dependency DAG. It has exactly six role
+types:
 
 ```text
 Run Supervisor
@@ -45,72 +38,143 @@ Run Verifier
 Owner
 ```
 
-Every Run receives a fresh Run Supervisor instance and isolated binding. Never reuse
-one Supervisor instance, context, mutable workspace, or evidence root across Runs.
-Concurrent active GO nodes receive isolated Worker, Checker, and GO Verifier
-instances without adding role types.
+Every Run receives a fresh Run Supervisor instance. The Supervisor may issue only
+control artifacts; it cannot issue, hold an issuance capability for, or invoke
+D0, D1, D2, or D3.
 
-## Method
+## Execution flow
 
-1. Load and validate one frozen `RUN_CONTRACT`.
-2. Construct the minimum complete GO set.
-3. Freeze every GO claim, evidence boundary, predecessor, and conflict key.
-4. Add only mandatory D2 predecessor edges using the edge test and bind actual
-   source-claim/output to target-input/assumption consumption evidence.
-5. Validate acyclicity, reachability, terminal coverage, and Run Feature coverage.
-6. Freeze `GRAPH_BASELINE`.
-7. Classify unresolved non-active nodes as `WAITING_GO` with typed
-   `waiting_reasons`.
-8. Immediately activate the maximal safe set of waiting-clear GO nodes.
-9. Execute each active GO through Worker D0, independent Checker D1, and independent
-   GO Verifier D2.
-10. When an incident crosses GO boundaries, record a versioned causal trace that
-    binds the source's current candidate/D2, an explicit real symptom set, and only
-    incident-evidence-selected consumption edges.
-11. Only after that trace is CONFIRMED, amend the graph with the minimum proven
-    successor impact from typed candidate/evidence/claim-output seeds and preserve
-    unaffected branches.
-12. Recompute the graph after every relevant event; newly unblocked GO nodes enter
-    `ACTIVE_GO` directly, including maximal-parallel reactivation after repair.
-13. After all Required GO outcomes resolve, obtain independent Run Verifier D3.
-14. Conduct immediate Run Owner Acceptance and emit `LOOP_OWNER_ACCEPTED` or the
-    appropriate rework/change verdict.
-15. Emit the accepted candidate's standardized security handoff to LCCoding.
+1. Freeze `RUN_CONTRACT`, `GLK_METHOD_LOCK`, the adapter profile, six role
+   bindings, and `GRAPH_BASELINE`.
+2. Recompute graph identity, node/edge coverage, predecessor equivalence, and
+   acyclicity from the actual DAG.
+3. Keep unresolved nodes as `WAITING_GO` with typed reasons. Nodes with no waiting
+   reason enter the maximal safe `ACTIVE_GO` set directly.
+4. For every GO, freeze a versioned `CELL_MANIFEST` and exact required CELL set.
+5. A Worker issues D0 for one exact CELL candidate; a Checker independently issues
+   D1 for the same candidate and contract.
+6. Supervisor admissions mechanically bind exact D0 and D1 digests. They do not
+   create technical verdicts.
+7. After every required CELL has a current D1 PASS, the designated Worker derives
+   `GO_CANDIDATE_CLOSURE` from exact CELL candidate, D0, and D1 digests.
+8. A GO Verifier issues D2 only for the admitted current closure. An admitted D2
+   still cannot release successors by itself.
+9. The Supervisor appends a separate `GRAPH_EVENT` that consumes the exact admitted
+   D2 and recomputes the maximal safe active set.
+10. A Run Verifier issues D3 only for the exact current required GO/D2 closure,
+    graph digest, graph events, and seam evidence.
+11. The Supervisor mechanically admits exact D3. The Owner alone issues Owner
+    Acceptance for the admitted D3.
+12. Only after `LOOP_OWNER_ACCEPTED` may the Supervisor append the security handoff;
+    LCCoding still owns centralized security closure.
 
-## Hard constraints
+There is no schedulable intermediate state between `WAITING_GO` and `ACTIVE_GO`.
+Arbitrary serialization and fake dependency edges are invalid. Independent GO
+branches activate concurrently up to the maximum-cardinality safe set.
 
-- no schedulable intermediate queue between waiting and active execution;
-- multi-GO activation capability is mandatory;
-- Run Supervisor maintains a maximal safe `ACTIVE_GO` set;
-- among conflicting safe alternatives, activate the greatest possible GO count;
-- arbitrary serialization is forbidden;
-- non-dependency constraints never become fake dependency edges;
-- execution is acyclic;
-- six roles only;
-- Run Supervisor never signs D1, D2, or D3;
-- D2 consumes D1 for the same immutable candidate;
-- D3 consumes D2 and tests graph seams plus the final Run claim;
-- causal source and symptom labels are incident annotations, not GO types or states;
-- only confirmed actual-consumption paths may invalidate current evidence;
-- reachability alone never confirms a causal path; every selected edge carries
-  incident evidence, while alternatives remain explicitly excluded;
-- unrelated amendment seeds fail closed;
-- candidate or claim/output seeds require source REWORK/QUARANTINE; an evidence-only
-  seed may use REVERIFY, and multiple seeds apply the strictest source disposition;
-- historical receipts remain append-only while amended current-validity is explicit;
-- causal recovery invalidates only the proven minimum successor slice;
-- no silent graph, role-binding, candidate, or evidence amendment;
-- centralized vulnerability closure remains owned by LCCoding.
+## Independent append-only artifacts
 
-## Required references
+D0, D1, `SUPERVISOR_ADMISSION`, D2, `GRAPH_EVENT`, D3, and
+`OWNER_ACCEPTANCE` are separate append-only artifacts. Each binds its unique
+authority, candidate and digest, Run/Graph/GO/CELL scope, execution context,
+non-empty evidence, provenance reference, and timestamp.
 
-- graph construction: `glk/references/go-graph-construction.md`
-- scheduling: `glk/references/scheduling.md`
-- state: `glk/references/state-machine.md`
-- roles and isolation: `glk/references/roles-and-isolation.md`
-- verification: `glk/references/verification.md`
-- causal slice and recovery: `glk/references/causal-impact.md`
-- amendments and resolutions: `glk/references/graph-amendment.md`
-- Owner Acceptance and security handoff:
-  `glk/references/owner-acceptance.md` and
-  `glk/references/security-boundary.md`
+`RUN_PACKAGE_INDEX` is a versioned append-only control artifact. It is not an
+oracle: the loader scans declared formal roots, rejects omissions, extra unindexed
+formal objects, bad digests, escaping paths, forks, and multiple heads, then freezes
+the loaded subject.
+
+## CELL closure and limited reuse
+
+D1 binds the current CELL manifest, CELL contract, exact CELL candidate/D0,
+Checker context, evidence, and provenance. D1 never binds a future GO closure.
+`GO_CANDIDATE_CLOSURE` is formed only after every required CELL has current admitted
+D0 and D1 PASS evidence.
+
+A changed CELL must produce a new D0 and D1. An unchanged CELL's D1 may be reused
+only when manifest version, contract, candidate, D0/D1 evidence, provenance, expiry,
+and impact are all current-valid. Any selected tuple change produces a new GO
+closure; an old closure cannot satisfy D2.
+
+## Causal recovery
+
+Each dependency edge binds `source_claim_or_output_refs`, target input/assumption
+refs, and actual consumption evidence. `GO_CAUSAL_TRACE` treats `CAUSAL_SOURCE` and
+`DOWNSTREAM_SYMPTOM` as incident annotations, not node types or states.
+
+Only a `CONFIRMED` source bound to its current immutable candidate/D2 and an explicit
+symptom set may select incident-evidenced causal edges. Reachability alone is not
+causality. Unselected reachable edges remain excluded.
+
+A graph amendment uses typed `CANDIDATE`, `EVIDENCE`, or `CLAIM_OR_OUTPUT` seeds.
+Unrelated refs fail closed. Candidate or claim/output seeds require source rework or
+quarantine; an evidence-only seed may reverify. Multiple seeds use the strictest
+source disposition. Only the proven successor impact slice loses current-validity;
+`UNAFFECTED` branches remain current and no full-graph replay occurs.
+
+## Validation boundaries
+
+`validate_glk` reports scope `REPOSITORY_DISTRIBUTION` and checks the published
+method package. `validate_run` reports scope `RUN_PACKAGE` and loads one complete
+Run package exactly once before applying ten validation layers:
+
+1. serialization and schema;
+2. package/index integrity;
+3. Run/Graph/GO/CELL/reference identity;
+4. adapter-backed provenance, sole authority, capability, and isolation;
+5. candidate, digest, admission, and receipt lineage;
+6. CELL manifest and GO candidate closure;
+7. recomputed DAG structure;
+8. D2 admission and graph-event separation;
+9. D3 closure and Run Verifier isolation;
+10. Owner Acceptance and post-acceptance handoff.
+
+Validation reports, preflight reports, simulation reports, and progress projections
+are derived non-authoritative objects. They never become receipts, admissions, graph
+events, or technical verdicts.
+
+## Provenance adapter boundary
+
+GLK defines exactly four abstract adapter operations:
+
+```text
+resolve_binding
+verify_issuance
+verify_isolation
+check_liveness
+```
+
+GLK does not implement sessions, credentials, key custody, production issuance,
+Broker services, replay, checkpoints, or an Agent runtime. LCagent or another trusted
+execution environment implements those capabilities and returns verifiable
+attestations through this boundary.
+
+## Preflight, simulation, liveness, and stops
+
+Bootstrap creates only `DRAFT_SCAFFOLD`. Formal preflight requires the exact method
+lock, one canonical declared installation, the complete six-role binding set,
+trusted adapter evidence, a ten-layer valid package, readiness evidence, a
+no-side-effect simulation, and no active hold.
+
+Read failure never implies health. Deadline expiry yields an unreachable role
+projection. `MONITOR_CONTROL` reuses one existing Supervisor task/callback with one
+deterministic key and append-only head; it never creates or schedules another task.
+
+A technical authority violation produces `RUN_AUTHORITY_HOLD` immediately. Two
+consecutive HIGH architecture findings on the same path produce
+`RUN_ARCHITECTURE_HOLD`. Recovery requires a frozen amendment plus revalidation, or
+sealing the Run and starting a new one.
+
+## Progress and boundaries
+
+Formal progress reports both `required GO/D2` and `required CELL/D1` counts and IDs,
+plus active GO IDs, waiting reasons, unreachable bindings, holds, graph version, and
+CELL manifest versions.
+
+The 2.4 formal-use freeze prevents new 2.4 Runs. Migration preserves compatible GO
+topology and causal history, revalidates contracts, and keeps unproven 2.4 receipts
+historical-only; it never upgrades them into current evidence.
+
+LCCoding owns project lifecycle, product-definition routing, and centralized
+security closure. GLK remains a lightweight engineering method and does not replace
+LCCoding or LCagent.

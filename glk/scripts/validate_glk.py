@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import hashlib
 import subprocess
 import sys
 from pathlib import Path
@@ -11,7 +12,8 @@ sys.dont_write_bytecode = True
 from repository import EXCLUDED_PARTS, build_hash_manifest, sha256
 
 
-VERSION = "2.4.0"
+VERSION = "3.0.0"
+VALIDATION_SCOPE = "REPOSITORY_DISTRIBUTION"
 ROLES = [
     "Run Supervisor",
     "Worker",
@@ -38,7 +40,16 @@ REQUIRED = [
     "VALIDATION-REPORT.md",
     "glk/schemas/glk.schema.json",
     "glk/scripts/graph_model.py",
+    "glk/scripts/artifact_model.py",
     "glk/scripts/run_model.py",
+    "glk/scripts/run_package.py",
+    "glk/scripts/run_state.py",
+    "glk/scripts/run_control.py",
+    "glk/scripts/run_validation.py",
+    "glk/scripts/validate_run.py",
+    "glk/scripts/provenance.py",
+    "glk/scripts/preflight.py",
+    "glk/scripts/method_lock.py",
     "glk/scripts/bootstrap_run.py",
     "glk/scripts/build_release.py",
     "glk/scripts/repository.py",
@@ -46,14 +57,34 @@ REQUIRED = [
     "glk/templates/ROLE_BINDING.yaml",
     "glk/templates/GO.yaml",
     "glk/templates/GRAPH_BASELINE.yaml",
-    "glk/templates/CELL_RECEIPT.yaml",
-    "glk/templates/GO_RECEIPT.yaml",
-    "glk/templates/RUN_RECEIPT.yaml",
+    "glk/templates/GLK_METHOD_LOCK.yaml",
+    "glk/templates/PROVENANCE_ADAPTER_PROFILE.yaml",
+    "glk/templates/CELL_MANIFEST.yaml",
+    "glk/templates/CELL_MANIFEST_AMENDMENT.yaml",
+    "glk/templates/D0_RECEIPT.yaml",
+    "glk/templates/D1_RECEIPT.yaml",
+    "glk/templates/GO_CANDIDATE_CLOSURE.yaml",
+    "glk/templates/SUPERVISOR_ADMISSION.yaml",
+    "glk/templates/PREFLIGHT_ADMISSION.yaml",
+    "glk/templates/RUN_PACKAGE_INDEX.yaml",
+    "glk/templates/D2_RECEIPT.yaml",
+    "glk/templates/GRAPH_EVENT.yaml",
+    "glk/templates/MONITOR_CONTROL.yaml",
+    "glk/templates/D3_RECEIPT.yaml",
     "glk/templates/GO_CAUSAL_TRACE.yaml",
     "glk/templates/GRAPH_AMENDMENT.yaml",
     "glk/templates/FORMAL_RESOLUTION.yaml",
     "glk/templates/OWNER_ACCEPTANCE.yaml",
     "glk/templates/SECURITY_HANDOFF.yaml",
+    "glk/references/artifact-authority.md",
+    "glk/references/run-package-validation.md",
+    "glk/references/readiness-and-liveness.md",
+    "glk/references/supply-chain.md",
+]
+FORBIDDEN_CURRENT = [
+    "glk/templates/CELL_RECEIPT.yaml",
+    "glk/templates/GO_RECEIPT.yaml",
+    "glk/templates/RUN_RECEIPT.yaml",
 ]
 NORMATIVE = [
     "SPEC.md",
@@ -63,6 +94,10 @@ NORMATIVE = [
     "docs/interpretation-test.md",
     "glk/SKILL.md",
     "glk/references/canonical-dictionary.md",
+    "glk/references/artifact-authority.md",
+    "glk/references/run-package-validation.md",
+    "glk/references/readiness-and-liveness.md",
+    "glk/references/supply-chain.md",
     "glk/references/causal-impact.md",
     "glk/references/go-graph-construction.md",
     "glk/references/graph-amendment.md",
@@ -76,17 +111,28 @@ NORMATIVE = [
 ]
 TEMPLATES = {
     "RUN_CONTRACT.yaml": "run_contract",
-    "ROLE_BINDING.yaml": "role_binding",
+    "GLK_METHOD_LOCK.yaml": "glk_method_lock",
+    "PROVENANCE_ADAPTER_PROFILE.yaml": "provenance_adapter_profile",
+    "ROLE_BINDING.yaml": "role_binding_300",
     "GO.yaml": "go",
     "GRAPH_BASELINE.yaml": "graph_baseline",
-    "CELL_RECEIPT.yaml": "cell_receipt",
-    "GO_RECEIPT.yaml": "go_receipt",
-    "RUN_RECEIPT.yaml": "run_receipt",
+    "CELL_MANIFEST.yaml": "cell_manifest",
+    "CELL_MANIFEST_AMENDMENT.yaml": "cell_manifest_amendment",
+    "D0_RECEIPT.yaml": "d0_receipt",
+    "D1_RECEIPT.yaml": "d1_receipt",
+    "GO_CANDIDATE_CLOSURE.yaml": "go_candidate_closure",
+    "SUPERVISOR_ADMISSION.yaml": "supervisor_admission",
+    "PREFLIGHT_ADMISSION.yaml": "preflight_admission",
+    "RUN_PACKAGE_INDEX.yaml": "run_package_index",
+    "D2_RECEIPT.yaml": "d2_receipt",
+    "GRAPH_EVENT.yaml": "graph_event",
+    "MONITOR_CONTROL.yaml": "monitor_control",
+    "D3_RECEIPT.yaml": "d3_receipt",
     "GO_CAUSAL_TRACE.yaml": "go_causal_trace",
     "GRAPH_AMENDMENT.yaml": "graph_amendment",
     "FORMAL_RESOLUTION.yaml": "formal_resolution",
-    "OWNER_ACCEPTANCE.yaml": "owner_acceptance",
-    "SECURITY_HANDOFF.yaml": "security_handoff",
+    "OWNER_ACCEPTANCE.yaml": "owner_acceptance_300",
+    "SECURITY_HANDOFF.yaml": "security_handoff_300",
 }
 
 
@@ -102,11 +148,14 @@ def validate_structure(root: Path):
     missing = [relative for relative in REQUIRED if not (root / relative).is_file()]
     if missing:
         fail("missing required files: " + ", ".join(missing))
+    legacy = [relative for relative in FORBIDDEN_CURRENT if (root / relative).exists()]
+    if legacy:
+        fail("legacy mixed receipt templates are not current formal types: " + ", ".join(legacy))
 
 
 def validate_version(root: Path):
     if read(root / "VERSION").strip() != VERSION:
-        fail("VERSION file does not contain version 2.4.0")
+        fail("VERSION file does not contain version 3.0.0")
     manifest = json.loads(read(root / "MANIFEST.json"))
     if manifest.get("version") != VERSION:
         fail("MANIFEST version mismatch")
@@ -218,6 +267,28 @@ def validate_templates(root: Path):
                 fail("artifact-invalidating seed requires deep source invalidation")
 
 
+def validate_validator_bundle(root: Path):
+    manifest = json.loads(read(root / "MANIFEST.json"))
+    bundle = manifest.get("run_validator_bundle")
+    if not isinstance(bundle, dict):
+        fail("MANIFEST run validator bundle is missing")
+    paths = bundle.get("paths")
+    if paths != ["glk/scripts/run_validation.py", "glk/scripts/validate_run.py"]:
+        fail("MANIFEST run validator bundle paths are invalid")
+    entries = [
+        {"path": relative, "sha256": sha256(root / relative)}
+        for relative in paths
+    ]
+    actual = hashlib.sha256(
+        json.dumps(entries, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    if bundle.get("sha256") != actual:
+        fail("MANIFEST run validator bundle digest mismatch")
+    lock = yaml.safe_load(read(root / "glk/templates/GLK_METHOD_LOCK.yaml"))
+    if lock.get("validator_sha256") != actual:
+        fail("method lock does not bind the real Run validator bundle")
+
+
 def tracked_files(root: Path):
     if not (root / ".git").exists():
         return None
@@ -271,9 +342,13 @@ def main():
     validate_version(root)
     validate_semantics(root)
     validate_templates(root)
+    validate_validator_bundle(root)
     validate_hygiene(root)
     validate_hashes(root)
-    print("PASS: GLK 2.4.0 structure, semantics, schema, hashes, and hygiene are valid.")
+    print(
+        "PASS: GLK 3.0.0 scope=REPOSITORY_DISTRIBUTION "
+        "structure, semantics, schema, hashes, and hygiene are valid."
+    )
 
 
 if __name__ == "__main__":

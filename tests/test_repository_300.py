@@ -1,3 +1,5 @@
+import hashlib
+import json
 from pathlib import Path
 
 import yaml
@@ -12,6 +14,20 @@ NORMATIVE = [
     ROOT / "glk" / "references" / "scheduling.md",
     ROOT / "glk" / "references" / "state-machine.md",
     ROOT / "glk" / "references" / "causal-impact.md",
+    ROOT / "glk" / "references" / "artifact-authority.md",
+    ROOT / "glk" / "references" / "run-package-validation.md",
+    ROOT / "glk" / "references" / "readiness-and-liveness.md",
+    ROOT / "glk" / "references" / "supply-chain.md",
+]
+
+CANONICAL_REPOSITORY = "https://github.com/DWG7318/large-loop-skill"
+SIX_ROLES = [
+    "Run Supervisor",
+    "Worker",
+    "Checker",
+    "GO Verifier",
+    "Run Verifier",
+    "Owner",
 ]
 
 
@@ -19,28 +35,38 @@ def text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_version_is_240_everywhere():
-    assert text(ROOT / "VERSION").strip() == "2.4.0"
+def test_version_is_300_everywhere():
+    assert text(ROOT / "VERSION").strip() == "3.0.0"
     for path in [
         ROOT / "SPEC.md",
         ROOT / "SKILL.md",
+        ROOT / "glk" / "SKILL.md",
         ROOT / "README.md",
+        ROOT / "README.zh-CN.md",
+        ROOT / "CHANGELOG.md",
+        ROOT / "MIGRATION.md",
+        ROOT / "VALIDATION-REPORT.md",
         ROOT / "glk" / "examples" / "appointment-run.yaml",
+        ROOT / "MANIFEST.json",
+        ROOT / "agents" / "openai.yaml",
     ]:
-        assert "2.4.0" in text(path)
+        assert "3.0.0" in text(path), path
+
+
+def test_canonical_repository_and_skill_entrypoints_are_locked():
+    manifest = json.loads(text(ROOT / "MANIFEST.json"))
+    assert manifest["canonical_repository"] == CANONICAL_REPOSITORY
+    assert manifest["invocation"] == "graph-loop-skill"
+    assert manifest["version"] == "3.0.0"
+    assert manifest["roles"] == SIX_ROLES
+    assert text(ROOT / "SKILL.md") == text(ROOT / "glk" / "SKILL.md")
+    for path in [ROOT / "SPEC.md", ROOT / "SKILL.md", ROOT / "README.md"]:
+        assert CANONICAL_REPOSITORY in text(path), path
 
 
 def test_six_roles_are_canonical_and_legacy_roles_are_not_normative():
     spec = text(ROOT / "SPEC.md")
-    roles = [
-        "Run Supervisor",
-        "Worker",
-        "Checker",
-        "GO Verifier",
-        "Run Verifier",
-        "Owner",
-    ]
-    for role in roles:
+    for role in SIX_ROLES:
         assert role in spec
     for legacy_role in ["Grapher", "Planner", "Router"]:
         assert legacy_role not in spec
@@ -157,7 +183,7 @@ def test_repaired_source_reuses_waiting_active_and_maximal_parallelism():
     assert "READY" not in combined
 
 
-def test_240_example_edges_use_complete_consumption_contracts():
+def test_300_example_edges_use_complete_consumption_contracts():
     example = yaml.safe_load(
         text(ROOT / "glk" / "examples" / "appointment-run.yaml")
     )
@@ -171,3 +197,75 @@ def test_240_example_edges_use_complete_consumption_contracts():
     }
     assert example["graph"]["edges"]
     assert all(set(edge) == required for edge in example["graph"]["edges"])
+
+
+def test_repository_and_run_validators_have_distinct_declared_scopes():
+    repository_validator = text(ROOT / "glk" / "scripts" / "validate_glk.py")
+    run_cli = text(ROOT / "glk" / "scripts" / "validate_run.py")
+    run_validator = text(ROOT / "glk" / "scripts" / "run_validation.py")
+    assert 'VALIDATION_SCOPE = "REPOSITORY_DISTRIBUTION"' in repository_validator
+    assert 'RUN_VALIDATION_SCOPE = "RUN_PACKAGE"' in run_validator
+    assert "RUN_VALIDATION_SCOPE" in run_cli
+    assert "validate_loaded_run" in run_cli
+    assert "validate_loaded_run" not in repository_validator
+
+
+def test_method_lock_binds_the_real_declared_run_validator_bundle():
+    manifest = json.loads(text(ROOT / "MANIFEST.json"))
+    bundle = manifest["run_validator_bundle"]
+    assert bundle["paths"] == [
+        "glk/scripts/run_validation.py",
+        "glk/scripts/validate_run.py",
+    ]
+    entries = [
+        {
+            "path": relative,
+            "sha256": hashlib.sha256((ROOT / relative).read_bytes()).hexdigest(),
+        }
+        for relative in bundle["paths"]
+    ]
+    actual = hashlib.sha256(
+        json.dumps(entries, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    assert bundle["sha256"] == actual
+    lock = yaml.safe_load(text(ROOT / "glk" / "templates" / "GLK_METHOD_LOCK.yaml"))
+    assert lock["validator_sha256"] == actual
+
+
+def test_300_surface_documents_authority_runtime_and_migration_boundaries():
+    combined = "\n".join(text(path) for path in NORMATIVE)
+    for marker in [
+        "2.4 formal-use freeze",
+        "resolve_binding",
+        "verify_issuance",
+        "verify_isolation",
+        "check_liveness",
+        "ten validation layers",
+        "REPOSITORY_DISTRIBUTION",
+        "RUN_PACKAGE",
+        "derived non-authoritative",
+        "required GO/D2",
+        "required CELL/D1",
+        "RUN_AUTHORITY_HOLD",
+        "RUN_ARCHITECTURE_HOLD",
+        "LCagent",
+        "LCCoding",
+    ]:
+        assert marker in combined, marker
+    assert "unproven 2.4" in combined and "current evidence" in combined
+
+
+def test_glk_contains_no_runtime_or_credential_subsystem_implementation():
+    forbidden_files = {
+        "broker.py",
+        "checkpoint.py",
+        "credential_store.py",
+        "replay.py",
+        "runtime.py",
+        "session_manager.py",
+    }
+    present = {
+        path.name.lower()
+        for path in (ROOT / "glk" / "scripts").glob("*.py")
+    }
+    assert forbidden_files.isdisjoint(present)

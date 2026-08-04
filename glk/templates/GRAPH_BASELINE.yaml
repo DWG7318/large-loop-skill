@@ -1,6 +1,16 @@
-schema_version: 2.4.0
-graph_id: GRAPH-001
+schema_version: 3.0.0
+artifact_type: GRAPH_BASELINE
+artifact_id: GRAPH-BASELINE-RUN-001-V1
 run_id: RUN-001
+graph_id: GRAPH-001
+graph_version: 1
+candidate_id: GRAPH-RUN-001-V1
+candidate_sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+issuer_binding_ref: ROLE-RUN-001-SUPERVISOR
+execution_context_ref: CONTEXT-RUN-001-SUPERVISOR
+evidence_refs: ["evidence/graph/GRAPH-BASELINE-RUN-001-V1.json"]
+provenance_ref: attestations/GRAPH-BASELINE-RUN-001-V1.json
+issued_at: "2026-08-03T01:05:00Z"
 version: 1
 graph_hash: "0000000000000000000000000000000000000000000000000000000000000000"
 nodes: ["GO-001", "GO-002", "GO-003"]
@@ -23,4 +33,4 @@ run_feature_coverage: ["RUN-CLAIM-001"]
 acyclic: true
 waiting_go_ids: ["GO-002", "GO-003"]
 active_go_ids: ["GO-001"]
-frozen_at: "1970-01-01T00:00:00Z"
+frozen_at: "2026-08-03T01:05:00Z"

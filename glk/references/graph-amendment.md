@@ -1,5 +1,7 @@
 # Graph Amendment and Formal Resolution
 
+GLK 3.0.0 amendments remain versioned and append-only.
+
 A frozen graph changes only through `GRAPH_AMENDMENT`. Record:
 
 ```text
@@ -41,3 +43,8 @@ Record `source_go` and `source_disposition` explicitly. A `CANDIDATE` or
 current-validity. An evidence-only seed may use `REVERIFY`. Multiple seeds apply the
 strictest source requirement, while downstream GOs retain independent impact
 evidence and dispositions.
+
+CELL membership or contract changes require a frozen `CELL_MANIFEST_AMENDMENT` and
+a new manifest closure. Architecture-hold recovery is limited to a frozen amendment
+plus complete affected revalidation, or sealing the Run and starting a new one. A
+report cannot clear a formal hold.

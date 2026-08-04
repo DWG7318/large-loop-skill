@@ -16,17 +16,34 @@ TEMPLATE_DIR = ROOT / "glk" / "templates"
 
 TEMPLATES = {
     "RUN_CONTRACT.yaml": "run_contract",
-    "ROLE_BINDING.yaml": "role_binding",
+    "GLK_METHOD_LOCK.yaml": "glk_method_lock",
+    "PROVENANCE_ADAPTER_PROFILE.yaml": "provenance_adapter_profile",
+    "ROLE_BINDING.yaml": "role_binding_300",
     "GO.yaml": "go",
     "GRAPH_BASELINE.yaml": "graph_baseline",
-    "CELL_RECEIPT.yaml": "cell_receipt",
-    "GO_RECEIPT.yaml": "go_receipt",
-    "RUN_RECEIPT.yaml": "run_receipt",
+    "CELL_MANIFEST.yaml": "cell_manifest",
+    "CELL_MANIFEST_AMENDMENT.yaml": "cell_manifest_amendment",
+    "D0_RECEIPT.yaml": "d0_receipt",
+    "D1_RECEIPT.yaml": "d1_receipt",
+    "GO_CANDIDATE_CLOSURE.yaml": "go_candidate_closure",
+    "SUPERVISOR_ADMISSION.yaml": "supervisor_admission",
+    "PREFLIGHT_ADMISSION.yaml": "preflight_admission",
+    "RUN_PACKAGE_INDEX.yaml": "run_package_index",
+    "D2_RECEIPT.yaml": "d2_receipt",
+    "GRAPH_EVENT.yaml": "graph_event",
+    "MONITOR_CONTROL.yaml": "monitor_control",
+    "D3_RECEIPT.yaml": "d3_receipt",
     "GO_CAUSAL_TRACE.yaml": "go_causal_trace",
     "GRAPH_AMENDMENT.yaml": "graph_amendment",
     "FORMAL_RESOLUTION.yaml": "formal_resolution",
-    "OWNER_ACCEPTANCE.yaml": "owner_acceptance",
-    "SECURITY_HANDOFF.yaml": "security_handoff",
+    "OWNER_ACCEPTANCE.yaml": "owner_acceptance_300",
+    "SECURITY_HANDOFF.yaml": "security_handoff_300",
+}
+
+LEGACY_MIXED_TEMPLATES = {
+    "CELL_RECEIPT.yaml",
+    "GO_RECEIPT.yaml",
+    "RUN_RECEIPT.yaml",
 }
 
 
@@ -49,17 +66,32 @@ def test_all_templates_exist_and_validate_against_executable_schema():
         path = TEMPLATE_DIR / filename
         assert path.exists(), path
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        assert data["schema_version"] == "3.0.0", filename
         validate_definition(schema, definition, data)
+
+
+def test_legacy_mixed_receipt_templates_are_not_current_product_surface():
+    schema = load_schema()
+    for filename in LEGACY_MIXED_TEMPLATES:
+        assert not (TEMPLATE_DIR / filename).exists(), filename
+    for definition in ("cell_receipt", "go_receipt", "run_receipt"):
+        assert definition not in schema["$defs"], definition
 
 
 def test_run_contract_binds_a_fresh_run_supervisor_instance():
     run = yaml.safe_load((TEMPLATE_DIR / "RUN_CONTRACT.yaml").read_text(encoding="utf-8"))
     binding = run["run_supervisor_binding"]
+    assert run["schema_version"] == "3.0.0"
+    assert binding["schema_version"] == "3.0.0"
+    assert binding["artifact_type"] == "ROLE_BINDING"
     assert binding["role_type"] == "RUN_SUPERVISOR"
     assert binding["run_id"] == run["run_id"]
     assert all(
         binding[key]
-        for key in ["instance_id", "context_id", "workspace_id", "evidence_root"]
+        for key in [
+            "instance_id", "execution_context_ref", "workspace_ref",
+            "evidence_root", "capability_profile_id", "provenance_ref",
+        ]
     )
     assert run["supervisor_reuse_forbidden"] is True
 

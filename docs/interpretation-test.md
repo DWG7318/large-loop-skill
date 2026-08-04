@@ -1,4 +1,4 @@
-# GLK 2.4.0 Interpretation Test
+# GLK 3.0.0 Interpretation Test
 
 A conforming Agent answers:
 
@@ -21,3 +21,22 @@ A conforming Agent answers:
     target input/assumption refs, consumption evidence, and D2 justification.**
 17. What happens after a repaired source receives current D2? **Every safe affected
     successor activates in the same maximum-cardinality recalculation.**
+18. Can a Supervisor issue or invoke D0-D3? **No; it only emits separate control
+    artifacts and exact admissions.**
+19. What makes D2 eligible? **The exact admitted current CELL manifest closure and
+    complete required CELL candidate/D0/D1 tuple set.**
+20. Does D2 release successors? **No; release requires exact D2 admission and a
+    separate graph event.**
+21. What are validator scopes? **`REPOSITORY_DISTRIBUTION` and `RUN_PACKAGE`.**
+22. How many Run validation layers? **Ten.**
+23. Are preflight, simulation, and progress reports formal verdicts? **No; they are
+    derived non-authoritative projections.**
+24. Which adapter operations exist? **`resolve_binding`, `verify_issuance`,
+    `verify_isolation`, and `check_liveness`.**
+25. What happens to stale liveness or authority failure? **The role becomes
+    unreachable or the Run enters the applicable authority/architecture hold.**
+26. What does formal progress show? **Both required GO/D2 and required CELL/D1
+    counts and IDs.**
+27. Can migration upgrade an unproven 2.4 receipt? **No; it remains historical-only.**
+28. Who implements sessions, credentials, and runtime provenance? **LCagent or
+    another trusted execution environment, never GLK.**

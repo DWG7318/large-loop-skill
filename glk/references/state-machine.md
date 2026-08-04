@@ -1,5 +1,7 @@
 # State Machine
 
+Version 3.0.0 separates technical verdicts from control events.
+
 Graph state and internal execution phase are separate.
 
 ## Graph state
@@ -43,3 +45,13 @@ A confirmed causal amendment does not add a graph state. It preserves historical
 where the impact slice proves invalidation, and projects affected GOs into existing
 `WAITING_GO` or `ACTIVE_GO` under the new graph version. `SUSPECTED` traces cause no
 state projection.
+
+`RUN_AUTHORITY_HOLD` is immediate after a proven technical authority violation.
+`RUN_ARCHITECTURE_HOLD` follows two consecutive HIGH findings on the same
+architecture path. Missing or expired liveness evidence projects the affected role
+as unreachable; no failed read produces healthy state.
+
+The derived progress projection contains required GO count, D2-verified required GO
+count, required CELL count, D1-accepted required CELL count, exact IDs, active GOs,
+typed waiting reasons, unreachable bindings, holds, graph version, and CELL
+manifest versions.

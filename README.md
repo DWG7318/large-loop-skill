@@ -1,4 +1,6 @@
-# Graph Loop Skill (GLK) 2.4.0
+# Graph Loop Skill (GLK) 3.0.0
+
+Canonical repository: https://github.com/DWG7318/large-loop-skill
 
 GLK governs one bounded engineering Run as a directed acyclic graph of
 independently verifiable GO outcomes.
@@ -75,3 +77,27 @@ security closure remains owned by LCCoding.
 
 Read [SPEC.md](SPEC.md) before using GLK. The executable templates, schema, model,
 and validator live under [glk](glk/).
+
+## 3.0 authority and validation
+
+GLK 3.0 splits Worker D0, Checker D1, Supervisor admission, GO Verifier D2,
+Supervisor graph event, Run Verifier D3, and Owner Acceptance into independent
+append-only artifacts. A versioned `CELL_MANIFEST` and exact
+`GO_CANDIDATE_CLOSURE` prevent premature D2 and permit reuse only for unchanged,
+current-valid CELL D1 evidence.
+
+`validate_glk` checks the `REPOSITORY_DISTRIBUTION`; `validate_run` checks one
+complete `RUN_PACKAGE` through ten validation layers. Bootstrap is draft-only,
+preflight and simulation are derived gates, liveness fails closed, and authority or
+repeated architecture failures stop the Run. Progress reports both required GO/D2
+and required CELL/D1 completion.
+
+The method lock pins version 3.0.0, this repository, release/commit, schema, Skill,
+the real Run validator source bundle, and adapter contract. The 2.4 formal-use
+freeze permits historical migration diagnostics but never upgrades unproven 2.4
+receipts into current evidence.
+
+GLK defines only the four-operation provenance adapter contract. LCCoding owns
+lifecycle and centralized security routing; LCagent or another trusted environment
+owns credentials, sessions, issuance, replay/checkpoint, Broker, and runtime
+provenance implementations.

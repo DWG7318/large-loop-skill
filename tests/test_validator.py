@@ -40,7 +40,9 @@ def run_validator(root: Path):
 def test_repository_validator_passes_current_tree():
     result = run_validator(ROOT)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "PASS: GLK 2.4.0" in result.stdout
+    assert "PASS: GLK 3.0.0" in result.stdout
+    assert "scope=REPOSITORY_DISTRIBUTION" in result.stdout
+    assert "scope=RUN_PACKAGE" not in result.stdout
 
 
 def test_repository_pins_lf_for_cross_platform_hashes():
@@ -60,7 +62,7 @@ def test_validator_rejects_example_version_drift(tmp_path):
     root = copy_repo(tmp_path)
     example = root / "glk/examples/appointment-run.yaml"
     example.write_text(
-        example.read_text(encoding="utf-8").replace("2.4.0", "2.3.1"),
+        example.read_text(encoding="utf-8").replace("3.0.0", "2.4.0"),
         encoding="utf-8",
     )
     result = run_validator(root)
@@ -139,7 +141,7 @@ def test_validator_rejects_cache_artifacts(tmp_path):
 
 
 def test_release_builder_emits_clean_integrity_checked_zip(tmp_path):
-    output = tmp_path / "GLK-2.4.0.zip"
+    output = tmp_path / "GLK-3.0.0.zip"
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     result = subprocess.run(
@@ -156,6 +158,8 @@ def test_release_builder_emits_clean_integrity_checked_zip(tmp_path):
         names = archive.namelist()
     assert any(name.endswith("FILE_HASHES.json") for name in names)
     assert any(name.endswith("glk/templates/GO_CAUSAL_TRACE.yaml") for name in names)
+    assert any(name.endswith("glk/scripts/validate_run.py") for name in names)
+    assert not any(name.endswith("glk/templates/CELL_RECEIPT.yaml") for name in names)
     assert not any(
         forbidden in name
         for name in names
@@ -165,7 +169,7 @@ def test_release_builder_emits_clean_integrity_checked_zip(tmp_path):
 
 def test_release_builder_writes_hash_manifest_with_lf(tmp_path):
     root = copy_repo(tmp_path)
-    output = tmp_path / "GLK-2.4.0.zip"
+    output = tmp_path / "GLK-3.0.0.zip"
     result = subprocess.run(
         [sys.executable, str(root / "glk/scripts/build_release.py"), str(output)],
         cwd=root,
@@ -179,7 +183,7 @@ def test_release_builder_writes_hash_manifest_with_lf(tmp_path):
 
 def test_release_builder_never_archives_its_own_output_from_another_cwd(tmp_path):
     root = copy_repo(tmp_path)
-    output = root / "dist" / "GLK-2.4.0.zip"
+    output = root / "dist" / "GLK-3.0.0.zip"
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     result = subprocess.run(
@@ -193,4 +197,4 @@ def test_release_builder_never_archives_its_own_output_from_another_cwd(tmp_path
     assert result.returncode == 0, result.stdout + result.stderr
     with zipfile.ZipFile(output) as archive:
         names = archive.namelist()
-    assert not any(name.endswith("GLK-2.4.0.zip") for name in names)
+    assert not any(name.endswith("GLK-3.0.0.zip") for name in names)

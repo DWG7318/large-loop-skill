@@ -1,5 +1,7 @@
 # Roles and Isolation
 
+Version 3.0.0 retains exactly six role types.
+
 ## Six-role authority
 
 | Authority | Role |
@@ -45,3 +47,12 @@ context. Run Verifier remains outside supervision, implementation, and checking.
 GO Verifier and Run Verifier may use one underlying Agent only through separate
 clean contexts, workspaces, evidence intake, and receipts; separate Agent instances
 remain the default.
+
+The provenance adapter exposes exactly `resolve_binding`, `verify_issuance`,
+`verify_isolation`, and `check_liveness`. It attests conversation, context,
+workspace, runtime-state, evidence-root, and decision-input separation. Different
+free strings alone do not prove isolation.
+
+Run Supervisor capability is checked before issuance verification: D0-D3 issuance,
+holding, or invocation capability is an immediate authority failure. Run Verifier
+isolation is verified against every consumed GO Verifier and Checker binding.

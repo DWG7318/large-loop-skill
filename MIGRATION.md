@@ -1,75 +1,82 @@
-# Migration to GLK 2.4.0
+# Migration to GLK 3.0.0
 
-## Hard boundary
+## Formal-use freeze
 
-GLK 2.4.0 preserves the Owner-approved 2.3.1 six-role architecture and adds
-evidence-bound causal recovery. Historical Runs remain
-governed by the version under which their contracts and receipts were frozen.
-No historical version may be silently relabeled as 2.4.0.
+New formal 2.4.x Runs are frozen. Historical Runs remain governed by the version
+under which their contracts and evidence were produced. Migration never rewrites
+history or silently relabels an old artifact as 3.0.0.
 
-## From 2.3.1
-
-Existing 2.3.1 graphs remain readable for ordinary scheduling. To use 2.4.0 causal
-recovery, create a new graph/schema version and bind every participating D2 edge to
-source claim/output refs, target input/assumption refs, and consumption evidence.
-
-Do not infer a causal source from ancestor position. Record `GO_CAUSAL_TRACE` with
-`SUSPECTED` or `CONFIRMED`; only the latter can authorize a minimum impact slice.
-Preserve historical candidates and receipts append-only while marking their
-current-validity for the new version. Re-project affected GOs through existing
-`WAITING_GO` and `ACTIVE_GO`; do not introduce READY, a Barrier, or full-graph replay.
-
-## From withdrawn 2.3.0
-
-| 2.3.0 object | 2.3.1 rule |
-|---|---|
-| READY GO | Remove; use `WAITING_GO` with reasons or direct `ACTIVE_GO` |
-| exactly one ACTIVE GO | Replace with maximal safe `ACTIVE_GO` set |
-| scheduling choice among READY | Automatic activation; choice only inside real conflict sets |
-| free-text independent context | Versioned role binding plus execution-context reference |
-| direct `d2_pass()` | Require same-candidate D1 PASS and independent GO Verifier context |
-| `SUPERSEDED`/`CANCELLED` counted terminal | Require formal resolution and amendment semantics |
-| four-file bootstrap | Replace with all contracts, schema validation, and evidence directories |
-| keyword validator | Replace with structural, semantic, schema, hash, and hygiene validation |
-
-Any in-progress 2.3.0 Run must stop, preserve artifacts, create a new 2.3.1 Run
-contract with a fresh Supervisor, and rebind still-valid immutable evidence. No
-technical verdict transfers without candidate/hash and contract validation.
-
-## From 2.0.0
-
-The following role types are not part of 2.3.1:
+The canonical 3.0 identity is:
 
 ```text
-Grapher
-Planner
-Router
+https://github.com/DWG7318/large-loop-skill
+graph-loop-skill
+3.0.0
+v3.0.0
 ```
 
-Their old authority is not assigned to new hidden roles. Run Supervisor owns the GO
-graph, waiting reasons, activation, receipt routing, and amendments while remaining
-forbidden from signing D1-D3. Worker, Checker, GO Verifier, Run Verifier, and Owner
-retain separate technical/product authority.
+## Preserve when semantically compatible
 
-The 2.0.0 conditional, fallback, conflict-edge, and loop-back graph contracts do not
-transfer. Reconstruct one acyclic D2 precedence graph from the frozen 2.3.1 Run
-Feature. Preserve historical receipts as immutable evidence only; re-verify any
-claim consumed by the new candidate.
+- the six roles and fresh Run Supervisor principle;
+- GO-DAG topology and maximal-safe `WAITING_GO`/`ACTIVE_GO` scheduling;
+- D0-D3 layer meanings and immediate Owner Acceptance;
+- actual-consumption edges, evidence-selected causal traces, impact slices, and
+  reactivation history;
+- immutable historical evidence and repository hash discipline.
 
-## Version and identity checks
+Preservation keeps facts available; it does not preserve derived trust.
 
-Before starting a 2.4.0 Run, verify:
+## Convert and revalidate
 
-- `VERSION`, Skill front matter, SPEC, MANIFEST, templates, and Schema all say
-  `2.4.0`;
-- the six role bindings are used and no undeclared control role exists;
-- the Supervisor binding is new for this Run;
-- no normative READY state exists;
-- the initial maximal safe active set is recorded;
-- every waiting GO has typed evidence-backed reasons;
-- every new D2 edge has complete actual-consumption bindings;
-- suspected causal traces cannot invalidate receipts;
-- causal amendments record minimum impact and reactivation projections;
-- execution graph acyclicity and Run Feature coverage pass;
-- D0-D3 candidate and context bindings are executable;
-- Owner Acceptance and security handoff templates are available.
+- Run and GO contracts;
+- graph baselines, amendments, formal resolutions, and indexes;
+- role bindings through the trusted four-operation adapter;
+- CELL required sets as versioned `CELL_MANIFEST` artifacts;
+- CELL candidates as independent D0 and D1 artifacts plus exact admissions;
+- GO candidates as `GO_CANDIDATE_CLOSURE`, D2, D2 admission, and graph event;
+- Run closure as D3, D3 admission, Owner Acceptance, and security handoff.
+
+The 3.0 loader and ten-layer validator recompute identity, digests, graph structure,
+required sets, provenance, lineage, isolation, and current-validity.
+
+## Historical-only
+
+- 2.4 free-form role-binding strings;
+- 2.4 D0-D3 evidence without trusted 3.0 provenance;
+- old control ledgers and validation reports;
+- old bootstrap workspaces and template-level completion claims;
+- unproven 2.4 receipts of any kind.
+
+Historical-only artifacts remain immutable audit evidence and cannot satisfy a 3.0
+admission or closure.
+
+## Rejected as current formal constructs
+
+- combined `CELL_RECEIPT`, `GO_RECEIPT`, and `RUN_RECEIPT` templates;
+- mixed mutable technical and control authority in one object;
+- a hand-written `acyclic: true` value as proof;
+- free actor strings or receipt IDs without digest-bound provenance;
+- sample bootstrap PASS/READY/ACCEPTED claims;
+- health inferred from failed reads;
+- standalone or duplicate cron monitoring.
+
+These constructs may remain mentioned in migration or rejection evidence but are
+not accepted by the current formal registry.
+
+## Migration report boundary
+
+`derive_migration_report` emits a derived, non-authoritative classification and new
+draft references only. It cannot admit an artifact, advance a state, mutate the old
+package, or mark old evidence current-valid.
+
+Compatible GO topology and causal history may be classified `preserve`; contracts
+may be `revalidate`; old bindings and receipts may be `historical-only`; mixed
+receipt/bootstrap constructs are discarded from formal eligibility. An unproven
+2.4 artifact never becomes current evidence through classification.
+
+## External boundaries
+
+LCCoding owns project lifecycle, product-definition routing, centralized security,
+and delivery. LCagent or another trusted environment owns sessions, credentials,
+issuance, replay/checkpoint, Broker, and runtime provenance. GLK defines only the
+method contract, validation logic, and abstract adapter interface.

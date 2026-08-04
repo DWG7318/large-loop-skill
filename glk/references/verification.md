@@ -1,5 +1,8 @@
 # Verification
 
+GLK 3.0.0 validates independent append-only artifacts and their cross-artifact
+lineage.
+
 ## D0-D3
 
 - D0 proves that one CELL candidate behaves as its Worker intended.
@@ -27,3 +30,11 @@ merely because it is reachable from the source.
 A `CONFIRMED` cross-GO causal trace binds the source GO's current immutable candidate
 and current D2 receipt. Each selected consumption edge carries incident evidence and
 `CONFIRMED` status; reachability without that evidence cannot invalidate a receipt.
+
+D2 requires the exact current admitted `GO_CANDIDATE_CLOSURE`, whose selected CELL
+tuples cover every required manifest entry. D3 requires exact current admitted D2
+for every required GO and graph-seam evidence. Eligibility functions and validation
+reports are derived non-authoritative and never issue D2 or D3.
+
+The complete Run package passes ten validation layers before formal preflight. The
+repository validator remains separately scoped to `REPOSITORY_DISTRIBUTION`.

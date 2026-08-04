@@ -1,5 +1,26 @@
 # Changelog
 
+## 3.0.0
+
+### Authority and Run validation
+
+- Freeze new formal use of 2.4 while preserving immutable history for migration.
+- Split D0, D1, Supervisor admission, D2, graph event, D3, and Owner Acceptance
+  into independent append-only artifacts with one authority each.
+- Add versioned CELL manifests, exact GO candidate closure, and safe reuse of only
+  unchanged current-valid CELL D1 evidence.
+- Add immutable Run package loading, append-only index-chain verification, and ten
+  cross-artifact validation layers.
+- Add the four-operation provenance adapter contract without implementing an Agent
+  runtime or credential system inside GLK.
+- Add draft-only bootstrap, trusted preflight, no-side-effect simulation, liveness
+  fail-closed behavior, monitor de-duplication, authority/architecture holds, and
+  dual GO-D2/CELL-D1 progress.
+- Pin the canonical repository, invocation, version, schema/Skill bundles, real Run
+  validator source bundle, and adapter profile/contract through `GLK_METHOD_LOCK`.
+- Preserve the six-role no-intermediate-queue GO DAG, maximal-safe parallel
+  activation, and evidence-selected causal recovery.
+
 ## 2.4.0
 
 ### Causal GO-DAG recovery

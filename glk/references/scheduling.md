@@ -1,5 +1,7 @@
 # Maximal-Safe Activation
 
+GLK 3.0.0 preserves direct maximal-safe activation.
+
 Run Supervisor maintains two graph-control sets:
 
 ```text
@@ -32,3 +34,12 @@ with no waiting reason enters `ACTIVE_GO` directly. Consuming successors remain
 `WAITING_GO` under existing dependency reasons until the source has current D2;
 then every safe successor activates in the same maximum-cardinality recalculation.
 Unaffected active or verified branches are not replayed.
+
+A D2 PASS alone cannot release a successor. The Supervisor first records an exact
+admission of that D2, then appends a separate `GRAPH_EVENT` bound to the current
+graph/version/digest. Only that event removes the typed dependency waiting reason
+and triggers active-set recomputation.
+
+Liveness and architecture holds constrain activation without becoming fake
+dependency edges. Progress reports active GO IDs together with exact required
+GO/D2 and required CELL/D1 completion.

@@ -1,7 +1,9 @@
 {
   "name": "GLK",
-  "version": "2.4.0",
+  "version": "3.0.0",
   "type": "complete-github-repository",
+  "canonical_repository": "https://github.com/DWG7318/large-loop-skill",
+  "invocation": "graph-loop-skill",
   "canonical_identity": "Run-scoped GO Execution Graph Standard",
   "roles": [
     "Run Supervisor",
@@ -17,5 +19,41 @@
   "causal_rule": "current-source-bound, incident-selected trace with strict typed-seed source disposition and minimum downstream impact",
   "supervisor_rule": "fresh instance for every Run",
   "completion_handoff": "LOOP_OWNER_ACCEPTED",
-  "centralized_vulnerability_owner": "LCCoding"
+  "centralized_vulnerability_owner": "LCCoding",
+  "repository_validation_scope": "REPOSITORY_DISTRIBUTION",
+  "run_validation_scope": "RUN_PACKAGE",
+  "formal_use_freeze": "2.4.x",
+  "run_validator_bundle": {
+    "paths": [
+      "glk/scripts/run_validation.py",
+      "glk/scripts/validate_run.py"
+    ],
+    "sha256": "b2eb7a958f9fec32794837134ed038006d1d642566b3763de640e0a6fe7a4be6"
+  },
+  "formal_templates": [
+    "RUN_CONTRACT.yaml",
+    "GLK_METHOD_LOCK.yaml",
+    "PROVENANCE_ADAPTER_PROFILE.yaml",
+    "ROLE_BINDING.yaml",
+    "GRAPH_BASELINE.yaml",
+    "CELL_MANIFEST.yaml",
+    "CELL_MANIFEST_AMENDMENT.yaml",
+    "GO_CANDIDATE_CLOSURE.yaml",
+    "D0_RECEIPT.yaml",
+    "D1_RECEIPT.yaml",
+    "SUPERVISOR_ADMISSION.yaml",
+    "PREFLIGHT_ADMISSION.yaml",
+    "RUN_PACKAGE_INDEX.yaml",
+    "D2_RECEIPT.yaml",
+    "GRAPH_EVENT.yaml",
+    "MONITOR_CONTROL.yaml",
+    "D3_RECEIPT.yaml",
+    "OWNER_ACCEPTANCE.yaml",
+    "SECURITY_HANDOFF.yaml"
+  ],
+  "legacy_current_templates_rejected": [
+    "CELL_RECEIPT.yaml",
+    "GO_RECEIPT.yaml",
+    "RUN_RECEIPT.yaml"
+  ]
 }

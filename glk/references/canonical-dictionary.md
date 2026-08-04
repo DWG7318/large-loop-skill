@@ -1,5 +1,8 @@
 # Canonical Dictionary
 
+Version: 3.0.0. Canonical repository:
+`https://github.com/DWG7318/large-loop-skill`.
+
 - **Run**: one bounded engineering execution governed by one frozen Run contract.
 - **GO**: one bounded independently verifiable engineering outcome.
 - **GO Execution Graph**: one Run's directed acyclic GO-to-GO D2 precedence graph.
@@ -16,3 +19,13 @@
 - **Seed-disposition invariant**: the strictest typed seed fixes the minimum source
   disposition; artifact-invalidating seeds cannot reuse the same current artifact.
 - **Loop Owner Acceptance**: immediate product acceptance of this bounded Run.
+- **Technical receipt**: one independent append-only D0, D1, D2, or D3 artifact
+  issued only by its designated technical authority.
+- **Supervisor admission**: mechanical acceptance or rejection of one exact
+  artifact digest; never a technical verdict.
+- **GO_CANDIDATE_CLOSURE**: exact current CELL candidate/D0/D1 tuple set from which
+  one GO generation and hash are derived.
+- **Derived non-authoritative**: a report or projection that cannot itself advance
+  formal state.
+- **RUN_AUTHORITY_HOLD / RUN_ARCHITECTURE_HOLD**: fail-closed Run stops for proven
+  authority failure or repeated architecture failure on one path.

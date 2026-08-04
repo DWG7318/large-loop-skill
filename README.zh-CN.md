@@ -1,4 +1,6 @@
-# Graph Loop Skill（GLK）2.4.0
+# Graph Loop Skill（GLK）3.0.0
+
+规范仓库：https://github.com/DWG7318/large-loop-skill
 
 GLK 用一张由可独立验证 GO 构成的有向无环执行图，治理一个边界冻结的工程 Run。
 
@@ -66,3 +68,23 @@ Run；项目级集中安全闭环仍归 LCCoding。
 
 正式使用前必须完整读取 [SPEC.md](SPEC.md)。可执行模板、Schema、图模型和验证器位于
 [glk](glk/) 目录。
+
+## 3.0 权限与验证
+
+GLK 3.0 将 Worker D0、Checker D1、Supervisor admission、GO Verifier D2、
+Supervisor graph event、Run Verifier D3 与 Owner Acceptance 拆成互不混权的追加型
+artifact。版本化 `CELL_MANIFEST` 与精确 `GO_CANDIDATE_CLOSURE` 阻止过早 D2；只有
+完全未变化且仍 current-valid 的 CELL D1 才能复用。
+
+`validate_glk` 验证 `REPOSITORY_DISTRIBUTION`，`validate_run` 对完整 `RUN_PACKAGE`
+执行十层验证。bootstrap 只生成草稿；preflight 与 simulation 是派生门禁；liveness
+失败关闭；技术权限或连续架构级错误会停止 Run。进度必须同时报告 required GO/D2
+与 required CELL/D1。
+
+方法锁固定 3.0.0、本规范仓库、commit/release、Schema、Skill、真实 Run validator
+源码 bundle 与 adapter contract。2.4 formal-use freeze 只允许历史迁移诊断，绝不把
+未证明的 2.4 receipt 升级为 current evidence。
+
+GLK 只定义四操作 provenance adapter 契约。LCCoding 负责生命周期和集中安全路由；
+LCagent 或其他可信执行环境负责凭据、会话、签发、replay/checkpoint、Broker 与 runtime
+provenance 实现。

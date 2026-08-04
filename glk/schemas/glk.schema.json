@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/DWG7318/large-loop-skill/glk/schemas/glk.schema.json",
-  "title": "GLK 2.4.0 executable contracts",
+  "title": "GLK 3.0.0 executable contracts",
   "$defs": {
     "id": {
       "type": "string",
@@ -206,17 +206,17 @@
       }
     },
     "run_contract": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
       "type": "object",
-      "additionalProperties": false,
+      "unevaluatedProperties": false,
       "required": [
-        "schema_version", "run_id", "feature_slice_id", "run_feature",
+        "feature_slice_id", "run_feature",
         "run_scope", "baselines", "ui_lock", "claims", "evidence_required",
         "autonomy_boundaries", "candidate_binding", "run_supervisor_binding",
         "supervisor_reuse_forbidden"
       ],
       "properties": {
-        "schema_version": {"const": "2.4.0"},
-        "run_id": {"$ref": "#/$defs/id"},
+        "artifact_type": {"const": "RUN_CONTRACT"},
         "feature_slice_id": {"$ref": "#/$defs/id"},
         "run_feature": {"$ref": "#/$defs/id"},
         "run_scope": {
@@ -236,7 +236,7 @@
         "candidate_binding": {"$ref": "#/$defs/id"},
         "run_supervisor_binding": {
           "allOf": [
-            {"$ref": "#/$defs/role_binding"},
+            {"$ref": "#/$defs/role_binding_300"},
             {"properties": {"role_type": {"const": "RUN_SUPERVISOR"}}}
           ]
         },
@@ -253,7 +253,7 @@
         "waiting_reasons", "candidate_binding"
       ],
       "properties": {
-        "schema_version": {"const": "2.4.0"},
+        "schema_version": {"const": "3.0.0"},
         "go_id": {"$ref": "#/$defs/id"},
         "run_id": {"$ref": "#/$defs/id"},
         "graph_version": {"type": "integer", "minimum": 1},
@@ -291,18 +291,17 @@
       }
     },
     "graph_baseline": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
       "type": "object",
-      "additionalProperties": false,
+      "unevaluatedProperties": false,
       "required": [
-        "schema_version", "graph_id", "run_id", "version", "graph_hash",
+        "version", "graph_hash",
         "nodes", "edges", "entry_go_ids", "terminal_go_ids",
         "run_feature_coverage", "acyclic", "waiting_go_ids", "active_go_ids",
         "frozen_at"
       ],
       "properties": {
-        "schema_version": {"const": "2.4.0"},
-        "graph_id": {"$ref": "#/$defs/id"},
-        "run_id": {"$ref": "#/$defs/id"},
+        "artifact_type": {"const": "GRAPH_BASELINE"},
         "version": {"type": "integer", "minimum": 1},
         "graph_hash": {"$ref": "#/$defs/hash"},
         "nodes": {"$ref": "#/$defs/string_array"},
@@ -319,75 +318,6 @@
         "frozen_at": {"$ref": "#/$defs/id"}
       }
     },
-    "cell_receipt": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["schema_version", "cell_id", "go_id", "graph_version", "candidate_id", "candidate_sha256", "d0", "d1"],
-      "properties": {
-        "schema_version": {"const": "2.4.0"},
-        "cell_id": {"$ref": "#/$defs/id"},
-        "go_id": {"$ref": "#/$defs/id"},
-        "graph_version": {"type": "integer", "minimum": 1},
-        "candidate_id": {"$ref": "#/$defs/id"},
-        "candidate_sha256": {"$ref": "#/$defs/hash"},
-        "d0": {"$ref": "#/$defs/verdict_block"},
-        "d1": {"$ref": "#/$defs/verdict_block"}
-      }
-    },
-    "verdict_block": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["receipt_id", "actor_binding_ref", "verdict", "evidence", "issued_at"],
-      "properties": {
-        "receipt_id": {"$ref": "#/$defs/id"},
-        "actor_binding_ref": {"$ref": "#/$defs/id"},
-        "verdict": {"$ref": "#/$defs/id"},
-        "evidence": {"$ref": "#/$defs/string_array"},
-        "issued_at": {"$ref": "#/$defs/id"}
-      }
-    },
-    "go_receipt": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["schema_version", "go_id", "graph_version", "candidate_id", "candidate_sha256", "d2", "successor_release"],
-      "properties": {
-        "schema_version": {"const": "2.4.0"},
-        "go_id": {"$ref": "#/$defs/id"},
-        "graph_version": {"type": "integer", "minimum": 1},
-        "candidate_id": {"$ref": "#/$defs/id"},
-        "candidate_sha256": {"$ref": "#/$defs/hash"},
-        "d2": {"$ref": "#/$defs/verification_block"},
-        "successor_release": {"$ref": "#/$defs/string_array"}
-      }
-    },
-    "run_receipt": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["schema_version", "run_id", "graph_version", "candidate_id", "candidate_sha256", "d3"],
-      "properties": {
-        "schema_version": {"const": "2.4.0"},
-        "run_id": {"$ref": "#/$defs/id"},
-        "graph_version": {"type": "integer", "minimum": 1},
-        "candidate_id": {"$ref": "#/$defs/id"},
-        "candidate_sha256": {"$ref": "#/$defs/hash"},
-        "d3": {"$ref": "#/$defs/verification_block"}
-      }
-    },
-    "verification_block": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["receipt_id", "verifier_binding_ref", "execution_context_ref", "verdict", "receipts_consumed", "claims_checked", "evidence", "issued_at"],
-      "properties": {
-        "receipt_id": {"$ref": "#/$defs/id"},
-        "verifier_binding_ref": {"$ref": "#/$defs/id"},
-        "execution_context_ref": {"$ref": "#/$defs/id"},
-        "verdict": {"$ref": "#/$defs/id"},
-        "receipts_consumed": {"$ref": "#/$defs/string_array"},
-        "claims_checked": {"$ref": "#/$defs/string_array"},
-        "evidence": {"$ref": "#/$defs/string_array"},
-        "issued_at": {"$ref": "#/$defs/id"}
-      }
-    },
     "go_causal_trace": {
       "type": "object",
       "additionalProperties": false,
@@ -399,7 +329,7 @@
         "confirmation_status", "issued_at"
       ],
       "properties": {
-        "schema_version": {"const": "2.4.0"},
+        "schema_version": {"const": "3.0.0"},
         "trace_id": {"$ref": "#/$defs/id"},
         "incident_id": {"$ref": "#/$defs/id"},
         "graph_id": {"$ref": "#/$defs/id"},
@@ -452,7 +382,7 @@
         "authority_binding_ref", "issued_at"
       ],
       "properties": {
-        "schema_version": {"const": "2.4.0"},
+        "schema_version": {"const": "3.0.0"},
         "amendment_id": {"$ref": "#/$defs/id"},
         "graph_id": {"$ref": "#/$defs/id"},
         "from_version": {"type": "integer", "minimum": 1},
@@ -521,7 +451,7 @@
       "additionalProperties": false,
       "required": ["schema_version", "resolution_id", "go_id", "kind", "amendment_id", "releases_successors", "removes_required", "authority_binding_ref", "evidence", "issued_at"],
       "properties": {
-        "schema_version": {"const": "2.4.0"},
+        "schema_version": {"const": "3.0.0"},
         "resolution_id": {"$ref": "#/$defs/id"},
         "go_id": {"$ref": "#/$defs/id"},
         "kind": {"enum": ["SUPERSEDED", "CANCELLED"]},

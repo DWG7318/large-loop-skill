@@ -1,4 +1,4 @@
-schema_version: 2.4.0
+schema_version: 3.0.0
 resolution_id: RES-001
 go_id: GO-001
 kind: SUPERSEDED
@@ -7,4 +7,4 @@ releases_successors: false
 removes_required: true
 authority_binding_ref: ROLE-RUN-001-SUPERVISOR
 evidence: ["evidence/GO-001/resolution.json"]
-issued_at: "1970-01-01T00:00:00Z"
+issued_at: "2026-08-03T06:20:00Z"
