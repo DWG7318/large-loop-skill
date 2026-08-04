@@ -17,6 +17,7 @@ TECHNICAL_RECEIPT_TYPES = (
     "D2_RECEIPT",
     "D3_RECEIPT",
 )
+PIN_CAPABILITY_TYPES = frozenset({"set_thread_pinned", "pin_thread", "thread_pin"})
 
 
 class RunBindingError(ValueError):
@@ -67,6 +68,12 @@ class RoleCapabilityProfile:
                 raise RunBindingError(f"{name} must be a unique tuple")
             if any(not isinstance(value, str) or not value for value in values):
                 raise RunBindingError(f"{name} contains an invalid capability")
+        forbidden_pin = tuple(sorted(set(self.operational_capabilities) & PIN_CAPABILITY_TYPES))
+        if forbidden_pin:
+            raise RunBindingError(
+                "PIN_CAPABILITY_FORBIDDEN: method roles cannot pin tasks: "
+                + ", ".join(forbidden_pin)
+            )
 
 
 def supervisor_technical_capabilities(profile: RoleCapabilityProfile) -> Tuple[str, ...]:
