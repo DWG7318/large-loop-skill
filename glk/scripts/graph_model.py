@@ -239,10 +239,19 @@ class Go:
     d0_receipt_ids_by_cell: Dict[str, str] = field(default_factory=dict)
     d1_receipt_ids_by_cell: Dict[str, str] = field(default_factory=dict)
     go_candidate_closure_sha256: Optional[str] = None
+    resource_claims: Dict[str, int] = field(default_factory=dict)
 
     def __post_init__(self):
         if not self.go_id:
             raise GraphError("GO id is required")
+        if any(
+            not isinstance(key, str)
+            or not key
+            or not isinstance(value, int)
+            or value < 0
+            for key, value in self.resource_claims.items()
+        ):
+            raise GraphError("GO resource claims must be non-negative integer mappings")
 
 
 class GoGraph:
@@ -258,16 +267,26 @@ class GoGraph:
         gos: Iterable[Go],
         edges: Iterable[DependencyEdge] = (),
         graph_version: int = 1,
+        resource_capacity: Optional[Mapping[str, int]] = None,
     ):
         go_list = list(gos)
         self.gos: Dict[str, Go] = {go.go_id: go for go in go_list}
         self.graph_version = graph_version
         self.edges = tuple(edges)
         self.amendment_history = []
+        self.resource_capacity = dict(resource_capacity or {})
         if len(self.gos) != len(go_list):
             raise GraphError("duplicate GO id")
         if graph_version < 1:
             raise GraphError("graph version must be positive")
+        if any(
+            not isinstance(key, str)
+            or not key
+            or not isinstance(value, int)
+            or value < 0
+            for key, value in self.resource_capacity.items()
+        ):
+            raise GraphError("resource capacity must be a non-negative integer mapping")
         for go in go_list:
             missing = go.predecessors - set(self.gos)
             if missing:
@@ -1011,13 +1030,18 @@ class GoGraph:
                 for active_id in final_active
                 if self.gos[active_id].conflict_keys & go.conflict_keys
             )
-            if not conflicts:
+            resource_conflicts = self._resource_conflicts(go_id, final_active)
+            if not conflicts and not resource_conflicts:
                 raise GraphError(
                     f"activation calculation was not maximal; {go_id} can be added"
                 )
             go.state = WAITING_GO
             go.phase = None
-            go.waiting = [WaitingReason("CONFLICT", conflicts)]
+            go.waiting = (
+                [WaitingReason("CONFLICT", conflicts)]
+                if conflicts
+                else [WaitingReason("RESOURCE", resource_conflicts)]
+            )
 
     def _maximum_compatible_subset(self, candidates: List[str]) -> List[str]:
         active_keys: Set[str] = set()
@@ -1030,8 +1054,24 @@ class GoGraph:
             if not (self.gos[go_id].conflict_keys & active_keys)
         ]
         best: List[str] = []
+        active_resources: Dict[str, int] = {}
+        for go_id in self.active():
+            for resource, amount in self.gos[go_id].resource_claims.items():
+                active_resources[resource] = active_resources.get(resource, 0) + amount
 
-        def search(index: int, chosen: List[str], used_keys: Set[str]):
+        def resources_fit(usage: Mapping[str, int], claims: Mapping[str, int]) -> bool:
+            return all(
+                usage.get(resource, 0) + amount <= self.resource_capacity.get(resource, 0)
+                for resource, amount in claims.items()
+                if resource in self.resource_capacity
+            )
+
+        def search(
+            index: int,
+            chosen: List[str],
+            used_keys: Set[str],
+            used_resources: Dict[str, int],
+        ):
             nonlocal best
             if len(chosen) + len(compatible) - index < len(best):
                 return
@@ -1043,12 +1083,30 @@ class GoGraph:
                 return
             go_id = compatible[index]
             keys = self.gos[go_id].conflict_keys
-            if not (keys & used_keys):
-                search(index + 1, chosen + [go_id], used_keys | keys)
-            search(index + 1, chosen, used_keys)
+            claims = self.gos[go_id].resource_claims
+            if not (keys & used_keys) and resources_fit(used_resources, claims):
+                next_resources = dict(used_resources)
+                for resource, amount in claims.items():
+                    next_resources[resource] = next_resources.get(resource, 0) + amount
+                search(index + 1, chosen + [go_id], used_keys | keys, next_resources)
+            search(index + 1, chosen, used_keys, used_resources)
 
-        search(0, [], set(active_keys))
+        search(0, [], set(active_keys), active_resources)
         return best
+
+    def _resource_conflicts(self, go_id: str, active_ids: List[str]) -> Tuple[str, ...]:
+        usage: Dict[str, int] = {}
+        for active_id in active_ids:
+            for resource, amount in self.gos[active_id].resource_claims.items():
+                usage[resource] = usage.get(resource, 0) + amount
+        return tuple(
+            sorted(
+                resource
+                for resource, amount in self.gos[go_id].resource_claims.items()
+                if resource in self.resource_capacity
+                and usage.get(resource, 0) + amount > self.resource_capacity[resource]
+            )
+        )
 
     def _base_waiting_reasons(self, go: Go) -> List[WaitingReason]:
         unmet = tuple(
