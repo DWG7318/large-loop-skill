@@ -5,8 +5,8 @@ Until an Owner-approved migration changes it, the canonical identity is:
 ```text
 repository: https://github.com/DWG7318/large-loop-skill
 invocation: graph-loop-skill
-version: 3.0.0
-tag: v3.0.0
+version: 3.1.0
+tag: v3.1.0
 ```
 
 `GLK_METHOD_LOCK` binds exact commit/tag, schema bundle, Skill package, the real

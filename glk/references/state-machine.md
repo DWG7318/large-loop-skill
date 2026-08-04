@@ -1,6 +1,6 @@
 # State Machine
 
-Version 3.0.0 separates technical verdicts from control events.
+Version 3.1.0 separates technical verdicts from control events.
 
 Graph state and internal execution phase are separate.
 

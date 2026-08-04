@@ -1,4 +1,4 @@
-# GLK Standard Specification 3.0.0
+# GLK Standard Specification 3.1.0
 
 ## 1. Identity
 
@@ -600,7 +600,7 @@ Every formal Run binds `GLK_METHOD_LOCK` to:
 ```text
 https://github.com/DWG7318/large-loop-skill
 graph-loop-skill
-3.0.0
+3.1.0
 exact commit and release tag
 schema and Skill bundle digests
 real Run validator source-bundle digest
@@ -615,7 +615,7 @@ Migration may preserve compatible GO topology, actual-consumption edges, causal
 traces, and amendment history. Contracts and bindings require revalidation. Mixed
 mutable receipts and sample bootstrap pass claims are excluded from the current
 formal model. An unproven 2.4 receipt remains historical-only and can never become
-3.0 current evidence through a migration report.
+3.1 current evidence through a migration report.
 
 ## 26. External ownership boundary
 
@@ -625,3 +625,111 @@ credential, issuance, replay/checkpoint, Broker, and runtime provenance mechanis
 GLK remains a lightweight engineering method: it defines GO-DAG authority,
 dependency unlock, maximal-safe activation, evidence contracts, and fail-closed
 validation without implementing those external systems.
+
+## 27. Worker-only Checker wake
+
+Only the Worker completing its current formal CELL may invoke the four-level wake
+ladder for the original Checker frozen at dispatch. The scoped message contains
+GO ID, CELL ordinal, current Required CELL total, and delivered/check semantics.
+The same CELL keeps its ordinal across rework. `BLOCKED` and
+`EXECUTION_FAILURE` retain the same Run/GO/CELL/Round identity.
+
+The levels are direct send at T+0, read/list and same-task unarchive/re-resolution
+at T+2, one deterministic temporary heartbeat at T+4, and append-only
+`PENDING_WAKE` at T+6. Each ACK window is at most 120 seconds and uses an injected
+clock. The Checker first emits `WAKE_ACK` bound to Run, GO, CELL, Round, Checker
+binding, thread, and host. Matching ACK or proven same-scope processing stops all
+later levels and cleans temporary state. IDs are never guessed and replacement
+roles are never created.
+
+Worker readiness proves send, read, list, unarchive, bounded wait, heartbeat
+upsert/delete, and pending-write capability. Other roles fail as
+`WAKE_ROLE_FORBIDDEN`; this mechanism is not a general message bus.
+
+## 28. Supervisor waiting, patrol, subagents, and Pin
+
+The Supervisor ends its turn after dispatch/control work. Positive-duration or
+looping `wait_threads` is `SUPERVISOR_WAIT_FORBIDDEN`; only a zero-time snapshot or
+read is allowed. Only the Worker ladder may wait for a bounded ACK.
+
+Each Run has one visible `RUN_PATROL_CONVERSATION` and one heartbeat, using
+`gpt-5.6-luna` with `xhigh` and a frozen 10/15/30-minute interval. The patrol is not
+a seventh authority role. It reports only unexplained stoppage, pending wake,
+subagent misuse, Supervisor wait, duplicate patrol, Pin provenance, and terminal
+closure. It cannot inspect product quality, repair, accept, plan, take over, or
+re-dispatch.
+
+GO, CELL, Round, plan step, visible stable task, and text `子任务` are not
+subagents. Closed evidence of `spawn_agent`, `delegate_task`, hidden Agent, or
+background Agent is forbidden.
+
+Every method role and the patrol permanently lacks `set_thread_pinned(true)` and
+equivalent Pin capability. Only an explicit Owner UI choice or item-specific
+current-Run authorization is legal. Agent/method Pin is
+`UNAUTHORIZED_THREAD_PIN`, even after later Unpin. Unknown provenance is
+`PIN_PROVENANCE_UNKNOWN`; patrol must not unpin because an Owner choice may be
+present. Pin is separate from archive, lifecycle, progress, and role indexing.
+
+Terminal patrol closure is `LOOP_TERMINAL`, heartbeat deletion, `PATROL_CLOSED`,
+then conversation archive.
+
+## 29. Layered realtime progress
+
+The progress stages are `DELIVERED`, `D1_ACCEPTED`, `GO_CANDIDATE_READY`,
+`D2_VERIFIED`, `RUN_VERIFIED`, and `OWNER_ACCEPTED`.
+
+Worker delivery never increments acceptance. Checker ACKs first and reports the
+finest D1 count; only one current-valid admitted D1 PASS per Required CELL counts.
+Checker sends the Supervisor one deduplicated GO-boundary milestone only after the
+current Required CELL set is accepted and a current GO candidate closure exists.
+Candidate readiness is not D2 verification.
+
+Supervisor emits only material GO, outer Level reference, Graph, Run, hold, or
+Required-version changes. It shows current Required CELL/D1, Required GO/D2,
+ACTIVE_GO, WAITING_GO reasons, holds, graph/manifest/plan/capacity/load versions,
+and never a single percentage. Verifiers emit verdicts only; patrol reports no
+engineering progress.
+
+Numerators come from current receipts/verdicts and denominators from versioned
+Required sets. Amendments recompute current denominators while historical
+projections remain immutable. Splitting a CELL adds no accepted progress.
+
+## 30. Device and cumulative-load CELL capacity
+
+Before plan freeze the Supervisor binds append-only `DEVICE_CAPACITY_PROFILE` and
+`CUMULATIVE_ENGINEERING_LOAD` records with explicit CPU, RAM, GPU/VRAM
+applicability, disk/IO, network/external, process/port, safe concurrency,
+command-duration, context, and evidence facts. Unknown, stale, unitless,
+free-text-only, or unproved capacity fails closed.
+
+Every `CELL_WORK_ESTIMATE` covers total engineering cost: scope, dependencies,
+artifacts, build/test matrix, independent Checker reproduction, regression,
+evidence/hash/cleanup, context recovery, external tools/services, rollback/retry,
+and cumulative baseline coupling. Small diffs do not erase full-regression cost.
+
+`CELL_CAPACITY_GATE` is exactly `PASS`, `SPLIT_REQUIRED`, or `CAPACITY_BLOCKED`.
+Only PASS allows dispatch. Pre-dispatch successors preserve one GO outcome and
+acceptance, remain independently deliverable/D1-checkable, and each pass the gate.
+A Worker cannot self-split; actual excess emits `CELL_SCOPE_EXCEEDED` and returns
+to the original Checker/planning authority.
+
+Late splitting records `POST_DISPATCH_CELL_SPLIT`. Three or more successors also
+record `CELL_OVERSIZE_SEVERE` and force every undispatched CELL to be re-evaluated;
+counts 6/7/8 are always severe. Boundary measurements update cumulative load.
+
+DAG eligibility and device safety are separate. The maximal safe ACTIVE_GO set
+also respects CPU, RAM, GPU/VRAM, disk/IO, process, port, external-service, and
+heavy-validation reservations. Capacity never creates a fake dependency.
+
+## 31. GLK 3.1 validation surface
+
+The accepted ten validation layers remain technical authority layers. A current
+3.1 package adds an operational-control gate for Worker wake, patrol uniqueness,
+Pin provenance capability exclusion, capacity lineage, and severe-split
+re-evaluation. Repository validation remains `REPOSITORY_DISTRIBUTION`; Run
+validation remains `RUN_PACKAGE`. All reports are derived non-authoritative.
+
+Preflight requires the 3.0 trust and isolation gates plus exact operational
+capabilities, one patrol, current capacity/load, PASS dispatch gates, current
+progress denominators, and no-side-effect operational simulation. Simulation uses
+fake time and local facts and never mutates formal ledger/index bytes.

@@ -1,4 +1,4 @@
-# Graph Loop Skill（GLK）3.0.0
+# Graph Loop Skill（GLK）3.1.0
 
 规范仓库：https://github.com/DWG7318/large-loop-skill
 
@@ -43,6 +43,21 @@ GLK 不设置介于等待与执行之间的排队层。未完成 GO 只有在仍
 GLK 必须尽可能同时激活相互独立的 GO。不得为了管理方便任意串行化，也不得伪造
 依赖边。若多个安全组合包含的 GO 数量不同，必须选择能同时激活最多 GO 的组合。
 
+## 3.1 运行保障
+
+GLK 3.1 在不改变六角色与 D0-D3 的前提下新增四个窄契约：Worker 专属四级
+叫醒原 Checker；每 Run 唯一、非权威的巡检对话与 heartbeat；区分交付、D1、
+GO 候选、D2、D3、Owner Acceptance 的分层进度；以及派工前基于设备与累计
+工程负载的 `CELL_CAPACITY_GATE`。
+
+Supervisor 不得用正时长或循环 `wait_threads` 长期在线。任何方法角色都不得
+主动置顶任务；只有 Owner 明确置顶证据合法。巡检只报告
+`UNAUTHORIZED_THREAD_PIN` / `PIN_PROVENANCE_UNKNOWN`，不得自行取消置顶。
+
+容量画像使用可验证的 CPU、RAM、GPU/显存、磁盘/IO、网络、进程/端口、命令
+时长、上下文与证据预算。超大 CELL 在派工前拆小且保持同一 GO outcome；派工后
+拆成三个或更多后继 CELL 必须记录 `CELL_OVERSIZE_SEVERE` 并重评所有未派发工作。
+
 ## 因果恢复
 
 每条 D2 边绑定生产者声明/输出、消费者输入/假设和消费证据。
@@ -81,7 +96,7 @@ artifact。版本化 `CELL_MANIFEST` 与精确 `GO_CANDIDATE_CLOSURE` 阻止过�
 失败关闭；技术权限或连续架构级错误会停止 Run。进度必须同时报告 required GO/D2
 与 required CELL/D1。
 
-方法锁固定 3.0.0、本规范仓库、commit/release、Schema、Skill、真实 Run validator
+方法锁固定 3.1.0、本规范仓库、commit/release、Schema、Skill、真实 Run validator
 源码 bundle 与 adapter contract。2.4 formal-use freeze 只允许历史迁移诊断，绝不把
 未证明的 2.4 receipt 升级为 current evidence。
 

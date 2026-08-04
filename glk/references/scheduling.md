@@ -1,6 +1,6 @@
 # Maximal-Safe Activation
 
-GLK 3.0.0 preserves direct maximal-safe activation.
+GLK 3.1.0 preserves direct maximal-safe activation.
 
 Run Supervisor maintains two graph-control sets:
 
@@ -43,3 +43,8 @@ and triggers active-set recomputation.
 Liveness and architecture holds constrain activation without becoming fake
 dependency edges. Progress reports active GO IDs together with exact required
 GO/D2 and required CELL/D1 completion.
+
+GLK 3.1 additionally constrains the maximal safe ACTIVE_GO set with current CPU,
+RAM, GPU/VRAM, disk/IO, process, port, external-service, and heavy-validation
+reservations. Logical eligibility remains unchanged. Capacity shortage shrinks a
+CELL or records a typed resource constraint; it never adds a fake edge.

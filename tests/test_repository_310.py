@@ -18,6 +18,10 @@ NORMATIVE = [
     ROOT / "glk" / "references" / "run-package-validation.md",
     ROOT / "glk" / "references" / "readiness-and-liveness.md",
     ROOT / "glk" / "references" / "supply-chain.md",
+    ROOT / "glk" / "references" / "worker-wake.md",
+    ROOT / "glk" / "references" / "run-patrol.md",
+    ROOT / "glk" / "references" / "layered-progress.md",
+    ROOT / "glk" / "references" / "cell-capacity.md",
 ]
 
 CANONICAL_REPOSITORY = "https://github.com/DWG7318/large-loop-skill"
@@ -35,8 +39,8 @@ def text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_version_is_300_everywhere():
-    assert text(ROOT / "VERSION").strip() == "3.0.0"
+def test_version_is_310_everywhere():
+    assert text(ROOT / "VERSION").strip() == "3.1.0"
     for path in [
         ROOT / "SPEC.md",
         ROOT / "SKILL.md",
@@ -50,14 +54,14 @@ def test_version_is_300_everywhere():
         ROOT / "MANIFEST.json",
         ROOT / "agents" / "openai.yaml",
     ]:
-        assert "3.0.0" in text(path), path
+        assert "3.1.0" in text(path), path
 
 
 def test_canonical_repository_and_skill_entrypoints_are_locked():
     manifest = json.loads(text(ROOT / "MANIFEST.json"))
     assert manifest["canonical_repository"] == CANONICAL_REPOSITORY
     assert manifest["invocation"] == "graph-loop-skill"
-    assert manifest["version"] == "3.0.0"
+    assert manifest["version"] == "3.1.0"
     assert manifest["roles"] == SIX_ROLES
     assert text(ROOT / "SKILL.md") == text(ROOT / "glk" / "SKILL.md")
     for path in [ROOT / "SPEC.md", ROOT / "SKILL.md", ROOT / "README.md"]:
@@ -81,7 +85,7 @@ def test_every_run_requires_a_fresh_supervisor_instance():
 
 def test_normative_model_has_no_ready_state_or_queue():
     for path in NORMATIVE:
-        assert "READY" not in text(path), path
+        assert "READY" not in text(path).replace("GO_CANDIDATE_READY", ""), path
 
 
 def test_graph_activates_a_maximal_safe_set_instead_of_serializing():
@@ -180,10 +184,10 @@ def test_repaired_source_reuses_waiting_active_and_maximal_parallelism():
     assert "WAITING_GO" in combined and "ACTIVE_GO" in combined
     assert "maximum-cardinality" in combined
     assert "same recalculation" in combined
-    assert "READY" not in combined
+    assert "READY" not in combined.replace("GO_CANDIDATE_READY", "")
 
 
-def test_300_example_edges_use_complete_consumption_contracts():
+def test_310_example_edges_use_complete_consumption_contracts():
     example = yaml.safe_load(
         text(ROOT / "glk" / "examples" / "appointment-run.yaml")
     )
@@ -232,7 +236,7 @@ def test_method_lock_binds_the_real_declared_run_validator_bundle():
     assert lock["validator_sha256"] == actual
 
 
-def test_300_surface_documents_authority_runtime_and_migration_boundaries():
+def test_310_surface_documents_authority_runtime_and_migration_boundaries():
     combined = "\n".join(text(path) for path in NORMATIVE)
     for marker in [
         "2.4 formal-use freeze",
@@ -250,6 +254,17 @@ def test_300_surface_documents_authority_runtime_and_migration_boundaries():
         "RUN_ARCHITECTURE_HOLD",
         "LCagent",
         "LCCoding",
+        "Worker-only",
+        "WAKE_ACK",
+        "PENDING_WAKE",
+        "gpt-5.6-luna",
+        "UNAUTHORIZED_THREAD_PIN",
+        "PIN_PROVENANCE_UNKNOWN",
+        "CELL_CAPACITY_GATE",
+        "SPLIT_REQUIRED",
+        "CELL_OVERSIZE_SEVERE",
+        "DELIVERED",
+        "GO_CANDIDATE_READY",
     ]:
         assert marker in combined, marker
     assert "unproven 2.4" in combined and "current evidence" in combined
@@ -269,3 +284,44 @@ def test_glk_contains_no_runtime_or_credential_subsystem_implementation():
         for path in (ROOT / "glk" / "scripts").glob("*.py")
     }
     assert forbidden_files.isdisjoint(present)
+
+
+def test_310_has_worker_wake_patrol_progress_and_capacity_surface():
+    for relative in [
+        "glk/scripts/worker_wake.py",
+        "glk/scripts/run_patrol.py",
+        "glk/scripts/progress_reporting.py",
+        "glk/scripts/cell_capacity.py",
+        "glk/references/worker-wake.md",
+        "glk/references/run-patrol.md",
+        "glk/references/layered-progress.md",
+        "glk/references/cell-capacity.md",
+    ]:
+        assert (ROOT / relative).is_file(), relative
+
+
+def test_patrol_is_not_a_seventh_authority_role():
+    manifest = json.loads(text(ROOT / "MANIFEST.json"))
+    assert manifest["roles"] == SIX_ROLES
+    combined = text(ROOT / "SPEC.md") + text(ROOT / "SKILL.md")
+    assert "patrol is not a seventh" in combined
+    assert "gpt-5.6-luna" in combined and "xhigh" in combined
+
+
+def test_pin_is_owner_only_and_never_automatic():
+    combined = text(ROOT / "SPEC.md") + text(ROOT / "glk" / "references" / "run-patrol.md")
+    for marker in [
+        "set_thread_pinned", "Owner", "UNAUTHORIZED_THREAD_PIN",
+        "PIN_PROVENANCE_UNKNOWN", "must not unpin",
+    ]:
+        assert marker in combined
+
+
+def test_capacity_and_progress_amendments_recompute_denominators():
+    combined = text(ROOT / "SPEC.md") + text(ROOT / "glk" / "references" / "cell-capacity.md") + text(ROOT / "glk" / "references" / "layered-progress.md")
+    assert "DEVICE_CAPACITY_PROFILE" in combined
+    assert "CUMULATIVE_ENGINEERING_LOAD" in combined
+    assert "CELL_CAPACITY_GATE" in combined
+    assert "POST_DISPATCH_CELL_SPLIT" in combined
+    assert "CELL_OVERSIZE_SEVERE" in combined
+    assert "recompute" in combined and "denominator" in combined

@@ -3,7 +3,10 @@ import json
 import hashlib
 import subprocess
 import sys
+import tempfile
+import zipfile
 from pathlib import Path
+from pathlib import PurePosixPath
 
 import yaml
 from jsonschema import Draft202012Validator
@@ -12,7 +15,7 @@ sys.dont_write_bytecode = True
 from repository import EXCLUDED_PARTS, build_hash_manifest, sha256
 
 
-VERSION = "3.0.0"
+VERSION = "3.1.0"
 VALIDATION_SCOPE = "REPOSITORY_DISTRIBUTION"
 ROLES = [
     "Run Supervisor",
@@ -53,6 +56,10 @@ REQUIRED = [
     "glk/scripts/bootstrap_run.py",
     "glk/scripts/build_release.py",
     "glk/scripts/repository.py",
+    "glk/scripts/worker_wake.py",
+    "glk/scripts/run_patrol.py",
+    "glk/scripts/progress_reporting.py",
+    "glk/scripts/cell_capacity.py",
     "glk/templates/RUN_CONTRACT.yaml",
     "glk/templates/ROLE_BINDING.yaml",
     "glk/templates/GO.yaml",
@@ -70,6 +77,16 @@ REQUIRED = [
     "glk/templates/D2_RECEIPT.yaml",
     "glk/templates/GRAPH_EVENT.yaml",
     "glk/templates/MONITOR_CONTROL.yaml",
+    "glk/templates/WORKER_CHECKER_WAKE_BINDING.yaml",
+    "glk/templates/WAKE_ATTEMPT.yaml",
+    "glk/templates/WAKE_ACK.yaml",
+    "glk/templates/PENDING_WAKE.yaml",
+    "glk/templates/DEVICE_CAPACITY_PROFILE.yaml",
+    "glk/templates/CUMULATIVE_ENGINEERING_LOAD.yaml",
+    "glk/templates/CELL_WORK_ESTIMATE.yaml",
+    "glk/templates/CELL_CAPACITY_GATE.yaml",
+    "glk/templates/CELL_PLAN_AMENDMENT.yaml",
+    "glk/templates/CELL_SCOPE_EXCEEDED.yaml",
     "glk/templates/D3_RECEIPT.yaml",
     "glk/templates/GO_CAUSAL_TRACE.yaml",
     "glk/templates/GRAPH_AMENDMENT.yaml",
@@ -80,6 +97,10 @@ REQUIRED = [
     "glk/references/run-package-validation.md",
     "glk/references/readiness-and-liveness.md",
     "glk/references/supply-chain.md",
+    "glk/references/worker-wake.md",
+    "glk/references/run-patrol.md",
+    "glk/references/layered-progress.md",
+    "glk/references/cell-capacity.md",
 ]
 FORBIDDEN_CURRENT = [
     "glk/templates/CELL_RECEIPT.yaml",
@@ -108,6 +129,10 @@ NORMATIVE = [
     "glk/references/security-boundary.md",
     "glk/references/state-machine.md",
     "glk/references/verification.md",
+    "glk/references/worker-wake.md",
+    "glk/references/run-patrol.md",
+    "glk/references/layered-progress.md",
+    "glk/references/cell-capacity.md",
 ]
 TEMPLATES = {
     "RUN_CONTRACT.yaml": "run_contract",
@@ -127,6 +152,16 @@ TEMPLATES = {
     "D2_RECEIPT.yaml": "d2_receipt",
     "GRAPH_EVENT.yaml": "graph_event",
     "MONITOR_CONTROL.yaml": "monitor_control",
+    "WORKER_CHECKER_WAKE_BINDING.yaml": "worker_checker_wake_binding",
+    "WAKE_ATTEMPT.yaml": "wake_attempt",
+    "WAKE_ACK.yaml": "wake_ack",
+    "PENDING_WAKE.yaml": "pending_wake",
+    "DEVICE_CAPACITY_PROFILE.yaml": "device_capacity_profile",
+    "CUMULATIVE_ENGINEERING_LOAD.yaml": "cumulative_engineering_load",
+    "CELL_WORK_ESTIMATE.yaml": "cell_work_estimate",
+    "CELL_CAPACITY_GATE.yaml": "cell_capacity_gate",
+    "CELL_PLAN_AMENDMENT.yaml": "cell_plan_amendment",
+    "CELL_SCOPE_EXCEEDED.yaml": "cell_scope_exceeded",
     "D3_RECEIPT.yaml": "d3_receipt",
     "GO_CAUSAL_TRACE.yaml": "go_causal_trace",
     "GRAPH_AMENDMENT.yaml": "graph_amendment",
@@ -155,7 +190,7 @@ def validate_structure(root: Path):
 
 def validate_version(root: Path):
     if read(root / "VERSION").strip() != VERSION:
-        fail("VERSION file does not contain version 3.0.0")
+        fail("VERSION file does not contain version 3.1.0")
     manifest = json.loads(read(root / "MANIFEST.json"))
     if manifest.get("version") != VERSION:
         fail("MANIFEST version mismatch")
@@ -176,8 +211,9 @@ def validate_version(root: Path):
 
 def validate_semantics(root: Path):
     combined = "\n".join(read(root / relative) for relative in NORMATIVE)
+    scheduling_text = combined.replace("GO_CANDIDATE_READY", "")
     forbidden = ["READY", "exactly one ACTIVE", "one-at-a-time", "Grapher", "Planner", "Router"]
-    found = [marker for marker in forbidden if marker in combined]
+    found = [marker for marker in forbidden if marker in scheduling_text]
     if found:
         fail("forbidden normative semantics: " + ", ".join(found))
     required = [
@@ -210,6 +246,19 @@ def validate_semantics(root: Path):
         "UNAFFECTED",
         "current-validity",
         "full-graph replay",
+        "Worker-only",
+        "WAKE_ACK",
+        "PENDING_WAKE",
+        "gpt-5.6-luna",
+        "UNAUTHORIZED_THREAD_PIN",
+        "PIN_PROVENANCE_UNKNOWN",
+        "DELIVERED",
+        "GO_CANDIDATE_READY",
+        "DEVICE_CAPACITY_PROFILE",
+        "CUMULATIVE_ENGINEERING_LOAD",
+        "CELL_CAPACITY_GATE",
+        "SPLIT_REQUIRED",
+        "CELL_OVERSIZE_SEVERE",
     ]
     missing = [marker for marker in required if marker not in combined]
     if missing:
@@ -336,8 +385,7 @@ def validate_hashes(root: Path):
         fail("hash mismatch: " + ", ".join(mismatches))
 
 
-def main():
-    root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
+def validate_repository(root: Path):
     validate_structure(root)
     validate_version(root)
     validate_semantics(root)
@@ -345,8 +393,45 @@ def main():
     validate_validator_bundle(root)
     validate_hygiene(root)
     validate_hashes(root)
+
+
+def validate_release_zip(source: Path):
+    prefix = f"GLK-{VERSION}"
+    with zipfile.ZipFile(source) as archive:
+        bad_member = archive.testzip()
+        if bad_member:
+            fail(f"ZIP integrity failed at {bad_member}")
+        members = archive.infolist()
+        if not members:
+            fail("release ZIP is empty")
+        for member in members:
+            relative = PurePosixPath(member.filename)
+            unix_mode = member.external_attr >> 16
+            if (
+                "\\\\" in member.filename
+                or relative.is_absolute()
+                or ".." in relative.parts
+                or not relative.parts
+                or relative.parts[0] != prefix
+            ):
+                fail(f"release ZIP path is outside {prefix}: {member.filename}")
+            if unix_mode & 0o170000 == 0o120000:
+                fail(f"release ZIP contains a symbolic link: {member.filename}")
+        with tempfile.TemporaryDirectory(prefix="glk-validate-") as temporary:
+            archive.extractall(temporary)
+            validate_repository(Path(temporary) / prefix)
+
+
+def main():
+    source = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
+    if source.is_file():
+        if source.suffix.lower() != ".zip":
+            fail("repository distribution input must be a directory or ZIP archive")
+        validate_release_zip(source)
+    else:
+        validate_repository(source)
     print(
-        "PASS: GLK 3.0.0 scope=REPOSITORY_DISTRIBUTION "
+        "PASS: GLK 3.1.0 scope=REPOSITORY_DISTRIBUTION "
         "structure, semantics, schema, hashes, and hygiene are valid."
     )
 

@@ -1,6 +1,6 @@
 # GO Graph Construction
 
-This reference defines the GLK 3.0.0 GO-DAG construction contract.
+This reference defines the GLK 3.1.0 GO-DAG construction contract.
 
 Build the minimum GO set that covers the frozen Run Feature. Every GO has one
 primary claim, explicit scope, acceptance, evidence, predecessors, conflict keys,

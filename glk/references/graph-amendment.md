@@ -1,6 +1,6 @@
 # Graph Amendment and Formal Resolution
 
-GLK 3.0.0 amendments remain versioned and append-only.
+GLK 3.1.0 amendments remain versioned and append-only.
 
 A frozen graph changes only through `GRAPH_AMENDMENT`. Record:
 

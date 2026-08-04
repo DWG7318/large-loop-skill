@@ -25,3 +25,9 @@ The ten validation layers are:
 A `VALIDATION_REPORT` is derived non-authoritative. It cannot issue a receipt,
 admission, graph event, D3, or Owner Acceptance. Package load failure is reported as
 package/invocation failure, not as a fabricated technical verdict.
+
+GLK 3.1 keeps these ten technical layers and applies an operational-control gate
+after them when 3.1 controls are present. It validates wake lineage, patrol
+uniqueness, Pin capability exclusion, current capacity/load/estimate/gate lineage,
+and severe post-dispatch split re-evaluation. Operational failure changes no D0-D3
+verdict.

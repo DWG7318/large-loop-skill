@@ -1,4 +1,4 @@
-# Graph Loop Skill (GLK) 3.0.0
+# Graph Loop Skill (GLK) 3.1.0
 
 Canonical repository: https://github.com/DWG7318/large-loop-skill
 
@@ -46,6 +46,27 @@ GLK must exploit independent branches concurrently. Arbitrary serialization and
 fake dependency edges are invalid. When conflict choices admit different safe sets,
 activate the alternative containing the greatest number of GO nodes.
 
+## 3.1 operational safety
+
+GLK 3.1 adds four narrow method contracts without changing the six roles or D0-D3:
+
+- Worker-only four-level wake of the original Checker, with scoped CELL position,
+  bound `WAKE_ACK`, a temporary heartbeat, and `PENDING_WAKE` fallback;
+- one visible non-authoritative Run patrol using `gpt-5.6-luna`/`xhigh`, with no
+  task creation, subagent, engineering, acceptance, or takeover authority;
+- layered progress that distinguishes delivery, D1 acceptance, GO candidate, D2,
+  D3, and Owner Acceptance;
+- device/cumulative-load-aware `CELL_CAPACITY_GATE` before Worker dispatch.
+
+Supervisor does not use positive-duration or looping `wait_threads`. Method roles
+never Pin tasks; only explicit Owner Pin provenance is legal. The patrol reports
+`UNAUTHORIZED_THREAD_PIN` or `PIN_PROVENANCE_UNKNOWN` and never unpins on its own.
+
+Capacity profiles use measured or conservative CPU, RAM, GPU/VRAM, disk/IO,
+network, process/port, duration, context, and evidence facts. Oversized work is split
+before dispatch while preserving one GO outcome. A late split into three or more
+successors is `CELL_OVERSIZE_SEVERE` and re-evaluates all undispatched work.
+
 ## Causal recovery
 
 Each D2 edge binds the producer claim/output, consumer input/assumption, and
@@ -92,7 +113,7 @@ preflight and simulation are derived gates, liveness fails closed, and authority
 repeated architecture failures stop the Run. Progress reports both required GO/D2
 and required CELL/D1 completion.
 
-The method lock pins version 3.0.0, this repository, release/commit, schema, Skill,
+The method lock pins version 3.1.0, this repository, release/commit, schema, Skill,
 the real Run validator source bundle, and adapter contract. The 2.4 formal-use
 freeze permits historical migration diagnostics but never upgrades unproven 2.4
 receipts into current evidence.

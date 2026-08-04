@@ -1,4 +1,4 @@
-schema_version: 3.0.0
+schema_version: 3.1.0
 artifact_type: CELL_MANIFEST_AMENDMENT
 artifact_id: CELL-MANIFEST-AMENDMENT-GO-001-V2
 run_id: RUN-001

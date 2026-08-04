@@ -1,6 +1,6 @@
 # Roles and Isolation
 
-Version 3.0.0 retains exactly six role types.
+Version 3.1.0 retains exactly six role types.
 
 ## Six-role authority
 
@@ -56,3 +56,8 @@ free strings alone do not prove isolation.
 Run Supervisor capability is checked before issuance verification: D0-D3 issuance,
 holding, or invocation capability is an immediate authority failure. Run Verifier
 isolation is verified against every consumed GO Verifier and Checker binding.
+
+Only Worker receives bounded original-Checker wake operations. Every formal role
+lacks task Pin capability. The one visible Run patrol is a non-authoritative control
+conversation, not a seventh role, and cannot create tasks, delegate, accept,
+repair, or perform product work.

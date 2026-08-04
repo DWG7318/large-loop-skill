@@ -1,4 +1,4 @@
-# GLK 3.0.0 Interpretation Test
+# GLK 3.1.0 Interpretation Test
 
 A conforming Agent answers:
 

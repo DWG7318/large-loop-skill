@@ -119,13 +119,13 @@ UTC_TIMESTAMP = re.compile(
     r"^(?!1970-01-01T00:00:00Z$)[0-9]{4}-(0[1-9]|1[0-2])-"
     r"(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$"
 )
-RUN_VALIDATOR_VERSION = "3.0.0"
+RUN_VALIDATOR_VERSION = "3.1.0"
 REPOSITORY_VALIDATION_SCOPE = "REPOSITORY_DISTRIBUTION"
 RUN_VALIDATION_SCOPE = "RUN_PACKAGE"
 _VALIDATOR_CONTRACT = {
     "scope": RUN_VALIDATION_SCOPE,
     "version": RUN_VALIDATOR_VERSION,
-    "layers": tuple(range(1, 11)),
+    "layers": tuple(range(1, 12)),
     "authority": "DERIVED_NON_AUTHORITATIVE",
 }
 RUN_VALIDATOR_DIGEST = hashlib.sha256(

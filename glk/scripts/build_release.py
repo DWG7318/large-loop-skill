@@ -19,7 +19,7 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     write_hash_manifest(root, output)
 
-    prefix = "GLK-3.0.0"
+    prefix = "GLK-3.1.0"
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in release_files(root, output):
             relative = path.relative_to(root).as_posix()

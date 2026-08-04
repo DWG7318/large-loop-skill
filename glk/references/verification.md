@@ -1,6 +1,6 @@
 # Verification
 
-GLK 3.0.0 validates independent append-only artifacts and their cross-artifact
+GLK 3.1.0 validates independent append-only artifacts and their cross-artifact
 lineage.
 
 ## D0-D3

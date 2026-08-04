@@ -33,7 +33,7 @@ def bootstrap_scaffold(target):
         (root / dirname).mkdir(parents=True, exist_ok=True)
     scaffold = {
         "document_kind": "GLK_RUN_SCAFFOLD",
-        "scaffold_version": "3.0.0",
+        "scaffold_version": "3.1.0",
         "state": "DRAFT_SCAFFOLD",
         "formal_execution_eligible": False,
         "run_id": "UNRESOLVED",
@@ -42,6 +42,14 @@ def bootstrap_scaffold(target):
         "adapter_profile": "UNRESOLVED",
         "role_bindings": "UNRESOLVED",
         "package_index": "UNRESOLVED",
+        "worker_checker_wake_bindings": "UNRESOLVED",
+        "run_patrol_conversation": "UNRESOLVED",
+        "run_patrol_heartbeat": "UNRESOLVED",
+        "device_capacity_profile": "UNRESOLVED",
+        "cumulative_engineering_load": "UNRESOLVED",
+        "cell_work_estimates": "UNRESOLVED",
+        "cell_capacity_gates": "UNRESOLVED",
+        "progress_denominator_versions": "UNRESOLVED",
     }
     draft_path = root / "draft" / "DRAFT_SCAFFOLD.json"
     draft_path.write_text(
@@ -59,7 +67,7 @@ def bootstrap_scaffold(target):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Create an incomplete GLK 3.0 Run scaffold")
+    parser = argparse.ArgumentParser(description="Create an incomplete GLK 3.1 Run scaffold")
     parser.add_argument("target")
     args = parser.parse_args(argv)
     output = bootstrap_scaffold(args.target)

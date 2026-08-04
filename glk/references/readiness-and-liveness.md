@@ -22,12 +22,18 @@ Liveness consumes indexed `check_liveness` attestations bound to the exact Run,
 role, adapter profile, and observation deadline. Missing reads, stale evidence, or
 deadline expiry never imply health. An expired role becomes unreachable.
 
-`MONITOR_CONTROL` has one deterministic monitor key and one append-only head. It
-references the existing Supervisor task/callback, binds the exact current
-attestation set, and never creates or schedules a second task. Technical authority
+`MONITOR_CONTROL` has one deterministic patrol key and one append-only head. It
+binds exactly one visible patrol conversation, one heartbeat, and the exact current
+attestation set; it never creates or schedules a task. Technical authority
 violations produce `RUN_AUTHORITY_HOLD`; repeated HIGH architecture findings on the
 same path produce `RUN_ARCHITECTURE_HOLD`.
 
 Progress reports exact `required GO/D2` and `required CELL/D1` counts and IDs,
 active GO IDs, typed waiting reasons, unreachable bindings, current holds, graph
 version, and CELL manifest versions.
+
+GLK 3.1 readiness also requires Worker wake operations, the original Checker
+binding, one patrol conversation/heartbeat, no task-creation/subagent/Pin
+capability, current device capacity and cumulative load, PASS dispatch gates, and
+current progress denominator versions. Operational simulation uses injected time
+and leaves formal ledger/index bytes unchanged.

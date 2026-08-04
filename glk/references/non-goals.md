@@ -1,6 +1,6 @@
 # Non-goals
 
-Applies to GLK 3.0.0.
+Applies to GLK 3.1.0.
 
 GLK does not define product intent, Proposal, Initialization, Calabash, Workflow,
 UI, Simulation, Feature Slice, Delivery, centralized project security closure,

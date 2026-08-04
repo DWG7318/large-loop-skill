@@ -1,4 +1,4 @@
-schema_version: 3.0.0
+schema_version: 3.1.0
 artifact_type: WORKER_CHECKER_WAKE_BINDING
 artifact_id: WAKE-BINDING-GO-001-CELL-001-R1
 run_id: RUN-001

@@ -128,6 +128,7 @@ class PreflightReport:
     method_lock_report_digest: str | None
     current_holds: Tuple[str, ...]
     simulation_report_digest: str | None
+    operational_report_digest: str | None
     report_digest: str
 
 
@@ -768,6 +769,7 @@ def derive_preflight_report(
     adapter,
     expected_method_lock,
     simulation_report,
+    operational_input,
     *,
     current_holds,
     observation_deadline,
@@ -831,7 +833,7 @@ def derive_preflight_report(
 
     if (
         validation_report.status != "PASS"
-        or len(validation_report.layers) != 10
+        or len(validation_report.layers) not in {10, 11}
         or any(layer.status != "PASS" for layer in validation_report.layers)
     ):
         failures.append("RUN_PACKAGE_VALIDATION_REQUIRED")
@@ -842,6 +844,9 @@ def derive_preflight_report(
         failures.append("SIMULATION_REQUIRED")
     elif simulation_report.current_evidence_eligible:
         failures.append("SIMULATION_EVIDENCE_BOUNDARY_INVALID")
+    operational_report = derive_operational_preflight(operational_input)
+    if operational_report.status != "PREFLIGHT_PASS":
+        failures.extend(operational_report.failure_codes)
 
     failure_codes = tuple(sorted(set(failures)))
     values = {
@@ -858,6 +863,7 @@ def derive_preflight_report(
         "simulation_report_digest": (
             simulation_report.report_digest if simulation_report is not None else None
         ),
+        "operational_report_digest": operational_report.report_digest,
     }
     digest = _report_digest("PREFLIGHT_REPORT", values)
     return PreflightReport(**values, report_digest=digest)

@@ -1,4 +1,4 @@
-# GLK 3.0.0 Validation Report
+# GLK 3.1.0 Validation Report
 
 ## Scope
 
@@ -26,10 +26,24 @@
 - repository/version/semantic validation;
 - hash manifest and clean ZIP construction;
 - Windows/Linux UTF-8 CI matrix.
+- Worker-only scoped wake Levels 1-4 with injected time and exact ACK cleanup;
+- one Run patrol, bounded Supervisor waiting, subagent classification, and terminal closure;
+- Owner-only Pin provenance with no automatic Unpin;
+- layered D1 CELL and D2 GO progress with versioned denominator recomputation;
+- device/cumulative-load CELL capacity gate, scope excess, and severe split feedback;
+- resource-aware maximal-safe activation without fake dependency edges;
+- ten technical validation layers plus the 3.1 operational-control gate.
 
 ## Local machine results
 
 Environment: Windows, Python 3.14, UTF-8 mode enabled.
+
+Fresh GLK 3.1.0 acceptance evidence:
+
+- complete repository suite: `563 passed`;
+- security-relevant optimized-Python matrix: `152 passed`;
+- CP936 with `PYTHONUTF8=0`: repository validator PASS and `52 passed`;
+- repository distribution validator: `PASS`, scope `REPOSITORY_DISTRIBUTION`.
 
 The release gate runs the complete pytest suite, the R01-R28/positive suite under
 normal and optimized Python, `validate_glk` with scope `REPOSITORY_DISTRIBUTION`,
@@ -43,6 +57,6 @@ pass.
 
 ## Interpreting green tests
 
-Green tests prove the executable 3.0.0 contracts shipped in this repository. They
+Green tests prove the executable 3.1.0 contracts shipped in this repository. They
 do not accept product work, substitute for D1-D3, or claim that LCCoding's
 centralized vulnerability closure has passed.

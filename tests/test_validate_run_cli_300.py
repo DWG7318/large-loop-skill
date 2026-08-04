@@ -142,7 +142,7 @@ def test_validate_run_CLI_emits_deterministic_complete_RUN_PACKAGE_JSON(tmp_path
     require_equal(output["scope_boundaries"]["validate_run"], "RUN_PACKAGE", "Run scope")
     require_equal(output["package"]["root"], case.root.resolve().as_posix(), "package root")
     require_equal(output["package"]["index_head_sha256"], sha256_file(case.head_path), "index head")
-    require_equal(output["validator"]["version"], "3.0.0", "validator version")
+    require_equal(output["validator"]["version"], "3.1.0", "validator version")
     require_equal(len(output["validator"]["digest"]), 64, "validator digest")
     require_equal(len(output["report_digest"]), 64, "report digest")
     require_equal([layer["layer"] for layer in output["layers"]], list(range(1, 11)), "layer numbers")

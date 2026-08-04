@@ -1,6 +1,6 @@
 # Security Boundary
 
-GLK 3.0.0 remains a method contract, not a security or Agent runtime.
+GLK 3.1.0 remains a method contract, not a security or Agent runtime.
 
 GLK owns only safety checks required by the frozen Run contract. It does not issue
 centralized vulnerability closure.

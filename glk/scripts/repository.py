@@ -42,7 +42,7 @@ def build_hash_manifest(root: Path, output: Path | None = None):
         if relative == "FILE_HASHES.json":
             continue
         files[relative] = sha256(path)
-    return {"algorithm": "sha256", "version": "3.0.0", "files": files}
+    return {"algorithm": "sha256", "version": "3.1.0", "files": files}
 
 
 def write_hash_manifest(root: Path, output: Path | None = None):

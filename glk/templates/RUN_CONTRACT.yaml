@@ -1,4 +1,4 @@
-schema_version: 3.0.0
+schema_version: 3.1.0
 artifact_type: RUN_CONTRACT
 artifact_id: RUN-CONTRACT-RUN-001-V1
 run_id: RUN-001
@@ -23,7 +23,7 @@ evidence_required: ["D0-D3 receipts bound to the final candidate"]
 autonomy_boundaries: ["Non-destructive repository work"]
 candidate_binding: CANDIDATE-RUN-001
 run_supervisor_binding:
-  schema_version: 3.0.0
+  schema_version: 3.1.0
   artifact_type: ROLE_BINDING
   artifact_id: ROLE-BINDING-RUN-001-SUPERVISOR-V1
   candidate_id: ROLE-BINDING-RUN-001-SUPERVISOR

@@ -1,10 +1,10 @@
-schema_version: 3.0.0
+schema_version: 3.1.0
 run_id: RUN-APPOINTMENT-001
 run_feature: "Operator can configure and publish an appointment service"
 method_lock:
   canonical_repository: https://github.com/DWG7318/large-loop-skill
   invocation: graph-loop-skill
-  method_version: 3.0.0
+  method_version: 3.1.0
 graph:
   nodes: [GO-AUTH, GO-SCHEDULE, GO-PUBLISH, GO-AUDIT]
   edges:

@@ -13,6 +13,7 @@ import test_preflight_300 as pf
 import test_run_closure_300 as rc
 import test_run_validation_300 as rv
 from glk300_fixtures import write_json
+from glk310_preflight_fixtures import valid_operational_input
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,7 +21,7 @@ SCRIPTS = ROOT / "glk" / "scripts"
 METHOD_LOCK_PATH = SCRIPTS / "method_lock.py"
 CANONICAL_REPOSITORY = "https://github.com/DWG7318/large-loop-skill"
 CANONICAL_INVOCATION = "graph-loop-skill"
-CANONICAL_VERSION = "3.0.0"
+CANONICAL_VERSION = "3.1.0"
 
 
 def require(condition, message):
@@ -118,7 +119,7 @@ def _installation(tmp_path, *, profile=None, installation_id="INSTALL-GLK-3"):
         {
             "canonical_repository": CANONICAL_REPOSITORY,
             "commit_sha": "1" * 64,
-            "release_tag": "v3.0.0",
+            "release_tag": "v3.1.0",
         },
     )
     profile_path = "bundle/adapter-profile.json"
@@ -133,7 +134,7 @@ def _installation(tmp_path, *, profile=None, installation_id="INSTALL-GLK-3"):
         "canonical_repository": CANONICAL_REPOSITORY,
         "invocation": CANONICAL_INVOCATION,
         "commit_sha": "1" * 64,
-        "release_tag": "v3.0.0",
+        "release_tag": "v3.1.0",
         "method_version": CANONICAL_VERSION,
         "schema_bundle_sha256": schema_digest,
         "skill_package_sha256": skill_digest,
@@ -236,12 +237,12 @@ def test_R24_rejects_stale_installation_under_same_invocation(
         ("canonical_repository", "https://github.com/example/wrong", "R25_REPOSITORY_MISMATCH"),
         ("invocation", "legacy-large-loop-skill", "R25_INVOCATION_MISMATCH"),
         ("commit_sha", "2" * 64, "R25_COMMIT_MISMATCH"),
-        ("release_tag", "v3.0.1", "R25_RELEASE_TAG_MISMATCH"),
-        ("method_version", "3.0.1", "R25_METHOD_VERSION_MISMATCH"),
+        ("release_tag", "v3.1.1", "R25_RELEASE_TAG_MISMATCH"),
+        ("method_version", "3.1.1", "R25_METHOD_VERSION_MISMATCH"),
         ("skill_package_sha256", "3" * 64, "R25_SKILL_BUNDLE_DIGEST_MISMATCH"),
         ("schema_bundle_sha256", "4" * 64, "R25_SCHEMA_BUNDLE_DIGEST_MISMATCH"),
         ("validator_bundle_sha256", "5" * 64, "R25_VALIDATOR_BUNDLE_DIGEST_MISMATCH"),
-        ("validator_version", "3.0.1", "R25_VALIDATOR_VERSION_MISMATCH"),
+        ("validator_version", "3.1.1", "R25_VALIDATOR_VERSION_MISMATCH"),
         ("adapter_profile_id", "PROVENANCE-PROFILE-WRONG", "R25_ADAPTER_PROFILE_ID_MISMATCH"),
         ("adapter_profile_sha256", "6" * 64, "R25_ADAPTER_PROFILE_DIGEST_MISMATCH"),
         ("adapter_contract_version", "2.0", "R25_ADAPTER_CONTRACT_VERSION_MISMATCH"),
@@ -455,6 +456,7 @@ def test_preflight_recomputes_method_lock_without_duplicating_validator_or_prove
         adapter,
         dict(loaded.artifacts_by_type["GLK_METHOD_LOCK"][0]),
         simulation,
+        operational_input=valid_operational_input(preflight),
         current_holds=(),
         observation_deadline="2026-08-03T23:59:59Z",
         installation_descriptors=(descriptor,),
@@ -469,6 +471,7 @@ def test_preflight_recomputes_method_lock_without_duplicating_validator_or_prove
         pf._readiness_adapter(preflight, loaded),
         dict(loaded.artifacts_by_type["GLK_METHOD_LOCK"][0]),
         simulation,
+        operational_input=valid_operational_input(preflight),
         current_holds=(),
         observation_deadline="2026-08-03T23:59:59Z",
         installation_descriptors=(bad,),
@@ -496,6 +499,7 @@ def test_preflight_requires_a_declared_installation_for_method_lock_verification
         adapter,
         dict(loaded.artifacts_by_type["GLK_METHOD_LOCK"][0]),
         simulation,
+        operational_input=valid_operational_input(preflight),
         current_holds=(),
         observation_deadline="2026-08-03T23:59:59Z",
         installation_descriptors=installation_descriptors,

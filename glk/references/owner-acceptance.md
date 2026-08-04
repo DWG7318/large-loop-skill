@@ -1,6 +1,6 @@
 # Run Owner Acceptance
 
-GLK 3.0.0 Owner Acceptance consumes one exact current D3 PASS and its independent
+GLK 3.1.0 Owner Acceptance consumes one exact current D3 PASS and its independent
 Supervisor admission, both bound to the current package/index head.
 
 Every GLK Run receives one small Owner Acceptance immediately after D3 PASS. It is

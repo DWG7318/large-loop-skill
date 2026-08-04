@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/DWG7318/large-loop-skill/glk/schemas/glk.schema.json",
-  "title": "GLK 3.0.0 executable contracts",
+  "title": "GLK 3.1.0 executable contracts",
   "$defs": {
     "id": {
       "type": "string",
@@ -36,7 +36,7 @@
         "provenance_ref", "issued_at"
       ],
       "properties": {
-        "schema_version": {"const": "3.0.0"},
+        "schema_version": {"enum": ["3.0.0", "3.1.0"]},
         "artifact_type": {"$ref": "#/$defs/id"},
         "artifact_id": {"$ref": "#/$defs/id"},
         "run_id": {"$ref": "#/$defs/id"},
@@ -253,7 +253,7 @@
         "waiting_reasons", "candidate_binding"
       ],
       "properties": {
-        "schema_version": {"const": "3.0.0"},
+        "schema_version": {"enum": ["3.0.0", "3.1.0"]},
         "go_id": {"$ref": "#/$defs/id"},
         "run_id": {"$ref": "#/$defs/id"},
         "graph_version": {"type": "integer", "minimum": 1},
@@ -329,7 +329,7 @@
         "confirmation_status", "issued_at"
       ],
       "properties": {
-        "schema_version": {"const": "3.0.0"},
+        "schema_version": {"enum": ["3.0.0", "3.1.0"]},
         "trace_id": {"$ref": "#/$defs/id"},
         "incident_id": {"$ref": "#/$defs/id"},
         "graph_id": {"$ref": "#/$defs/id"},
@@ -382,7 +382,7 @@
         "authority_binding_ref", "issued_at"
       ],
       "properties": {
-        "schema_version": {"const": "3.0.0"},
+        "schema_version": {"enum": ["3.0.0", "3.1.0"]},
         "amendment_id": {"$ref": "#/$defs/id"},
         "graph_id": {"$ref": "#/$defs/id"},
         "from_version": {"type": "integer", "minimum": 1},
@@ -451,7 +451,7 @@
       "additionalProperties": false,
       "required": ["schema_version", "resolution_id", "go_id", "kind", "amendment_id", "releases_successors", "removes_required", "authority_binding_ref", "evidence", "issued_at"],
       "properties": {
-        "schema_version": {"const": "3.0.0"},
+        "schema_version": {"enum": ["3.0.0", "3.1.0"]},
         "resolution_id": {"$ref": "#/$defs/id"},
         "go_id": {"$ref": "#/$defs/id"},
         "kind": {"enum": ["SUPERSEDED", "CANCELLED"]},
@@ -478,11 +478,11 @@
         "canonical_repository": {"const": "https://github.com/DWG7318/large-loop-skill"},
         "invocation": {"const": "graph-loop-skill"},
         "commit_sha": {"$ref": "#/$defs/hash"},
-        "release_tag": {"const": "v3.0.0"},
-        "method_version": {"const": "3.0.0"},
+        "release_tag": {"const": "v3.1.0"},
+        "method_version": {"const": "3.1.0"},
         "schema_bundle_sha256": {"$ref": "#/$defs/hash"},
         "skill_package_sha256": {"$ref": "#/$defs/hash"},
-        "validator_version": {"const": "3.0.0"},
+        "validator_version": {"const": "3.1.0"},
         "validator_sha256": {"$ref": "#/$defs/hash"},
         "adapter_profile_id": {"$ref": "#/$defs/id"},
         "adapter_contract_version": {"const": "1.0"}

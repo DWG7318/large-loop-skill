@@ -1,4 +1,4 @@
-schema_version: 3.0.0
+schema_version: 3.1.0
 artifact_type: SUPERVISOR_ADMISSION
 artifact_id: SUPERVISOR-ADMISSION-D0-CELL-001-V1
 run_id: RUN-001
@@ -14,7 +14,7 @@ issued_at: "2026-08-03T01:08:00Z"
 admission_id: SUPERVISOR-ADMISSION-D0-CELL-001-V1
 admitted_artifact_ref: receipts/D0-CELL-001-V1.yaml
 admitted_artifact_sha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeea"
-validator_version: 3.0.0
+validator_version: 3.1.0
 validator_sha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 validation_report_sha256: "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb"
 package_index_sha256: "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc"

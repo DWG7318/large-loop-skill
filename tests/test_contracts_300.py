@@ -265,7 +265,7 @@ def test_all_task1_templates_have_a_valid_300_envelope_and_schema():
     schema = load_schema()
     for filename, definition in TEMPLATES.items():
         instance = load_template(filename)
-        require_equal(instance["schema_version"], "3.0.0", f"{filename} version")
+        require_equal(instance["schema_version"], "3.1.0", f"{filename} version")
         require_equal(
             set(instance) & REQUIRED_ENVELOPE,
             REQUIRED_ENVELOPE,

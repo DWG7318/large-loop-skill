@@ -1,10 +1,35 @@
-# Migration to GLK 3.0.0
+# Migration to GLK 3.1.0
+
+## From accepted GLK 3.0.0
+
+GLK 3.1 preserves the six roles, fresh Supervisor, GO DAG, WAITING_GO/ACTIVE_GO,
+D0-D3 authority, exact CELL closure, causal recovery, and immutable 3.0 evidence.
+Technical receipts remain usable only when their existing current-validity holds.
+
+Revalidate or issue new 3.1 control evidence for Worker/original-Checker wake
+bindings, one patrol conversation/heartbeat, current device capacity and cumulative
+load, every undispatched CELL estimate/gate, and current progress denominators.
+The old Supervisor-task monitor identity is historical-only for 3.1 patrol
+eligibility.
+
+Migration never creates a task, heartbeat, Agent, Pin, device measurement,
+admission, or verdict. It produces draft references for an external trusted
+environment and re-runs preflight/validation.
+
+Current 3.1 identity is:
+
+```text
+https://github.com/DWG7318/large-loop-skill
+graph-loop-skill
+3.1.0
+v3.1.0
+```
 
 ## Formal-use freeze
 
 New formal 2.4.x Runs are frozen. Historical Runs remain governed by the version
 under which their contracts and evidence were produced. Migration never rewrites
-history or silently relabels an old artifact as 3.0.0.
+history or silently relabels an old artifact as 3.1.0.
 
 The canonical 3.0 identity is:
 

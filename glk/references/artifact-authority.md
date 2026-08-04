@@ -26,3 +26,10 @@ hold issuance capability for, or invoke D0-D3.
 Validation, preflight, simulation, migration, liveness, and progress reports are
 derived non-authoritative projections. They are not formal artifacts and cannot
 advance the Run by themselves.
+
+GLK 3.1 adds append-only operational controls with one issuer: Supervisor issues
+`WORKER_CHECKER_WAKE_BINDING`, `DEVICE_CAPACITY_PROFILE`,
+`CUMULATIVE_ENGINEERING_LOAD`, `CELL_WORK_ESTIMATE`, `CELL_CAPACITY_GATE`, and
+`CELL_PLAN_AMENDMENT`; Worker issues `WAKE_ATTEMPT`, `PENDING_WAKE`, and
+`CELL_SCOPE_EXCEEDED`; Checker issues `WAKE_ACK`. None may issue or replace D0-D3.
+Patrol observations and layered progress remain derived non-authoritative.

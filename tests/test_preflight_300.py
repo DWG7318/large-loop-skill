@@ -11,6 +11,7 @@ import test_conformance_300 as cf
 import test_run_closure_300 as rc
 import test_run_validation_300 as rv
 from glk300_fixtures import read_index, sha256_file, write_index, write_json
+from glk310_preflight_fixtures import valid_operational_input
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -288,6 +289,7 @@ def test_preflight_pass_is_adapter_verified_derived_and_cannot_advance_run(tmp_p
         adapter,
         _method_lock(loaded),
         simulation,
+        operational_input=valid_operational_input(module),
         current_holds=(),
         observation_deadline="2026-08-03T23:59:59Z",
         installation_descriptors=(descriptor,),
@@ -351,6 +353,7 @@ def test_preflight_fails_closed_for_every_readiness_gate(tmp_path, mutation, exp
         adapter,
         expected_lock,
         simulation,
+        operational_input=valid_operational_input(module),
         current_holds=holds,
         observation_deadline="2026-08-03T23:59:59Z",
     )
@@ -374,6 +377,7 @@ def test_preflight_requires_the_formal_adapter_profile(tmp_path):
         _readiness_adapter(module, loaded),
         _method_lock(loaded),
         simulation,
+        operational_input=valid_operational_input(module),
         current_holds=(),
         observation_deadline="2026-08-03T23:59:59Z",
     )
@@ -399,6 +403,7 @@ def test_preflight_rejects_incomplete_package_role_registry(tmp_path):
         _readiness_adapter(module, loaded),
         _method_lock(loaded),
         simulation,
+        operational_input=valid_operational_input(module),
         current_holds=(),
         observation_deadline="2026-08-03T23:59:59Z",
     )
@@ -423,6 +428,7 @@ def test_preflight_rejects_untrusted_readiness_observations(tmp_path, fault, exp
         _readiness_adapter(module, loaded, fault=fault),
         _method_lock(loaded),
         simulation,
+        operational_input=valid_operational_input(module),
         current_holds=(),
         observation_deadline="2026-08-03T23:59:59Z",
     )
@@ -446,6 +452,7 @@ def test_preflight_rejects_self_reported_readiness_without_trusted_adapter(tmp_p
         forged,
         _method_lock(loaded),
         simulation,
+        operational_input=valid_operational_input(module),
         current_holds=(),
         observation_deadline="2026-08-03T23:59:59Z",
     )

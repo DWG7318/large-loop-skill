@@ -1,6 +1,6 @@
 # Canonical Dictionary
 
-Version: 3.0.0. Canonical repository:
+Version: 3.1.0. Canonical repository:
 `https://github.com/DWG7318/large-loop-skill`.
 
 - **Run**: one bounded engineering execution governed by one frozen Run contract.

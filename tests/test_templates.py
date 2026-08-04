@@ -76,7 +76,7 @@ def test_all_templates_exist_and_validate_against_executable_schema():
         path = TEMPLATE_DIR / filename
         assert path.exists(), path
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
-        assert data["schema_version"] == "3.0.0", filename
+        assert data["schema_version"] == "3.1.0", filename
         validate_definition(schema, definition, data)
 
 
@@ -91,8 +91,8 @@ def test_legacy_mixed_receipt_templates_are_not_current_product_surface():
 def test_run_contract_binds_a_fresh_run_supervisor_instance():
     run = yaml.safe_load((TEMPLATE_DIR / "RUN_CONTRACT.yaml").read_text(encoding="utf-8"))
     binding = run["run_supervisor_binding"]
-    assert run["schema_version"] == "3.0.0"
-    assert binding["schema_version"] == "3.0.0"
+    assert run["schema_version"] == "3.1.0"
+    assert binding["schema_version"] == "3.1.0"
     assert binding["artifact_type"] == "ROLE_BINDING"
     assert binding["role_type"] == "RUN_SUPERVISOR"
     assert binding["run_id"] == run["run_id"]

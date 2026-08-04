@@ -1,10 +1,10 @@
 ---
 name: graph-loop-skill
 description: Govern one frozen engineering Run whose independently verifiable GO outcomes form a dependency DAG with maximal-safe parallel activation.
-version: 3.0.0
+version: 3.1.0
 ---
 
-# Graph Loop Skill (GLK) 3.0.0
+# Graph Loop Skill (GLK) 3.1.0
 
 Canonical repository: https://github.com/DWG7318/large-loop-skill
 
@@ -153,12 +153,14 @@ attestations through this boundary.
 
 Bootstrap creates only `DRAFT_SCAFFOLD`. Formal preflight requires the exact method
 lock, one canonical declared installation, the complete six-role binding set,
-trusted adapter evidence, a ten-layer valid package, readiness evidence, a
+trusted adapter evidence, a ten-layer valid technical package, the applicable
+3.1 operational-control gate, readiness evidence, a
 no-side-effect simulation, and no active hold.
 
 Read failure never implies health. Deadline expiry yields an unreachable role
-projection. `MONITOR_CONTROL` reuses one existing Supervisor task/callback with one
-deterministic key and append-only head; it never creates or schedules another task.
+projection. `MONITOR_CONTROL` binds exactly one visible patrol conversation and one
+heartbeat with one deterministic key and append-only head. The patrol uses
+`gpt-5.6-luna` with `xhigh`; the patrol is not a seventh authority role.
 
 A technical authority violation produces `RUN_AUTHORITY_HOLD` immediately. Two
 consecutive HIGH architecture findings on the same path produce
@@ -170,6 +172,43 @@ sealing the Run and starting a new one.
 Formal progress reports both `required GO/D2` and `required CELL/D1` counts and IDs,
 plus active GO IDs, waiting reasons, unreachable bindings, holds, graph version, and
 CELL manifest versions.
+
+## GLK 3.1 operational rules
+
+Only Worker may wake its original frozen Checker. It sends a scoped
+`GO <GO_ID> CELL <ordinal>/<Required CELL total> 已交付，请检查` message and escalates
+through direct send, same-task read/list/unarchive, one temporary heartbeat, then
+`PENDING_WAKE`. Every level waits at most 120 seconds through an injected clock.
+Checker first returns a Run/GO/CELL/Round-bound `WAKE_ACK`. Success stops escalation
+and cleans temporary state; IDs are never guessed and replacement roles are never
+created.
+
+Supervisor must not remain online with positive-duration or looping
+`wait_threads`. The unique patrol checks only unexplained stoppage, pending wake,
+actual subagent evidence, forbidden Supervisor wait, duplicate patrol/heartbeat,
+Pin provenance, and terminal closure. A GO, CELL, Round, plan step, visible task, or
+the word `子任务` is not a subagent; actual `spawn_agent`, `delegate_task`, hidden
+Agent, or background Agent evidence is forbidden.
+
+No method role or patrol may call `set_thread_pinned(true)` or an equivalent Pin.
+Only explicit Owner UI or item-specific Run authorization is legal. Report Agent
+Pin as `UNAUTHORIZED_THREAD_PIN`; report unknown provenance as
+`PIN_PROVENANCE_UNKNOWN` and must not unpin automatically.
+
+Layered progress distinguishes `DELIVERED`, `D1_ACCEPTED`,
+`GO_CANDIDATE_READY`, `D2_VERIFIED`, `RUN_VERIFIED`, and `OWNER_ACCEPTED`.
+Worker delivery never increments D1. Checker counts current-valid admitted D1 PASS
+once and emits only a GO-boundary milestone to Supervisor. Supervisor reports only
+material global changes with D1/Required CELL, D2/Required GO, ACTIVE_GO,
+WAITING_GO, holds, and graph/manifest/plan/capacity/load versions; no percentage.
+
+Before dispatch, Supervisor binds current `DEVICE_CAPACITY_PROFILE`,
+`CUMULATIVE_ENGINEERING_LOAD`, and total-cost `CELL_WORK_ESTIMATE` evidence.
+`CELL_CAPACITY_GATE` is `PASS`, `SPLIT_REQUIRED`, or `CAPACITY_BLOCKED`; only PASS
+dispatches. Worker cannot self-split. Post-dispatch splitting records
+`POST_DISPATCH_CELL_SPLIT`; three or more successors also require
+`CELL_OVERSIZE_SEVERE` and remaining-plan re-evaluation. Resource claims constrain
+maximal-safe ACTIVE_GO without fake dependency edges.
 
 The 2.4 formal-use freeze prevents new 2.4 Runs. Migration preserves compatible GO
 topology and causal history, revalidates contracts, and keeps unproven 2.4 receipts
