@@ -42,6 +42,8 @@ class FakeGateway:
         self.snapshots = list(snapshots)
         self.registry = tuple(registry)
         self.calls = []
+        self.heartbeats = {}
+        self.pending = {}
 
     def send_message(self, *, thread_id, host_id, message):
         self.calls.append(("send", thread_id, host_id, message))
@@ -61,6 +63,22 @@ class FakeGateway:
 
     def unarchive_thread(self, *, thread_id, host_id):
         self.calls.append(("unarchive", thread_id, host_id))
+
+    def upsert_temporary_heartbeat(self, *, heartbeat_key, record):
+        self.calls.append(("heartbeat_upsert", heartbeat_key, record))
+        self.heartbeats[heartbeat_key] = record
+
+    def delete_temporary_heartbeat(self, *, heartbeat_key):
+        self.calls.append(("heartbeat_delete", heartbeat_key))
+        self.heartbeats.pop(heartbeat_key, None)
+
+    def write_pending_wake(self, *, pending_key, record):
+        self.calls.append(("pending_write", pending_key, record))
+        self.pending.setdefault(pending_key, record)
+
+    def consume_pending_wake(self, *, pending_key, acknowledged_at):
+        self.calls.append(("pending_consume", pending_key, acknowledged_at))
+        self.pending.pop(pending_key, None)
 
 
 def _profile(run_model, operations=None, role_type="WORKER"):
@@ -299,3 +317,173 @@ def test_missing_each_required_capability_fails_before_gateway_call(modules):
                 clock=gateway.clock,
             )
         assert gateway.calls == []
+
+
+def test_level_three_uses_one_deterministic_heartbeat_and_ack_deletes_it(modules):
+    m, run_model = modules
+    binding = _binding(m)
+    snapshot = _snapshot(m, binding)
+    gateway = FakeGateway(
+        FakeClock(),
+        acknowledgements=[None, None, _ack(m, binding)],
+        snapshots=[snapshot],
+        registry=[snapshot],
+    )
+
+    result = m.execute_wake_ladder(
+        binding=binding,
+        worker_profile=_profile(run_model, _required(m)),
+        gateway=gateway,
+        clock=gateway.clock,
+    )
+
+    assert result.status == "ACKNOWLEDGED"
+    assert result.success_level == 3
+    upserts = [call for call in gateway.calls if call[0] == "heartbeat_upsert"]
+    deletes = [call for call in gateway.calls if call[0] == "heartbeat_delete"]
+    assert len(upserts) == len(deletes) == 1
+    assert upserts[0][1] == m.wake_heartbeat_key(binding)
+    assert deletes[0][1] == upserts[0][1]
+    assert gateway.heartbeats == {}
+    assert not any(call[0] == "pending_write" for call in gateway.calls)
+
+
+def test_repeated_level_three_upsert_has_one_identity(modules):
+    m, run_model = modules
+    binding = _binding(m)
+    snapshot = _snapshot(m, binding)
+    gateway = FakeGateway(
+        FakeClock(),
+        acknowledgements=[None, None, None],
+        snapshots=[snapshot],
+        registry=[snapshot],
+    )
+
+    first = m.execute_wake_ladder(
+        binding=binding,
+        worker_profile=_profile(run_model, _required(m)),
+        gateway=gateway,
+        clock=gateway.clock,
+    )
+    gateway.acknowledgements = [None, None, None]
+    gateway.snapshots = [snapshot]
+    second = m.execute_wake_ladder(
+        binding=binding,
+        worker_profile=_profile(run_model, _required(m)),
+        gateway=gateway,
+        clock=gateway.clock,
+    )
+
+    assert first.heartbeat_key == second.heartbeat_key
+    assert len(gateway.heartbeats) == 1
+    assert len(gateway.pending) == 1
+
+
+def test_three_failures_write_one_complete_pending_wake_at_t_plus_six(modules):
+    m, run_model = modules
+    binding = _binding(m)
+    snapshot = _snapshot(m, binding)
+    gateway = FakeGateway(
+        FakeClock(),
+        acknowledgements=[None, None, None],
+        snapshots=[snapshot],
+        registry=[snapshot],
+    )
+
+    result = m.execute_wake_ladder(
+        binding=binding,
+        worker_profile=_profile(run_model, _required(m)),
+        gateway=gateway,
+        clock=gateway.clock,
+    )
+
+    assert result.status == "PENDING_WAKE"
+    assert result.success_level is None
+    assert gateway.clock.seconds == 360
+    assert len(gateway.pending) == 1
+    pending = next(iter(gateway.pending.values()))
+    assert pending.wake_identity == binding.wake_identity
+    assert tuple(attempt.level for attempt in pending.attempts) == (1, 2, 3)
+    assert pending.worker_binding_id == binding.worker_binding_id
+    assert pending.checker_binding_id == binding.checker_binding_id
+    assert pending.message == "GO GO-03 CELL 25/30 已交付，请检查"
+    assert result.pending_key == m.pending_wake_key(binding)
+
+
+def test_all_levels_reuse_exact_progress_message_identity(modules):
+    m, run_model = modules
+    binding = _binding(m)
+    snapshot = _snapshot(m, binding)
+    gateway = FakeGateway(
+        FakeClock(), acknowledgements=[None, None, None], snapshots=[snapshot], registry=[snapshot]
+    )
+
+    result = m.execute_wake_ladder(
+        binding=binding,
+        worker_profile=_profile(run_model, _required(m)),
+        gateway=gateway,
+        clock=gateway.clock,
+    )
+
+    assert {attempt.message for attempt in result.attempts} == {result.message}
+    heartbeat = next(iter(gateway.heartbeats.values()))
+    pending = next(iter(gateway.pending.values()))
+    assert heartbeat.message_digest == pending.message_digest == result.message_digest
+
+
+def test_verified_processing_evidence_stops_before_heartbeat(modules):
+    m, run_model = modules
+    binding = _binding(m)
+    running = _snapshot(m, binding, running=True)
+    gateway = FakeGateway(
+        FakeClock(), acknowledgements=[None], snapshots=[running], registry=[running]
+    )
+
+    result = m.execute_wake_ladder(
+        binding=binding,
+        worker_profile=_profile(run_model, _required(m)),
+        gateway=gateway,
+        clock=gateway.clock,
+    )
+
+    assert result.status == "ACKNOWLEDGED"
+    assert result.success_level == 2
+    assert not any(call[0].startswith("heartbeat") or call[0].startswith("pending") for call in gateway.calls)
+
+
+def test_late_matching_ack_cleans_heartbeat_and_pending_idempotently(modules):
+    m, _ = modules
+    binding = _binding(m)
+    gateway = FakeGateway(FakeClock())
+    heartbeat_key = m.wake_heartbeat_key(binding)
+    pending_key = m.pending_wake_key(binding)
+    gateway.heartbeats[heartbeat_key] = object()
+    gateway.pending[pending_key] = object()
+    ack = _ack(m, binding)
+
+    first = m.reconcile_wake_ack(binding=binding, ack=ack, gateway=gateway)
+    second = m.reconcile_wake_ack(binding=binding, ack=ack, gateway=gateway)
+
+    assert first == second == "ACKNOWLEDGED"
+    assert gateway.heartbeats == {}
+    assert gateway.pending == {}
+
+
+def test_late_wrong_ack_does_not_clean_operational_records(modules):
+    m, _ = modules
+    binding = _binding(m)
+    gateway = FakeGateway(FakeClock())
+    heartbeat_key = m.wake_heartbeat_key(binding)
+    pending_key = m.pending_wake_key(binding)
+    gateway.heartbeats[heartbeat_key] = object()
+    gateway.pending[pending_key] = object()
+
+    with pytest.raises(m.WakeContractError, match="WAKE_ACK_SCOPE_MISMATCH"):
+        m.reconcile_wake_ack(
+            binding=binding,
+            ack=_ack(m, binding, round_id="ROUND-WRONG"),
+            gateway=gateway,
+        )
+
+    assert heartbeat_key in gateway.heartbeats
+    assert pending_key in gateway.pending

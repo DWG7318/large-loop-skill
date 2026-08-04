@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+import hashlib
+import json
 from typing import Optional, Protocol, Tuple
 
 from run_model import RoleCapabilityProfile
@@ -139,6 +141,36 @@ class WakeResult:
     message: str
     attempts: Tuple[WakeAttempt, ...]
     error_codes: Tuple[str, ...]
+    message_digest: str = ""
+    heartbeat_key: Optional[str] = None
+    pending_key: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class TemporaryWakeHeartbeat:
+    heartbeat_key: str
+    wake_identity: Tuple[str, ...]
+    checker_thread_id: str
+    checker_host_id: str
+    message: str
+    message_digest: str
+    created_at: str
+    temporary: bool = True
+
+
+@dataclass(frozen=True)
+class PendingWake:
+    pending_key: str
+    wake_identity: Tuple[str, ...]
+    worker_binding_id: str
+    checker_binding_id: str
+    checker_thread_id: str
+    checker_host_id: str
+    message: str
+    message_digest: str
+    attempts: Tuple[WakeAttempt, ...]
+    error_codes: Tuple[str, ...]
+    pending_at: str
 
 
 class WakeClock(Protocol):
@@ -164,6 +196,16 @@ class WorkerWakeGateway(Protocol):
 
     def unarchive_thread(self, *, thread_id: str, host_id: str) -> None: ...
 
+    def upsert_temporary_heartbeat(
+        self, *, heartbeat_key: str, record: TemporaryWakeHeartbeat
+    ) -> None: ...
+
+    def delete_temporary_heartbeat(self, *, heartbeat_key: str) -> None: ...
+
+    def write_pending_wake(self, *, pending_key: str, record: PendingWake) -> None: ...
+
+    def consume_pending_wake(self, *, pending_key: str, acknowledged_at: str) -> None: ...
+
 
 def format_worker_message(binding: FrozenWakeBinding, disposition: str = "DELIVERED") -> str:
     if disposition not in WAKE_DISPOSITIONS:
@@ -179,6 +221,23 @@ def format_wake_ack(ack: WakeAck) -> str:
         f"WAKE_ACK RUN={ack.run_id} GO={ack.go_id} "
         f"CELL={ack.cell_id} ROUND={ack.round_id}"
     )
+
+
+def _digest(value: object) -> str:
+    payload = json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def wake_heartbeat_key(binding: FrozenWakeBinding) -> str:
+    return "GLK-WAKE/" + _digest(binding.wake_identity)
+
+
+def pending_wake_key(binding: FrozenWakeBinding) -> str:
+    return "PENDING-WAKE/" + _digest(binding.wake_identity)
+
+
+def wake_message_digest(binding: FrozenWakeBinding, disposition: str = "DELIVERED") -> str:
+    return _digest((binding.wake_identity, format_worker_message(binding, disposition)))
 
 
 def _validate_worker_profile(profile: RoleCapabilityProfile) -> None:
@@ -320,3 +379,101 @@ def attempt_levels_one_two(
     return WakeResult(
         "ESCALATE_LEVEL_3", None, binding.wake_identity, message, tuple(attempts), tuple(dict.fromkeys(errors))
     )
+
+
+def execute_wake_ladder(
+    *,
+    binding: FrozenWakeBinding,
+    worker_profile: RoleCapabilityProfile,
+    gateway: WorkerWakeGateway,
+    clock: WakeClock,
+    disposition: str = "DELIVERED",
+) -> WakeResult:
+    partial = attempt_levels_one_two(
+        binding=binding,
+        worker_profile=worker_profile,
+        gateway=gateway,
+        clock=clock,
+        disposition=disposition,
+    )
+    digest = wake_message_digest(binding, disposition)
+    heartbeat_key = wake_heartbeat_key(binding)
+    pending_key = pending_wake_key(binding)
+    if partial.status == "ACKNOWLEDGED":
+        return replace(
+            partial,
+            message_digest=digest,
+            heartbeat_key=heartbeat_key,
+            pending_key=pending_key,
+        )
+
+    attempts = list(partial.attempts)
+    errors = list(partial.error_codes)
+    started_at = clock.utc_now()
+    heartbeat = TemporaryWakeHeartbeat(
+        heartbeat_key=heartbeat_key,
+        wake_identity=binding.wake_identity,
+        checker_thread_id=binding.checker_thread_id,
+        checker_host_id=binding.checker_host_id,
+        message=partial.message,
+        message_digest=digest,
+        created_at=started_at,
+    )
+    gateway.upsert_temporary_heartbeat(heartbeat_key=heartbeat_key, record=heartbeat)
+    matched, error = _wait(binding, gateway)
+    attempts.append(
+        WakeAttempt(3, started_at, partial.message, "ACKNOWLEDGED" if matched else "FAILED", error)
+    )
+    if matched:
+        gateway.delete_temporary_heartbeat(heartbeat_key=heartbeat_key)
+        return WakeResult(
+            status="ACKNOWLEDGED",
+            success_level=3,
+            wake_identity=binding.wake_identity,
+            message=partial.message,
+            attempts=tuple(attempts),
+            error_codes=tuple(dict.fromkeys(errors)),
+            message_digest=digest,
+            heartbeat_key=heartbeat_key,
+            pending_key=pending_key,
+        )
+    if error:
+        errors.append(error)
+    pending = PendingWake(
+        pending_key=pending_key,
+        wake_identity=binding.wake_identity,
+        worker_binding_id=binding.worker_binding_id,
+        checker_binding_id=binding.checker_binding_id,
+        checker_thread_id=binding.checker_thread_id,
+        checker_host_id=binding.checker_host_id,
+        message=partial.message,
+        message_digest=digest,
+        attempts=tuple(attempts),
+        error_codes=tuple(dict.fromkeys(errors)),
+        pending_at=clock.utc_now(),
+    )
+    gateway.write_pending_wake(pending_key=pending_key, record=pending)
+    return WakeResult(
+        status="PENDING_WAKE",
+        success_level=None,
+        wake_identity=binding.wake_identity,
+        message=partial.message,
+        attempts=tuple(attempts),
+        error_codes=tuple(dict.fromkeys(errors)),
+        message_digest=digest,
+        heartbeat_key=heartbeat_key,
+        pending_key=pending_key,
+    )
+
+
+def reconcile_wake_ack(
+    *, binding: FrozenWakeBinding, ack: WakeAck, gateway: WorkerWakeGateway
+) -> str:
+    if not _ack_matches(binding, ack):
+        raise WakeContractError("WAKE_ACK_SCOPE_MISMATCH: ACK does not match frozen wake scope")
+    gateway.delete_temporary_heartbeat(heartbeat_key=wake_heartbeat_key(binding))
+    gateway.consume_pending_wake(
+        pending_key=pending_wake_key(binding),
+        acknowledged_at=ack.acknowledged_at,
+    )
+    return "ACKNOWLEDGED"
