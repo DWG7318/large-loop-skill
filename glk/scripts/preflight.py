@@ -28,6 +28,14 @@ from run_model import (
     RunBindingError,
     enforce_supervisor_capability_exclusion,
 )
+from run_patrol import (
+    PatrolContractError,
+    RunPatrolBinding,
+    validate_method_role_capabilities,
+    validate_patrol_capabilities,
+    validate_patrol_inventory,
+)
+from worker_wake import REQUIRED_WORKER_WAKE_CAPABILITIES
 
 
 REQUIRED_ROLE_TYPES = (
@@ -123,6 +131,48 @@ class PreflightReport:
     report_digest: str
 
 
+@dataclass(frozen=True)
+class OperationalSimulationReport:
+    status: str
+    failure_codes: Tuple[str, ...]
+    observed_wake_levels: Tuple[int, ...]
+    progress_stages: Tuple[str, ...]
+    capacity_results: Tuple[str, ...]
+    severe_split_counts: Tuple[int, ...]
+    formal_ledger_unchanged: bool
+    marker: str = "SIMULATION_ONLY"
+    projection_kind: str = "DERIVED_NON_AUTHORITATIVE"
+    current_evidence_eligible: bool = False
+
+
+@dataclass(frozen=True)
+class OperationalPreflightInput:
+    run_id: str
+    role_capability_profiles: Tuple[RoleCapabilityProfile, ...]
+    worker_wake_binding_count: int
+    worker_wake_bindings_valid: bool
+    patrol_bindings: Tuple[RunPatrolBinding, ...]
+    patrol_heartbeat_refs: Tuple[str, ...]
+    patrol_capabilities: Tuple[str, ...]
+    supervisor_control_operations: Tuple[Tuple[str, int, bool], ...]
+    dispatch_gate_results: Tuple[str, ...]
+    capacity_profile_current: bool
+    cumulative_load_current: bool
+    progress_denominator_versions_current: bool
+    simulation_report: OperationalSimulationReport
+
+
+@dataclass(frozen=True)
+class OperationalPreflightReport:
+    status: str
+    failure_codes: Tuple[str, ...]
+    run_id: str
+    can_dispatch: bool
+    simulation_status: str
+    report_digest: str
+    projection_kind: str = "DERIVED_NON_AUTHORITATIVE"
+
+
 def _canonical_digest(value):
     return hashlib.sha256(
         json.dumps(
@@ -132,6 +182,135 @@ def _canonical_digest(value):
             sort_keys=True,
         ).encode("utf-8")
     ).hexdigest()
+
+
+def validate_operational_simulation(
+    *,
+    observed_wake_levels,
+    early_stop_cleanup,
+    pending_wake_patrol_consumed,
+    legal_pause_suppressed,
+    subtask_not_subagent,
+    actual_subagent_rejected,
+    owner_pin_accepted,
+    agent_pin_rejected,
+    unknown_pin_reported_without_unpin,
+    pin_then_unpin_violation_retained,
+    progress_stages,
+    capacity_results,
+    severe_split_counts,
+    resource_safe_activation,
+    formal_ledger_before_sha256,
+    formal_ledger_after_sha256,
+):
+    failures = []
+    if tuple(observed_wake_levels) != (1, 2, 3, 4):
+        failures.append("SIMULATION_WAKE_LEVELS_INCOMPLETE")
+    required_flags = (
+        early_stop_cleanup,
+        pending_wake_patrol_consumed,
+        legal_pause_suppressed,
+        subtask_not_subagent,
+        actual_subagent_rejected,
+        owner_pin_accepted,
+        agent_pin_rejected,
+        unknown_pin_reported_without_unpin,
+        pin_then_unpin_violation_retained,
+        resource_safe_activation,
+    )
+    if not all(value is True for value in required_flags):
+        failures.append("SIMULATION_OPERATIONAL_GUARD_INCOMPLETE")
+    expected_stages = (
+        "DELIVERED",
+        "D1_ACCEPTED",
+        "GO_CANDIDATE_READY",
+        "D2_VERIFIED",
+        "RUN_VERIFIED",
+        "OWNER_ACCEPTED",
+    )
+    if tuple(progress_stages) != expected_stages:
+        failures.append("SIMULATION_PROGRESS_STAGES_INCOMPLETE")
+    if tuple(capacity_results) != ("PASS", "SPLIT_REQUIRED", "CAPACITY_BLOCKED"):
+        failures.append("SIMULATION_CAPACITY_RESULTS_INCOMPLETE")
+    if tuple(severe_split_counts) != (3, 6, 7, 8):
+        failures.append("SIMULATION_SEVERE_SPLITS_INCOMPLETE")
+    ledger_unchanged = (
+        isinstance(formal_ledger_before_sha256, str)
+        and len(formal_ledger_before_sha256) == 64
+        and formal_ledger_before_sha256 == formal_ledger_after_sha256
+    )
+    if not ledger_unchanged:
+        failures.append("SIMULATION_FORMAL_LEDGER_MUTATED")
+    return OperationalSimulationReport(
+        status="SIMULATION_FAIL" if failures else "SIMULATION_PASS",
+        failure_codes=tuple(sorted(set(failures))),
+        observed_wake_levels=tuple(observed_wake_levels),
+        progress_stages=tuple(progress_stages),
+        capacity_results=tuple(capacity_results),
+        severe_split_counts=tuple(severe_split_counts),
+        formal_ledger_unchanged=ledger_unchanged,
+    )
+
+
+def derive_operational_preflight(values: OperationalPreflightInput) -> OperationalPreflightReport:
+    failures = []
+    role_types = tuple(profile.role_type for profile in values.role_capability_profiles)
+    if len(role_types) != len(REQUIRED_ROLE_TYPES) or set(role_types) != set(REQUIRED_ROLE_TYPES):
+        failures.append("ROLE_BINDING_INCOMPLETE")
+    workers = tuple(
+        profile for profile in values.role_capability_profiles if profile.role_type == "WORKER"
+    )
+    for profile in values.role_capability_profiles:
+        try:
+            validate_method_role_capabilities(profile.role_type, profile.operational_capabilities)
+        except PatrolContractError:
+            failures.append("PIN_CAPABILITY_FORBIDDEN")
+    for worker in workers:
+        if not set(REQUIRED_WORKER_WAKE_CAPABILITIES).issubset(worker.operational_capabilities):
+            failures.append("WAKE_CAPABILITY_MISSING")
+    if (
+        values.worker_wake_binding_count != len(workers)
+        or not values.worker_wake_bindings_valid
+    ):
+        failures.append("WAKE_BINDING_MISMATCH")
+
+    inventory = validate_patrol_inventory(values.patrol_bindings, values.patrol_heartbeat_refs)
+    failures.extend(inventory.alert_codes)
+    try:
+        validate_patrol_capabilities(values.patrol_capabilities)
+    except PatrolContractError:
+        failures.append("PATROL_FORBIDDEN_CAPABILITY")
+    for operation, timeout_ms, looped in values.supervisor_control_operations:
+        if operation == "wait_threads" and (timeout_ms > 0 or looped):
+            failures.append("SUPERVISOR_WAIT_FORBIDDEN")
+
+    if not values.capacity_profile_current:
+        failures.append("DEVICE_CAPACITY_STALE")
+    if not values.cumulative_load_current:
+        failures.append("CUMULATIVE_LOAD_STALE")
+    if not values.dispatch_gate_results or any(
+        result != "PASS" for result in values.dispatch_gate_results
+    ):
+        failures.append("CELL_CAPACITY_NOT_PASS")
+    if not values.progress_denominator_versions_current:
+        failures.append("PROGRESS_DENOMINATOR_STALE")
+    if values.simulation_report.status != "SIMULATION_PASS":
+        failures.append("OPERATIONAL_SIMULATION_REQUIRED")
+
+    failure_codes = tuple(sorted(set(failures)))
+    payload = {
+        "run_id": values.run_id,
+        "failure_codes": failure_codes,
+        "simulation_status": values.simulation_report.status,
+    }
+    return OperationalPreflightReport(
+        status="PREFLIGHT_FAIL" if failure_codes else "PREFLIGHT_PASS",
+        failure_codes=failure_codes,
+        run_id=values.run_id,
+        can_dispatch=not failure_codes,
+        simulation_status=values.simulation_report.status,
+        report_digest=_canonical_digest(payload),
+    )
 
 
 def _report_digest(report_type, values):
