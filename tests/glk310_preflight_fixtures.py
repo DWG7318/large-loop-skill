@@ -1,9 +1,18 @@
 def valid_operational_input(module, run_id="RUN-001"):
     profiles = []
     issue = {
-        "RUN_SUPERVISOR": ("GRAPH_EVENT", "SUPERVISOR_ADMISSION", "PREFLIGHT_ADMISSION"),
-        "WORKER": ("D0_RECEIPT", "GO_CANDIDATE_CLOSURE"),
-        "CHECKER": ("D1_RECEIPT",),
+        "RUN_SUPERVISOR": (
+            "GRAPH_EVENT", "SUPERVISOR_ADMISSION", "PREFLIGHT_ADMISSION",
+            "MONITOR_CONTROL", "WORKER_CHECKER_WAKE_BINDING",
+            "DEVICE_CAPACITY_PROFILE", "CUMULATIVE_ENGINEERING_LOAD",
+            "CELL_WORK_ESTIMATE", "CELL_CAPACITY_GATE", "CELL_PLAN_AMENDMENT",
+            "SUPERVISOR_PROGRESS_EVENT",
+        ),
+        "WORKER": (
+            "D0_RECEIPT", "GO_CANDIDATE_CLOSURE", "WAKE_ATTEMPT",
+            "PENDING_WAKE", "CELL_SCOPE_EXCEEDED",
+        ),
+        "CHECKER": ("D1_RECEIPT", "WAKE_ACK", "CHECKER_PROGRESS_EVENT"),
         "GO_VERIFIER": ("D2_RECEIPT",),
         "RUN_VERIFIER": ("D3_RECEIPT",),
         "OWNER": ("OWNER_ACCEPTANCE",),
@@ -47,6 +56,9 @@ def valid_operational_input(module, run_id="RUN-001"):
         agent_pin_rejected=True,
         unknown_pin_reported_without_unpin=True,
         pin_then_unpin_violation_retained=True,
+        patrol_check_ids=module.PATROL_CHECK_IDS,
+        wait_all_rejected=True,
+        all_role_subagent_capabilities_rejected=True,
         progress_stages=("DELIVERED", "D1_ACCEPTED", "GO_CANDIDATE_READY", "D2_VERIFIED", "RUN_VERIFIED", "OWNER_ACCEPTED"),
         capacity_results=("PASS", "SPLIT_REQUIRED", "CAPACITY_BLOCKED"),
         severe_split_counts=(3, 6, 7, 8),

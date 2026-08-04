@@ -48,7 +48,7 @@ activate the alternative containing the greatest number of GO nodes.
 
 ## 3.1 operational safety
 
-GLK 3.1 adds four narrow method contracts without changing the six roles or D0-D3:
+GLK 3.1 adds seven narrow operational rules without changing the six roles or D0-D3:
 
 - Worker-only four-level wake of the original Checker, with scoped CELL position,
   bound `WAKE_ACK`, a temporary heartbeat, and `PENDING_WAKE` fallback;
@@ -61,6 +61,15 @@ GLK 3.1 adds four narrow method contracts without changing the six roles or D0-D
 Supervisor does not use positive-duration or looping `wait_threads`. Method roles
 never Pin tasks; only explicit Owner Pin provenance is legal. The patrol reports
 `UNAUTHORIZED_THREAD_PIN` or `PIN_PROVENANCE_UNKNOWN` and never unpins on its own.
+Wait-all is always forbidden, and every formal role rejects actual
+spawn/delegate/hidden/background Agent capability. Patrol difficulty maps light
+`LOW`/normal `MEDIUM`/heavy `HIGH` to 10/15/30 minutes and every cycle proves the
+same exact seven-check checklist.
+
+Current 3.1 Run packages always execute Layer 11. It requires exact wake, capacity,
+patrol, and append-only Checker/Supervisor progress coverage; missing controls
+cannot disable the layer. Exact historical 3.0 packages retain an explicit legacy
+`NOT_APPLICABLE` result only.
 
 Capacity profiles use measured or conservative CPU, RAM, GPU/VRAM, disk/IO,
 network, process/port, duration, context, and evidence facts. Oversized work is split

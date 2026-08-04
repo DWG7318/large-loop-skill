@@ -19,6 +19,6 @@ method_version: 3.1.0
 schema_bundle_sha256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 skill_package_sha256: "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
 validator_version: 3.1.0
-validator_sha256: "259e1156d2afca62f6782c8bf3b241b76b7a96638683b7aaa9922afdbe58f8b2"
+validator_sha256: "e43019db194648804ae876274a189a652f31e4a091b28ec01d3421af4327a25d"
 adapter_profile_id: PROVENANCE-PROFILE-001
 adapter_contract_version: "1.0"

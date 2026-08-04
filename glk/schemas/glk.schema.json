@@ -463,7 +463,7 @@
         "issued_at": {"$ref": "#/$defs/id"}
       }
     },
-    "glk_method_lock": {
+    "glk_method_lock_310": {
       "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
       "type": "object",
       "unevaluatedProperties": false,
@@ -487,6 +487,37 @@
         "adapter_profile_id": {"$ref": "#/$defs/id"},
         "adapter_contract_version": {"const": "1.0"}
       }
+    },
+    "glk_method_lock_300_historical": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "canonical_repository", "invocation", "commit_sha", "release_tag",
+        "method_version", "schema_bundle_sha256", "skill_package_sha256",
+        "validator_version", "validator_sha256", "adapter_profile_id",
+        "adapter_contract_version"
+      ],
+      "properties": {
+        "artifact_type": {"const": "GLK_METHOD_LOCK"},
+        "canonical_repository": {"const": "https://github.com/DWG7318/large-loop-skill"},
+        "invocation": {"const": "graph-loop-skill"},
+        "commit_sha": {"$ref": "#/$defs/hash"},
+        "release_tag": {"const": "v3.0.0"},
+        "method_version": {"const": "3.0.0"},
+        "schema_bundle_sha256": {"$ref": "#/$defs/hash"},
+        "skill_package_sha256": {"$ref": "#/$defs/hash"},
+        "validator_version": {"const": "3.0.0"},
+        "validator_sha256": {"$ref": "#/$defs/hash"},
+        "adapter_profile_id": {"$ref": "#/$defs/id"},
+        "adapter_contract_version": {"const": "1.0"}
+      }
+    },
+    "glk_method_lock": {
+      "oneOf": [
+        {"$ref": "#/$defs/glk_method_lock_300_historical"},
+        {"$ref": "#/$defs/glk_method_lock_310"}
+      ]
     },
     "provenance_adapter_profile": {
       "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
@@ -809,15 +840,39 @@
         "monitor_state": {"enum": ["MONITOR_ACTIVE", "MONITOR_HELD", "MONITOR_CLOSED"]}
       }
     },
+    "patrol_check_item_310": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id", "finding", "result", "alert_code", "observation_ref",
+        "evidence_refs", "actor_type", "operation", "timeout_ms", "looped",
+        "wait_all", "pin_provenance", "terminal_sequence"
+      ],
+      "properties": {
+        "check_id": {"enum": ["UNEXPLAINED_STALL", "PENDING_WAKE", "SUBAGENT_EVIDENCE", "SUPERVISOR_WAIT", "PATROL_UNIQUENESS", "THREAD_PIN", "TERMINAL_CLOSURE"]},
+        "finding": {"enum": ["NORMAL_RUNNING", "FORMAL_PAUSE", "LEGAL_BLOCKED", "EXTERNAL_WAIT", "LOOP_STOPPED", "NO_PENDING_WAKE", "PENDING_WAKE", "NO_SUBAGENT_EVIDENCE", "VISIBLE_TASK", "AGENT_OPERATION", "NO_SUPERVISOR_WAIT", "THREAD_OPERATION", "UNIQUE_PATROL_HEARTBEAT", "PATROL_DUPLICATE", "PATROL_HEARTBEAT_DUPLICATE", "NO_PIN", "THREAD_PIN", "LOOP_NON_TERMINAL", "LOOP_TERMINAL"]},
+        "result": {"enum": ["CLEAR", "LEGAL_SUPPRESSION", "ALERT", "CLOSED"]},
+        "alert_code": {"type": ["string", "null"]},
+        "observation_ref": {"$ref": "#/$defs/id"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "actor_type": {"$ref": "#/$defs/id"},
+        "operation": {"type": ["string", "null"]},
+        "timeout_ms": {"type": ["integer", "null"], "minimum": 0},
+        "looped": {"type": "boolean"},
+        "wait_all": {"type": "boolean"},
+        "pin_provenance": {"type": ["string", "null"]},
+        "terminal_sequence": {"$ref": "#/$defs/string_array"}
+      }
+    },
     "monitor_control_310": {
-      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
       "type": "object",
       "unevaluatedProperties": false,
       "required": [
         "monitor_id", "monitor_version", "prior_monitor_sha256", "monitor_key",
         "patrol_conversation_ref", "patrol_host_id", "patrol_heartbeat_ref",
         "patrol_model", "patrol_reasoning_effort", "project_difficulty",
-        "patrol_interval_minutes", "callback_target", "observation_deadline",
+        "patrol_interval_minutes", "patrol_cycle_id", "patrol_checklist",
+        "callback_target", "observation_deadline",
         "liveness_attestation_refs", "monitor_state"
       ],
       "properties": {
@@ -833,11 +888,24 @@
         "patrol_reasoning_effort": {"const": "xhigh"},
         "project_difficulty": {"enum": ["HIGH", "MEDIUM", "LOW"]},
         "patrol_interval_minutes": {"enum": [10, 15, 30]},
+        "patrol_cycle_id": {"$ref": "#/$defs/id"},
+        "patrol_checklist": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/patrol_check_item_310"},
+          "minItems": 7,
+          "maxItems": 7
+        },
         "callback_target": {"$ref": "#/$defs/id"},
         "observation_deadline": {"$ref": "#/$defs/utc_timestamp_300"},
         "liveness_attestation_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
         "monitor_state": {"enum": ["MONITOR_ACTIVE", "MONITOR_HELD", "MONITOR_CLOSED"]}
-      }
+      },
+      "allOf": [
+        {"$ref": "#/$defs/artifact_envelope_300"},
+        {"if": {"properties": {"project_difficulty": {"const": "LOW"}}}, "then": {"properties": {"patrol_interval_minutes": {"const": 10}}}},
+        {"if": {"properties": {"project_difficulty": {"const": "MEDIUM"}}}, "then": {"properties": {"patrol_interval_minutes": {"const": 15}}}},
+        {"if": {"properties": {"project_difficulty": {"const": "HIGH"}}}, "then": {"properties": {"patrol_interval_minutes": {"const": 30}}}}
+      ]
     },
     "monitor_control": {
       "oneOf": [
@@ -854,7 +922,8 @@
         "required_cell_count", "manifest_id", "manifest_version", "plan_id",
         "plan_version", "worker_binding_ref", "worker_thread_id", "worker_host_id",
         "checker_binding_ref", "checker_thread_id", "checker_host_id",
-        "capability_profile_sha256", "capacity_gate_sha256", "frozen_at"
+        "capability_profile_sha256", "capacity_gate_sha256",
+        "delivery_candidate_id", "delivery_candidate_sha256", "frozen_at"
       ],
       "properties": {
         "artifact_type": {"const": "WORKER_CHECKER_WAKE_BINDING"},
@@ -877,6 +946,8 @@
         "checker_host_id": {"$ref": "#/$defs/id"},
         "capability_profile_sha256": {"$ref": "#/$defs/hash"},
         "capacity_gate_sha256": {"$ref": "#/$defs/hash"},
+        "delivery_candidate_id": {"$ref": "#/$defs/id"},
+        "delivery_candidate_sha256": {"$ref": "#/$defs/hash"},
         "frozen_at": {"$ref": "#/$defs/utc_timestamp_300"}
       }
     },
@@ -1113,6 +1184,85 @@
         "checkpoint_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
         "actual_scope_evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
         "authorized_action": {"const": "RETURN_TO_ORIGINAL_CHECKER_AND_PLANNING_AUTHORITY"}
+      }
+    },
+    "checker_progress_event": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "event_id", "event_kind", "go_id", "cell_id", "round_id",
+        "cell_ordinal", "required_cell_count", "manifest_id", "manifest_version",
+        "plan_id", "plan_version", "trigger_artifact_ref",
+        "trigger_artifact_sha256", "d1_verdict", "accepted_cell_count",
+        "state", "progress_sequence", "message"
+      ],
+      "properties": {
+        "artifact_type": {"const": "CHECKER_PROGRESS_EVENT"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "event_id": {"$ref": "#/$defs/id"},
+        "event_kind": {"enum": ["D1_DECISION", "GO_CANDIDATE_MILESTONE"]},
+        "go_id": {"$ref": "#/$defs/id"},
+        "cell_id": {"$ref": "#/$defs/id"},
+        "round_id": {"$ref": "#/$defs/id"},
+        "cell_ordinal": {"type": "integer", "minimum": 1},
+        "required_cell_count": {"type": "integer", "minimum": 1},
+        "manifest_id": {"$ref": "#/$defs/id"},
+        "manifest_version": {"type": "integer", "minimum": 1},
+        "plan_id": {"$ref": "#/$defs/id"},
+        "plan_version": {"type": "integer", "minimum": 1},
+        "trigger_artifact_ref": {"$ref": "#/$defs/id"},
+        "trigger_artifact_sha256": {"$ref": "#/$defs/hash"},
+        "d1_verdict": {"enum": ["D1_PASS", "D1_FAIL", "D1_BLOCKED", "NONE"]},
+        "accepted_cell_count": {"type": "integer", "minimum": 0},
+        "state": {"enum": ["DELIVERED", "D1_ACCEPTED", "GO_CANDIDATE_READY"]},
+        "progress_sequence": {"type": "integer", "minimum": 1},
+        "message": {"type": "string", "minLength": 1}
+      }
+    },
+    "progress_manifest_version_310": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["go_id", "manifest_id", "manifest_version", "plan_id", "plan_version"],
+      "properties": {
+        "go_id": {"$ref": "#/$defs/id"},
+        "manifest_id": {"$ref": "#/$defs/id"},
+        "manifest_version": {"type": "integer", "minimum": 1},
+        "plan_id": {"$ref": "#/$defs/id"},
+        "plan_version": {"type": "integer", "minimum": 1}
+      }
+    },
+    "supervisor_progress_event": {
+      "allOf": [{"$ref": "#/$defs/artifact_envelope_300"}],
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": [
+        "event_id", "event_kind", "trigger_artifact_ref", "trigger_artifact_sha256",
+        "required_go_count", "d2_verified_required_go_count", "required_cell_count",
+        "d1_accepted_required_cell_count", "active_go_ids", "waiting_go_reasons",
+        "holds", "cell_manifest_versions", "capacity_profile_version",
+        "cumulative_load_version", "state", "progress_sequence", "message"
+      ],
+      "properties": {
+        "artifact_type": {"const": "SUPERVISOR_PROGRESS_EVENT"},
+        "evidence_refs": {"$ref": "#/$defs/non_empty_string_array_300"},
+        "event_id": {"$ref": "#/$defs/id"},
+        "event_kind": {"enum": ["REQUIRED_SET_CHANGED", "GRAPH_STATE_CHANGED", "D2_STATE_CHANGED", "RUN_STATE_CHANGED", "OWNER_STATE_CHANGED"]},
+        "trigger_artifact_ref": {"$ref": "#/$defs/id"},
+        "trigger_artifact_sha256": {"$ref": "#/$defs/hash"},
+        "required_go_count": {"type": "integer", "minimum": 1},
+        "d2_verified_required_go_count": {"type": "integer", "minimum": 0},
+        "required_cell_count": {"type": "integer", "minimum": 1},
+        "d1_accepted_required_cell_count": {"type": "integer", "minimum": 0},
+        "active_go_ids": {"$ref": "#/$defs/string_array"},
+        "waiting_go_reasons": {"$ref": "#/$defs/string_array"},
+        "holds": {"$ref": "#/$defs/string_array"},
+        "cell_manifest_versions": {"type": "array", "items": {"$ref": "#/$defs/progress_manifest_version_310"}, "minItems": 1},
+        "capacity_profile_version": {"type": "integer", "minimum": 1},
+        "cumulative_load_version": {"type": "integer", "minimum": 1},
+        "state": {"enum": ["DELIVERED", "D1_ACCEPTED", "GO_CANDIDATE_READY", "D2_VERIFIED", "RUN_VERIFIED", "OWNER_ACCEPTED"]},
+        "progress_sequence": {"type": "integer", "minimum": 1},
+        "message": {"type": "string", "minLength": 1}
       }
     },
     "d3_receipt": {

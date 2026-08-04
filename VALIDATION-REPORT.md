@@ -27,12 +27,16 @@
 - hash manifest and clean ZIP construction;
 - Windows/Linux UTF-8 CI matrix.
 - Worker-only scoped wake Levels 1-4 with injected time and exact ACK cleanup;
-- one Run patrol, bounded Supervisor waiting, subagent classification, and terminal closure;
+- one Run patrol with LOW/MEDIUM/HIGH = 10/15/30, an exact seven-check cycle,
+  bounded non-wait-all Supervisor snapshots, all-role subagent exclusion, and
+  terminal closure;
 - Owner-only Pin provenance with no automatic Unpin;
-- layered D1 CELL and D2 GO progress with versioned denominator recomputation;
+- append-only Checker/Supervisor progress-trigger coverage with layered D1 CELL and
+  D2 GO counts and versioned denominator recomputation;
 - device/cumulative-load CELL capacity gate, scope excess, and severe split feedback;
 - resource-aware maximal-safe activation without fake dependency edges;
-- ten technical validation layers plus the 3.1 operational-control gate.
+- ten technical validation layers plus mandatory Layer 11 for exact current 3.1
+  method locks; only exact historical 3.0 locks are legacy `NOT_APPLICABLE`.
 
 ## Local machine results
 
@@ -40,8 +44,8 @@ Environment: Windows, Python 3.14, UTF-8 mode enabled.
 
 Fresh GLK 3.1.0 acceptance evidence:
 
-- complete repository suite: `563 passed`;
-- security-relevant optimized-Python matrix: `152 passed`;
+- complete repository suite: `626 passed`;
+- security-relevant optimized-Python matrix: `207 passed`;
 - CP936 with `PYTHONUTF8=0`: repository validator PASS and `52 passed`;
 - repository distribution validator: `PASS`, scope `REPOSITORY_DISTRIBUTION`.
 

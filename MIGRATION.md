@@ -8,9 +8,14 @@ Technical receipts remain usable only when their existing current-validity holds
 
 Revalidate or issue new 3.1 control evidence for Worker/original-Checker wake
 bindings, one patrol conversation/heartbeat, current device capacity and cumulative
-load, every undispatched CELL estimate/gate, and current progress denominators.
+load, every undispatched CELL estimate/gate, exact seven-check patrol cycles, and
+append-only Checker/Supervisor progress triggers with current denominators.
 The old Supervisor-task monitor identity is historical-only for 3.1 patrol
 eligibility.
+
+Every exact 3.1 method lock activates Layer 11 even when no operational artifacts
+are present; missing controls fail closed. Only an exact historical 3.0 lock may
+receive legacy `NOT_APPLICABLE`, and that result is never current 3.1 evidence.
 
 Migration never creates a task, heartbeat, Agent, Pin, device measurement,
 admission, or verdict. It produces draft references for an external trusted

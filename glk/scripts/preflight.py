@@ -29,6 +29,7 @@ from run_model import (
     enforce_supervisor_capability_exclusion,
 )
 from run_patrol import (
+    PATROL_CHECK_IDS,
     PatrolContractError,
     RunPatrolBinding,
     validate_method_role_capabilities,
@@ -46,6 +47,18 @@ REQUIRED_ROLE_TYPES = (
     "RUN_VERIFIER",
     "OWNER",
 )
+REQUIRED_OPERATIONAL_ISSUANCE = {
+    "RUN_SUPERVISOR": frozenset(
+        {
+            "MONITOR_CONTROL", "WORKER_CHECKER_WAKE_BINDING",
+            "DEVICE_CAPACITY_PROFILE", "CUMULATIVE_ENGINEERING_LOAD",
+            "CELL_WORK_ESTIMATE", "CELL_CAPACITY_GATE", "CELL_PLAN_AMENDMENT",
+            "SUPERVISOR_PROGRESS_EVENT",
+        }
+    ),
+    "WORKER": frozenset({"WAKE_ATTEMPT", "PENDING_WAKE", "CELL_SCOPE_EXCEEDED"}),
+    "CHECKER": frozenset({"WAKE_ACK", "CHECKER_PROGRESS_EVENT"}),
+}
 REQUIRED_ADAPTER_OPERATIONS = (
     "resolve_binding",
     "verify_issuance",
@@ -141,9 +154,24 @@ class OperationalSimulationReport:
     capacity_results: Tuple[str, ...]
     severe_split_counts: Tuple[int, ...]
     formal_ledger_unchanged: bool
+    patrol_check_ids: Tuple[str, ...]
+    wait_all_rejected: bool
+    all_role_subagent_capabilities_rejected: bool
     marker: str = "SIMULATION_ONLY"
     projection_kind: str = "DERIVED_NON_AUTHORITATIVE"
     current_evidence_eligible: bool = False
+
+
+@dataclass(frozen=True)
+class SupervisorControlOperation:
+    operation: str
+    timeout_ms: int
+    looped: bool
+    wait_all: bool
+
+    def __post_init__(self):
+        if self.operation != "wait_threads" or self.timeout_ms < 0:
+            raise ValueError("SUPERVISOR_CONTROL_OPERATION_INVALID")
 
 
 @dataclass(frozen=True)
@@ -155,7 +183,7 @@ class OperationalPreflightInput:
     patrol_bindings: Tuple[RunPatrolBinding, ...]
     patrol_heartbeat_refs: Tuple[str, ...]
     patrol_capabilities: Tuple[str, ...]
-    supervisor_control_operations: Tuple[Tuple[str, int, bool], ...]
+    supervisor_control_operations: Tuple[SupervisorControlOperation, ...]
     dispatch_gate_results: Tuple[str, ...]
     capacity_profile_current: bool
     cumulative_load_current: bool
@@ -197,6 +225,9 @@ def validate_operational_simulation(
     agent_pin_rejected,
     unknown_pin_reported_without_unpin,
     pin_then_unpin_violation_retained,
+    patrol_check_ids,
+    wait_all_rejected,
+    all_role_subagent_capabilities_rejected,
     progress_stages,
     capacity_results,
     severe_split_counts,
@@ -217,6 +248,8 @@ def validate_operational_simulation(
         agent_pin_rejected,
         unknown_pin_reported_without_unpin,
         pin_then_unpin_violation_retained,
+        wait_all_rejected,
+        all_role_subagent_capabilities_rejected,
         resource_safe_activation,
     )
     if not all(value is True for value in required_flags):
@@ -235,6 +268,8 @@ def validate_operational_simulation(
         failures.append("SIMULATION_CAPACITY_RESULTS_INCOMPLETE")
     if tuple(severe_split_counts) != (3, 6, 7, 8):
         failures.append("SIMULATION_SEVERE_SPLITS_INCOMPLETE")
+    if tuple(patrol_check_ids) != PATROL_CHECK_IDS:
+        failures.append("SIMULATION_PATROL_CHECKLIST_INCOMPLETE")
     ledger_unchanged = (
         isinstance(formal_ledger_before_sha256, str)
         and len(formal_ledger_before_sha256) == 64
@@ -250,6 +285,11 @@ def validate_operational_simulation(
         capacity_results=tuple(capacity_results),
         severe_split_counts=tuple(severe_split_counts),
         formal_ledger_unchanged=ledger_unchanged,
+        patrol_check_ids=tuple(patrol_check_ids),
+        wait_all_rejected=wait_all_rejected is True,
+        all_role_subagent_capabilities_rejected=(
+            all_role_subagent_capabilities_rejected is True
+        ),
     )
 
 
@@ -264,8 +304,15 @@ def derive_operational_preflight(values: OperationalPreflightInput) -> Operation
     for profile in values.role_capability_profiles:
         try:
             validate_method_role_capabilities(profile.role_type, profile.operational_capabilities)
-        except PatrolContractError:
-            failures.append("PIN_CAPABILITY_FORBIDDEN")
+        except PatrolContractError as error:
+            failures.append(
+                "SUBAGENT_CAPABILITY_FORBIDDEN"
+                if "SUBAGENT" in str(error)
+                else "PIN_CAPABILITY_FORBIDDEN"
+            )
+        required_issuance = REQUIRED_OPERATIONAL_ISSUANCE.get(profile.role_type, frozenset())
+        if not required_issuance.issubset(profile.issuable_artifact_types):
+            failures.append("OPERATIONAL_ISSUANCE_CAPABILITY_MISSING")
     for worker in workers:
         if not set(REQUIRED_WORKER_WAKE_CAPABILITIES).issubset(worker.operational_capabilities):
             failures.append("WAKE_CAPABILITY_MISSING")
@@ -281,8 +328,11 @@ def derive_operational_preflight(values: OperationalPreflightInput) -> Operation
         validate_patrol_capabilities(values.patrol_capabilities)
     except PatrolContractError:
         failures.append("PATROL_FORBIDDEN_CAPABILITY")
-    for operation, timeout_ms, looped in values.supervisor_control_operations:
-        if operation == "wait_threads" and (timeout_ms > 0 or looped):
+    for operation in values.supervisor_control_operations:
+        if not isinstance(operation, SupervisorControlOperation):
+            failures.append("SUPERVISOR_CONTROL_OPERATION_INVALID")
+            continue
+        if operation.timeout_ms > 0 or operation.looped or operation.wait_all:
             failures.append("SUPERVISOR_WAIT_FORBIDDEN")
 
     if not values.capacity_profile_current:

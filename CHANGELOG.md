@@ -8,7 +8,8 @@
   position, 120-second injected-clock windows, exact `WAKE_ACK`, one temporary
   heartbeat, and append-only `PENDING_WAKE` fallback.
 - Prohibit Supervisor long/looping waits and add one visible non-authoritative Run
-  patrol using `gpt-5.6-luna` with `xhigh` and a 10/15/30-minute interval.
+  patrol using `gpt-5.6-luna` with `xhigh`; light/normal/heavy map to 10/15/30
+  minutes. Wait-all is always forbidden.
 - Define GO/CELL/Round/plan steps and visible tasks as work units rather than
   subagents; reject actual spawn/delegate/hidden/background Agent evidence.
 - Permanently remove Pin capability from every method role and patrol. Add
@@ -22,6 +23,10 @@
 - Extend maximal-safe activation with physical resource reservations without fake
   dependency edges, and add an operational-control gate after the ten technical
   Run-validation layers.
+- Make Layer 11 mandatory for every exact 3.1 method lock, with exact seven-check
+  patrol cycles, six-role subagent capability exclusion, and append-only
+  Checker/Supervisor progress-trigger coverage. Exact historical 3.0 locks alone
+  retain explicit legacy `NOT_APPLICABLE`.
 
 ## 3.0.0
 

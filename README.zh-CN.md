@@ -45,7 +45,7 @@ GLK 必须尽可能同时激活相互独立的 GO。不得为了管理方便任�
 
 ## 3.1 运行保障
 
-GLK 3.1 在不改变六角色与 D0-D3 的前提下新增四个窄契约：Worker 专属四级
+GLK 3.1 在不改变六角色与 D0-D3 的前提下新增七项窄运行规则：Worker 专属四级
 叫醒原 Checker；每 Run 唯一、非权威的巡检对话与 heartbeat；区分交付、D1、
 GO 候选、D2、D3、Owner Acceptance 的分层进度；以及派工前基于设备与累计
 工程负载的 `CELL_CAPACITY_GATE`。
@@ -53,6 +53,13 @@ GO 候选、D2、D3、Owner Acceptance 的分层进度；以及派工前基于�
 Supervisor 不得用正时长或循环 `wait_threads` 长期在线。任何方法角色都不得
 主动置顶任务；只有 Owner 明确置顶证据合法。巡检只报告
 `UNAUTHORIZED_THREAD_PIN` / `PIN_PROVENANCE_UNKNOWN`，不得自行取消置顶。
+wait-all 一律禁止，六种正式角色都拒绝 spawn/delegate/隐藏/后台 Agent 能力。
+轻型 `LOW`、普通 `MEDIUM`、重型 `HIGH` 分别使用 10/15/30 分钟巡检间隔；每个
+巡检周期必须完整证明同一份七项机械清单。
+
+当前 3.1 Run 必须执行 Layer 11，精确覆盖叫醒、容量、巡检和 Checker/Supervisor
+追加式进度事件；缺少控制对象不能关闭门禁。只有精确历史 3.0 包可得到明确的
+legacy `NOT_APPLICABLE`。
 
 容量画像使用可验证的 CPU、RAM、GPU/显存、磁盘/IO、网络、进程/端口、命令
 时长、上下文与证据预算。超大 CELL 在派工前拆小且保持同一 GO outcome；派工后

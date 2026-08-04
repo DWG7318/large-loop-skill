@@ -11,6 +11,7 @@ from provenance import (
     ProvenanceEvaluator,
     request_digest_for,
 )
+from run_patrol import PATROL_INTERVALS
 
 
 RUN_AUTHORITY_HOLD = "RUN_AUTHORITY_HOLD"
@@ -405,9 +406,7 @@ def advance_monitor_control(
                 add("MONITOR_SECOND_VISIBLE_TASK", control, "patrol conversation reference changed")
             if control.get("patrol_heartbeat_ref") != existing_patrol_heartbeat_ref:
                 add("PATROL_HEARTBEAT_DUPLICATE", control, "patrol heartbeat reference changed")
-            expected_interval = {"HIGH": 10, "MEDIUM": 15, "LOW": 30}.get(
-                control.get("project_difficulty")
-            )
+            expected_interval = PATROL_INTERVALS.get(control.get("project_difficulty"))
             if (
                 control.get("patrol_model") != "gpt-5.6-luna"
                 or control.get("patrol_reasoning_effort") != "xhigh"

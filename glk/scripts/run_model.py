@@ -18,6 +18,9 @@ TECHNICAL_RECEIPT_TYPES = (
     "D3_RECEIPT",
 )
 PIN_CAPABILITY_TYPES = frozenset({"set_thread_pinned", "pin_thread", "thread_pin"})
+SUBAGENT_CAPABILITY_TYPES = frozenset(
+    {"spawn_agent", "delegate_task", "hidden_agent", "background_agent"}
+)
 
 
 class RunBindingError(ValueError):
@@ -73,6 +76,14 @@ class RoleCapabilityProfile:
             raise RunBindingError(
                 "PIN_CAPABILITY_FORBIDDEN: method roles cannot pin tasks: "
                 + ", ".join(forbidden_pin)
+            )
+        forbidden_subagent = tuple(
+            sorted(set(self.operational_capabilities) & SUBAGENT_CAPABILITY_TYPES)
+        )
+        if forbidden_subagent:
+            raise RunBindingError(
+                "SUBAGENT_CAPABILITY_FORBIDDEN: method roles cannot use subagents: "
+                + ", ".join(forbidden_subagent)
             )
 
 

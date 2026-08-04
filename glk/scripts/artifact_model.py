@@ -98,6 +98,10 @@ FORMAL_TYPES: Mapping[str, ArtifactAuthority] = MappingProxyType(
             "CELL_PLAN_AMENDMENT", "RUN_SUPERVISOR"
         ),
         "CELL_SCOPE_EXCEEDED": _authority("CELL_SCOPE_EXCEEDED", "WORKER"),
+        "CHECKER_PROGRESS_EVENT": _authority("CHECKER_PROGRESS_EVENT", "CHECKER"),
+        "SUPERVISOR_PROGRESS_EVENT": _authority(
+            "SUPERVISOR_PROGRESS_EVENT", "RUN_SUPERVISOR"
+        ),
         "D3_RECEIPT": _authority("D3_RECEIPT", "RUN_VERIFIER"),
         "OWNER_ACCEPTANCE": _authority("OWNER_ACCEPTANCE", "OWNER"),
         "SECURITY_HANDOFF": _authority("SECURITY_HANDOFF", "RUN_SUPERVISOR"),

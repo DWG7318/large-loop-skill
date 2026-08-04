@@ -1,4 +1,5 @@
 import importlib
+import inspect
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -7,6 +8,11 @@ import pytest
 
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "glk" / "scripts"
+
+
+def require(condition, message):
+    if not condition:
+        pytest.fail(message)
 
 
 @pytest.fixture
@@ -25,9 +31,18 @@ def modules():
 
 def _profile(run_model, role_type, operations=()):
     issue = {
-        "RUN_SUPERVISOR": ("GRAPH_EVENT", "SUPERVISOR_ADMISSION", "PREFLIGHT_ADMISSION"),
-        "WORKER": ("D0_RECEIPT", "GO_CANDIDATE_CLOSURE"),
-        "CHECKER": ("D1_RECEIPT",),
+        "RUN_SUPERVISOR": (
+            "GRAPH_EVENT", "SUPERVISOR_ADMISSION", "PREFLIGHT_ADMISSION",
+            "MONITOR_CONTROL", "WORKER_CHECKER_WAKE_BINDING",
+            "DEVICE_CAPACITY_PROFILE", "CUMULATIVE_ENGINEERING_LOAD",
+            "CELL_WORK_ESTIMATE", "CELL_CAPACITY_GATE", "CELL_PLAN_AMENDMENT",
+            "SUPERVISOR_PROGRESS_EVENT",
+        ),
+        "WORKER": (
+            "D0_RECEIPT", "GO_CANDIDATE_CLOSURE", "WAKE_ATTEMPT",
+            "PENDING_WAKE", "CELL_SCOPE_EXCEEDED",
+        ),
+        "CHECKER": ("D1_RECEIPT", "WAKE_ACK", "CHECKER_PROGRESS_EVENT"),
         "GO_VERIFIER": ("D2_RECEIPT",),
         "RUN_VERIFIER": ("D3_RECEIPT",),
         "OWNER": ("OWNER_ACCEPTANCE",),
@@ -74,6 +89,9 @@ def _simulation(preflight, **changes):
         agent_pin_rejected=True,
         unknown_pin_reported_without_unpin=True,
         pin_then_unpin_violation_retained=True,
+        patrol_check_ids=preflight.PATROL_CHECK_IDS,
+        wait_all_rejected=True,
+        all_role_subagent_capabilities_rejected=True,
         progress_stages=(
             "DELIVERED",
             "D1_ACCEPTED",
@@ -130,6 +148,81 @@ def test_complete_operational_preflight_passes(modules):
     assert report.projection_kind == "DERIVED_NON_AUTHORITATIVE"
 
 
+@pytest.mark.parametrize(
+    "role_type", ("RUN_SUPERVISOR", "WORKER", "CHECKER", "GO_VERIFIER", "RUN_VERIFIER", "OWNER")
+)
+@pytest.mark.parametrize(
+    "operation", ("spawn_agent", "delegate_task", "hidden_agent", "background_agent")
+)
+def test_REDO_every_formal_role_rejects_subagent_capability(
+    modules, role_type, operation
+):
+    _, run_model, *_ = modules
+    with pytest.raises(run_model.RunBindingError, match="SUBAGENT_CAPABILITY_FORBIDDEN"):
+        _profile(run_model, role_type, (operation,))
+
+
+def test_REDO_supervisor_wait_all_envelope_fails_preflight(modules):
+    preflight, *_ = modules
+    wait_all = preflight.SupervisorControlOperation(
+        operation="wait_threads", timeout_ms=0, looped=False, wait_all=True
+    )
+    report = preflight.derive_operational_preflight(
+        replace(_input(modules), supervisor_control_operations=(wait_all,))
+    )
+    require("SUPERVISOR_WAIT_FORBIDDEN" in report.failure_codes, "wait-all must fail preflight")
+
+
+def test_REDO_missing_operational_issuance_capability_fails_readiness(modules):
+    preflight, run_model, *_ = modules
+    base = _input(modules)
+    profiles = tuple(
+        replace(
+            profile,
+            issuable_artifact_types=tuple(
+                value
+                for value in profile.issuable_artifact_types
+                if value != "CHECKER_PROGRESS_EVENT"
+            ),
+        )
+        if profile.role_type == "CHECKER"
+        else profile
+        for profile in base.role_capability_profiles
+    )
+    report = preflight.derive_operational_preflight(
+        replace(base, role_capability_profiles=profiles)
+    )
+    require(
+        "OPERATIONAL_ISSUANCE_CAPABILITY_MISSING" in report.failure_codes,
+        "missing operational issuance must fail readiness",
+    )
+
+
+def test_REDO_simulation_contract_covers_checklist_wait_all_and_all_roles(modules):
+    preflight, *_ = modules
+    parameters = set(inspect.signature(preflight.validate_operational_simulation).parameters)
+    require({
+        "patrol_check_ids",
+        "wait_all_rejected",
+        "all_role_subagent_capabilities_rejected",
+    } <= parameters, "simulation contract must expose every new guard")
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"patrol_check_ids": ("UNEXPLAINED_STALL",)},
+        {"wait_all_rejected": False},
+        {"all_role_subagent_capabilities_rejected": False},
+    ],
+)
+def test_simulation_fails_closed_when_new_operational_guard_is_unproven(modules, change):
+    preflight, *_ = modules
+    report = _simulation(preflight, **change)
+    require(report.status == "SIMULATION_FAIL", "incomplete simulation must fail")
+    require(report.current_evidence_eligible is False, "simulation cannot become formal evidence")
+
+
 def test_each_missing_worker_wake_capability_fails_closed(modules):
     preflight, run_model, worker_wake, *_ = modules
     base = _input(modules)
@@ -183,11 +276,15 @@ def test_patrol_forbidden_capability_fails_preflight(modules, operation):
 
 
 @pytest.mark.parametrize(
-    "operation",
-    [("wait_threads", 120000, False), ("wait_threads", 0, True)],
+    "operation_values",
+    [
+        {"operation": "wait_threads", "timeout_ms": 120000, "looped": False, "wait_all": False},
+        {"operation": "wait_threads", "timeout_ms": 0, "looped": True, "wait_all": False},
+    ],
 )
-def test_supervisor_long_or_looping_wait_fails_preflight(modules, operation):
+def test_supervisor_long_or_looping_wait_fails_preflight(modules, operation_values):
     preflight, *_ = modules
+    operation = preflight.SupervisorControlOperation(**operation_values)
     report = preflight.derive_operational_preflight(
         replace(_input(modules), supervisor_control_operations=(operation,))
     )
@@ -196,8 +293,11 @@ def test_supervisor_long_or_looping_wait_fails_preflight(modules, operation):
 
 def test_supervisor_immediate_snapshot_is_allowed(modules):
     preflight, *_ = modules
+    operation = preflight.SupervisorControlOperation(
+        operation="wait_threads", timeout_ms=0, looped=False, wait_all=False
+    )
     report = preflight.derive_operational_preflight(
-        replace(_input(modules), supervisor_control_operations=(("wait_threads", 0, False),))
+        replace(_input(modules), supervisor_control_operations=(operation,))
     )
     assert report.status == "PREFLIGHT_PASS"
 

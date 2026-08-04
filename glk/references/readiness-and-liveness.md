@@ -28,12 +28,17 @@ attestation set; it never creates or schedules a task. Technical authority
 violations produce `RUN_AUTHORITY_HOLD`; repeated HIGH architecture findings on the
 same path produce `RUN_ARCHITECTURE_HOLD`.
 
+Each patrol cycle proves the exact seven-check mechanical checklist. Light `LOW`,
+normal `MEDIUM`, and heavy `HIGH` use 10-, 15-, and 30-minute intervals. Supervisor
+wait-all is always forbidden; only a non-wait-all zero-time snapshot is legal.
+
 Progress reports exact `required GO/D2` and `required CELL/D1` counts and IDs,
 active GO IDs, typed waiting reasons, unreachable bindings, current holds, graph
 version, and CELL manifest versions.
 
 GLK 3.1 readiness also requires Worker wake operations, the original Checker
-binding, one patrol conversation/heartbeat, no task-creation/subagent/Pin
-capability, current device capacity and cumulative load, PASS dispatch gates, and
-current progress denominator versions. Operational simulation uses injected time
-and leaves formal ledger/index bytes unchanged.
+binding, one patrol conversation/heartbeat with its exact checklist, no subagent or
+Pin capability in any formal role profile, current device capacity and cumulative
+load, PASS dispatch gates, exact progress-event issuance capabilities, and current
+progress denominator versions. Operational simulation proves the same controls
+with injected time and leaves formal ledger/index bytes unchanged.

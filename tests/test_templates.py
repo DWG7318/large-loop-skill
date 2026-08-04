@@ -42,6 +42,8 @@ TEMPLATES = {
     "CELL_CAPACITY_GATE.yaml": "cell_capacity_gate",
     "CELL_PLAN_AMENDMENT.yaml": "cell_plan_amendment",
     "CELL_SCOPE_EXCEEDED.yaml": "cell_scope_exceeded",
+    "CHECKER_PROGRESS_EVENT.yaml": "checker_progress_event",
+    "SUPERVISOR_PROGRESS_EVENT.yaml": "supervisor_progress_event",
     "D3_RECEIPT.yaml": "d3_receipt",
     "GO_CAUSAL_TRACE.yaml": "go_causal_trace",
     "GRAPH_AMENDMENT.yaml": "graph_amendment",

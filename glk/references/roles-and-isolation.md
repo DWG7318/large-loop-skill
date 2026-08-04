@@ -58,6 +58,6 @@ holding, or invocation capability is an immediate authority failure. Run Verifie
 isolation is verified against every consumed GO Verifier and Checker binding.
 
 Only Worker receives bounded original-Checker wake operations. Every formal role
-lacks task Pin capability. The one visible Run patrol is a non-authoritative control
+lacks task Pin and spawn/delegate/hidden/background Agent capability. The one visible Run patrol is a non-authoritative control
 conversation, not a seventh role, and cannot create tasks, delegate, accept,
 repair, or perform product work.

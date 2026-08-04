@@ -26,8 +26,11 @@ A `VALIDATION_REPORT` is derived non-authoritative. It cannot issue a receipt,
 admission, graph event, D3, or Owner Acceptance. Package load failure is reported as
 package/invocation failure, not as a fabricated technical verdict.
 
-GLK 3.1 keeps these ten technical layers and applies an operational-control gate
-after them when 3.1 controls are present. It validates wake lineage, patrol
-uniqueness, Pin capability exclusion, current capacity/load/estimate/gate lineage,
-and severe post-dispatch split re-evaluation. Operational failure changes no D0-D3
-verdict.
+GLK 3.1 keeps these ten technical layers and requires Layer 11 whenever the exact
+method lock is 3.1.0. Layer 11 validates exact wake lineage, the complete patrol
+checklist and uniqueness, Pin and all-role subagent capability exclusion,
+Supervisor wait-all/long-wait exclusion, current capacity/load/estimate/gate
+lineage, severe post-dispatch split re-evaluation, and exact progress-trigger
+coverage. Missing 3.1 controls fail closed; artifact absence cannot turn the layer
+off. Only an exact historical 3.0 lock receives explicit legacy `NOT_APPLICABLE`.
+Operational failure changes no D0-D3 verdict.

@@ -160,7 +160,8 @@ no-side-effect simulation, and no active hold.
 Read failure never implies health. Deadline expiry yields an unreachable role
 projection. `MONITOR_CONTROL` binds exactly one visible patrol conversation and one
 heartbeat with one deterministic key and append-only head. The patrol uses
-`gpt-5.6-luna` with `xhigh`; the patrol is not a seventh authority role.
+`gpt-5.6-luna` with `xhigh`; light `LOW`, normal `MEDIUM`, and heavy `HIGH` map to
+10, 15, and 30 minutes. The patrol is not a seventh authority role.
 
 A technical authority violation produces `RUN_AUTHORITY_HOLD` immediately. Two
 consecutive HIGH architecture findings on the same path produce
@@ -183,12 +184,14 @@ Checker first returns a Run/GO/CELL/Round-bound `WAKE_ACK`. Success stops escala
 and cleans temporary state; IDs are never guessed and replacement roles are never
 created.
 
-Supervisor must not remain online with positive-duration or looping
-`wait_threads`. The unique patrol checks only unexplained stoppage, pending wake,
-actual subagent evidence, forbidden Supervisor wait, duplicate patrol/heartbeat,
-Pin provenance, and terminal closure. A GO, CELL, Round, plan step, visible task, or
-the word `子任务` is not a subagent; actual `spawn_agent`, `delegate_task`, hidden
-Agent, or background Agent evidence is forbidden.
+Supervisor must not remain online with positive-duration, looping, or wait-all
+`wait_threads`; only a non-wait-all zero-time snapshot is allowed. Each unique
+patrol cycle has exactly one evidenced closed check for unexplained stoppage,
+pending wake, actual subagent evidence, forbidden Supervisor wait, duplicate
+patrol/heartbeat, Pin provenance, and terminal closure. Missing, duplicate, or
+free-form checklist rows fail closed. A GO, CELL, Round, plan step, visible task, or
+the word `子任务` is not a subagent; every formal role profile rejects actual
+`spawn_agent`, `delegate_task`, hidden Agent, or background Agent capability.
 
 No method role or patrol may call `set_thread_pinned(true)` or an equivalent Pin.
 Only explicit Owner UI or item-specific Run authorization is legal. Report Agent
@@ -201,6 +204,10 @@ Worker delivery never increments D1. Checker counts current-valid admitted D1 PA
 once and emits only a GO-boundary milestone to Supervisor. Supervisor reports only
 material global changes with D1/Required CELL, D2/Required GO, ACTIVE_GO,
 WAITING_GO, holds, and graph/manifest/plan/capacity/load versions; no percentage.
+Append-only `CHECKER_PROGRESS_EVENT` and `SUPERVISOR_PROGRESS_EVENT` traces must
+cover each current trigger exactly once. Current 3.1 Runs always execute Layer 11;
+missing wake, capacity, patrol, or progress controls fail closed. Only an exact
+historical 3.0 method lock receives explicit legacy `NOT_APPLICABLE` for Layer 11.
 
 Before dispatch, Supervisor binds current `DEVICE_CAPACITY_PROFILE`,
 `CUMULATIVE_ENGINEERING_LOAD`, and total-cost `CELL_WORK_ESTIMATE` evidence.

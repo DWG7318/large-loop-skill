@@ -1,4 +1,5 @@
 import importlib.util
+import copy
 import json
 import sys
 from pathlib import Path
@@ -25,6 +26,8 @@ NEW_AUTHORITIES = {
     "CELL_CAPACITY_GATE": "RUN_SUPERVISOR",
     "CELL_PLAN_AMENDMENT": "RUN_SUPERVISOR",
     "CELL_SCOPE_EXCEEDED": "WORKER",
+    "CHECKER_PROGRESS_EVENT": "CHECKER",
+    "SUPERVISOR_PROGRESS_EVENT": "RUN_SUPERVISOR",
 }
 NEW_DEFINITIONS = {
     "WORKER_CHECKER_WAKE_BINDING": "worker_checker_wake_binding",
@@ -37,6 +40,8 @@ NEW_DEFINITIONS = {
     "CELL_CAPACITY_GATE": "cell_capacity_gate",
     "CELL_PLAN_AMENDMENT": "cell_plan_amendment",
     "CELL_SCOPE_EXCEEDED": "cell_scope_exceeded",
+    "CHECKER_PROGRESS_EVENT": "checker_progress_event",
+    "SUPERVISOR_PROGRESS_EVENT": "supervisor_progress_event",
 }
 
 
@@ -113,6 +118,41 @@ def test_monitor_control_is_patrol_bound_not_supervisor_wait_bound():
     assert value["patrol_interval_minutes"] in {10, 15, 30}
     assert "supervisor_task_ref" not in value
     assert "created_task_ref" not in value
+
+
+@pytest.mark.parametrize("difficulty,interval", [("LOW", 10), ("MEDIUM", 15), ("HIGH", 30)])
+def test_monitor_schema_binds_owner_difficulty_to_exact_interval(difficulty, interval):
+    value = yaml.safe_load((TEMPLATES / "MONITOR_CONTROL.yaml").read_text(encoding="utf-8"))
+    value.update(project_difficulty=difficulty, patrol_interval_minutes=interval)
+    _validate("monitor_control", value)
+    value["patrol_interval_minutes"] = {10: 30, 15: 10, 30: 10}[interval]
+    with pytest.raises(ValidationError):
+        _validate("monitor_control", value)
+
+
+def test_monitor_schema_requires_exact_closed_patrol_checklist():
+    value = yaml.safe_load((TEMPLATES / "MONITOR_CONTROL.yaml").read_text(encoding="utf-8"))
+    value["patrol_checklist"] = value["patrol_checklist"][:-1]
+    with pytest.raises(ValidationError):
+        _validate("monitor_control", value)
+    value = yaml.safe_load((TEMPLATES / "MONITOR_CONTROL.yaml").read_text(encoding="utf-8"))
+    value["patrol_checklist"][0]["finding"] = "EVERYTHING_FINE"
+    with pytest.raises(ValidationError):
+        _validate("monitor_control", value)
+
+
+def test_method_lock_schema_distinguishes_historical_300_and_current_310():
+    current = yaml.safe_load((TEMPLATES / "GLK_METHOD_LOCK.yaml").read_text(encoding="utf-8"))
+    _validate("glk_method_lock", current)
+    historical = copy.deepcopy(current)
+    historical.update(
+        schema_version="3.0.0",
+        candidate_id="METHOD-GLK-3.0.0",
+        release_tag="v3.0.0",
+        method_version="3.0.0",
+        validator_version="3.0.0",
+    )
+    _validate("glk_method_lock", historical)
 
 
 @pytest.mark.parametrize(

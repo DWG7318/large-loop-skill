@@ -1,0 +1,31 @@
+schema_version: 3.1.0
+artifact_type: SUPERVISOR_PROGRESS_EVENT
+artifact_id: SUPERVISOR-PROGRESS-RUN-001-MANIFEST-V1
+run_id: RUN-001
+graph_id: GRAPH-RUN-001
+graph_version: 1
+candidate_id: SUPERVISOR-PROGRESS-RUN-001-MANIFEST-V1
+candidate_sha256: "3333333333333333333333333333333333333333333333333333333333333333"
+issuer_binding_ref: ROLE-RUN-001-SUPERVISOR
+execution_context_ref: CONTEXT-RUN-001-SUPERVISOR
+evidence_refs: ["evidence/progress/supervisor-manifest-v1.json"]
+provenance_ref: attestations/SUPERVISOR-PROGRESS-MANIFEST-V1.json
+issued_at: "2026-08-04T00:35:00Z"
+event_id: SUPERVISOR-PROGRESS-RUN-001-MANIFEST-V1
+event_kind: REQUIRED_SET_CHANGED
+trigger_artifact_ref: manifests/CELL-MANIFEST-GO-001-V1.json
+trigger_artifact_sha256: "4444444444444444444444444444444444444444444444444444444444444444"
+required_go_count: 1
+d2_verified_required_go_count: 0
+required_cell_count: 3
+d1_accepted_required_cell_count: 0
+active_go_ids: [GO-001]
+waiting_go_reasons: []
+holds: []
+cell_manifest_versions:
+  - {go_id: GO-001, manifest_id: CELL-MANIFEST-GO-001, manifest_version: 1, plan_id: CELL-PLAN-GO-001, plan_version: 1}
+capacity_profile_version: 1
+cumulative_load_version: 1
+state: DELIVERED
+progress_sequence: 1
+message: Run=RUN-001 CELL(D1)=0/3 GO(D2)=0/1 ACTIVE=GO-001 WAITING=0 HOLDS=- Graph=v1 Capacity=v1 Load=v1 状态=DELIVERED

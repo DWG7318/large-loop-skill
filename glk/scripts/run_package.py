@@ -38,6 +38,8 @@ FORMAL_ROOT_BY_TYPE = MappingProxyType(
         "CELL_CAPACITY_GATE": "controls",
         "CELL_PLAN_AMENDMENT": "controls",
         "CELL_SCOPE_EXCEEDED": "controls",
+        "CHECKER_PROGRESS_EVENT": "controls",
+        "SUPERVISOR_PROGRESS_EVENT": "controls",
         "D3_RECEIPT": "receipts",
         "OWNER_ACCEPTANCE": "acceptance",
         "SECURITY_HANDOFF": "handoffs",

@@ -60,9 +60,22 @@ ISSUABLE_BY_ROLE = {
         "GRAPH_EVENT",
         "MONITOR_CONTROL",
         "RUN_PACKAGE_INDEX",
+        "WORKER_CHECKER_WAKE_BINDING",
+        "DEVICE_CAPACITY_PROFILE",
+        "CUMULATIVE_ENGINEERING_LOAD",
+        "CELL_WORK_ESTIMATE",
+        "CELL_CAPACITY_GATE",
+        "CELL_PLAN_AMENDMENT",
+        "SUPERVISOR_PROGRESS_EVENT",
     ),
-    "WORKER": ("D0_RECEIPT", "GO_CANDIDATE_CLOSURE"),
-    "CHECKER": ("D1_RECEIPT",),
+    "WORKER": (
+        "D0_RECEIPT",
+        "GO_CANDIDATE_CLOSURE",
+        "WAKE_ATTEMPT",
+        "PENDING_WAKE",
+        "CELL_SCOPE_EXCEEDED",
+    ),
+    "CHECKER": ("D1_RECEIPT", "WAKE_ACK", "CHECKER_PROGRESS_EVENT"),
     "GO_VERIFIER": ("D2_RECEIPT",),
     "RUN_VERIFIER": ("D3_RECEIPT",),
     "OWNER": ("OWNER_ACCEPTANCE",),
@@ -352,6 +365,15 @@ def _prepare_validation_fixture(tmp_path):
         path, original = _artifact(fixture.root, artifact_type)
         issuer = ISSUER_BY_TYPE.get(artifact_type)
         value = _preserved_envelope(original, _template(artifact_type), issuer_binding_ref=issuer)
+        if artifact_type == "GLK_METHOD_LOCK":
+            value.update(
+                schema_version="3.0.0",
+                candidate_id="METHOD-GLK-3.0.0",
+                candidate_sha256=_candidate_hash("METHOD-GLK-3.0.0"),
+                release_tag="v3.0.0",
+                method_version="3.0.0",
+                validator_version="3.0.0",
+            )
         _write_artifact(path, value)
 
     supervisor_path, supervisor = _artifact(fixture.root, "ROLE_BINDING")

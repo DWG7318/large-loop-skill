@@ -12,6 +12,7 @@ import test_conformance_300 as cf
 import test_preflight_300 as pf
 import test_run_closure_300 as rc
 import test_run_validation_300 as rv
+import test_run_validation_310 as rv310
 from glk300_fixtures import write_json
 from glk310_preflight_fixtures import valid_operational_input
 
@@ -432,6 +433,8 @@ def _locked_preflight_case(tmp_path, method_module):
     lock.update(lock_values)
     write_json(lock_path, lock)
     case = cf.rebuild_conformance_indexes(case)
+    rv310._upgrade_existing_case_to_310(case, replace_method_lock=False)
+    rv310._append_operational_index(case)
     _, validation_report, loaded = rc._validate(case)
     require_equal(validation_report.status, "PASS", "locked preflight package")
     preflight = pf.load_preflight()

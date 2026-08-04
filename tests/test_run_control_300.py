@@ -378,6 +378,35 @@ def test_R23_monitor_control_has_one_append_only_head_and_reuses_existing_task(t
 
 
 @pytest.mark.parametrize(
+    ("difficulty", "interval", "expected_status"),
+    [
+        ("LOW", 10, "MONITOR_ACTIVE"),
+        ("HIGH", 30, "MONITOR_ACTIVE"),
+        ("LOW", 30, "MONITOR_HELD"),
+        ("HIGH", 10, "MONITOR_HELD"),
+    ],
+)
+def test_REDO_monitor_control_uses_owner_difficulty_mapping(
+    tmp_path, difficulty, interval, expected_status
+):
+    control, case, *_ = _control_case(tmp_path)
+    monitor_path, monitor = _monitor_records(case)[0]
+    monitor.update(
+        project_difficulty=difficulty,
+        patrol_interval_minutes=interval,
+    )
+    write_json(monitor_path, monitor)
+    _, loaded = _reload_control_case(case)
+    projection = control.advance_monitor_control(
+        loaded,
+        existing_patrol_conversation_ref="task/RUN-001/PATROL",
+        existing_patrol_heartbeat_ref="heartbeat/RUN-001/PATROL",
+        existing_callback_target="callback/RUN-001/PATROL",
+    )
+    require_equal(projection.status, expected_status, f"{difficulty}/{interval}")
+
+
+@pytest.mark.parametrize(
     ("mutation", "expected_code"),
     [
         ("DUPLICATE", "MONITOR_DUPLICATE_KEY"),

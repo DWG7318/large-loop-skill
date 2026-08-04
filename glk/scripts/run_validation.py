@@ -21,6 +21,13 @@ from provenance import (
     request_digest_for,
 )
 from run_control import RUN_AUTHORITY_HOLD
+from run_patrol import (
+    PATROL_INTERVALS,
+    PatrolContractError,
+    PatrolEvent,
+    RunPatrolBinding,
+    derive_patrol_observation,
+)
 from run_state import (
     CurrentD2Fact,
     D3Eligibility,
@@ -51,6 +58,8 @@ REQUIRES_EVIDENCE = TECHNICAL_TYPES + (
     "CELL_CAPACITY_GATE",
     "CELL_PLAN_AMENDMENT",
     "CELL_SCOPE_EXCEEDED",
+    "CHECKER_PROGRESS_EVENT",
+    "SUPERVISOR_PROGRESS_EVENT",
 )
 ROLE_AUTHORITIES = frozenset(
     {"RUN_SUPERVISOR", "WORKER", "CHECKER", "GO_VERIFIER", "RUN_VERIFIER", "OWNER"}
@@ -89,6 +98,8 @@ SCHEMA_DEF_BY_TYPE = {
     "CELL_CAPACITY_GATE": "cell_capacity_gate",
     "CELL_PLAN_AMENDMENT": "cell_plan_amendment",
     "CELL_SCOPE_EXCEEDED": "cell_scope_exceeded",
+    "CHECKER_PROGRESS_EVENT": "checker_progress_event",
+    "SUPERVISOR_PROGRESS_EVENT": "supervisor_progress_event",
     "D3_RECEIPT": "d3_receipt",
     "OWNER_ACCEPTANCE": "owner_acceptance_300",
     "SECURITY_HANDOFF": "security_handoff_300",
@@ -364,57 +375,86 @@ def _schema_issue(record, schema):
 
 
 def validate_operational_controls(package):
-    """Validate 3.1 operational-control lineage without issuing a technical verdict."""
-    new_types = {
-        "WORKER_CHECKER_WAKE_BINDING",
-        "WAKE_ATTEMPT",
-        "WAKE_ACK",
-        "PENDING_WAKE",
-        "DEVICE_CAPACITY_PROFILE",
-        "CUMULATIVE_ENGINEERING_LOAD",
-        "CELL_WORK_ESTIMATE",
-        "CELL_CAPACITY_GATE",
-        "CELL_PLAN_AMENDMENT",
-        "CELL_SCOPE_EXCEEDED",
+    """Validate mandatory 3.1 operational lineage without issuing a verdict."""
+    current_types = {
+        "WORKER_CHECKER_WAKE_BINDING", "WAKE_ATTEMPT", "WAKE_ACK", "PENDING_WAKE",
+        "DEVICE_CAPACITY_PROFILE", "CUMULATIVE_ENGINEERING_LOAD",
+        "CELL_WORK_ESTIMATE", "CELL_CAPACITY_GATE", "CELL_PLAN_AMENDMENT",
+        "CELL_SCOPE_EXCEEDED", "CHECKER_PROGRESS_EVENT",
+        "SUPERVISOR_PROGRESS_EVENT",
     }
-    applicable = any(package.artifacts_by_type.get(name, ()) for name in new_types)
-    if not applicable:
-        return OperationalControlReport("NOT_APPLICABLE", (), False)
-
     issues = []
 
     def add(code, value, detail):
         issues.append(
             OperationalControlIssue(
                 code,
-                value.get("artifact_id", "OPERATIONAL-CONTROL"),
+                value.get("artifact_id", "OPERATIONAL-CONTROL")
+                if isinstance(value, Mapping)
+                else "OPERATIONAL-CONTROL",
                 str(detail),
             )
         )
 
+    locks = tuple(package.artifacts_by_type.get("GLK_METHOD_LOCK", ()))
+    if len(locks) != 1:
+        add("METHOD_LOCK_REQUIRED", locks[0] if locks else {}, len(locks))
+        return OperationalControlReport("FAIL", tuple(sorted(set(issues))), True)
+    method_version = locks[0].get("method_version")
+    if method_version == "3.0.0":
+        if any(package.artifacts_by_type.get(name, ()) for name in current_types):
+            add("LEGACY_OPERATIONAL_CONTROL_CONFLICT", locks[0], "3.1 control in 3.0 Run")
+            return OperationalControlReport("FAIL", tuple(sorted(set(issues))), True)
+        return OperationalControlReport("NOT_APPLICABLE", (), False)
+    if method_version != "3.1.0":
+        add("METHOD_LOCK_VERSION_UNSUPPORTED", locks[0], method_version)
+        return OperationalControlReport("FAIL", tuple(sorted(set(issues))), True)
+
+    required_control_types = (
+        "MONITOR_CONTROL",
+        "DEVICE_CAPACITY_PROFILE",
+        "CUMULATIVE_ENGINEERING_LOAD",
+        "CHECKER_PROGRESS_EVENT",
+        "SUPERVISOR_PROGRESS_EVENT",
+    )
+    missing_control_types = tuple(
+        name for name in required_control_types
+        if not package.artifacts_by_type.get(name, ())
+    )
+    if missing_control_types:
+        add("OPERATIONAL_CONTROL_REQUIRED", locks[0], ",".join(missing_control_types))
+
     digest_by_identity = {
         id(value): digest for digest, value in package.artifacts_by_digest.items()
     }
+    by_digest = dict(package.artifacts_by_digest)
     head = package.index_chain[-1] if package.index_chain else {}
     value_by_path = {}
+    path_by_identity = {}
     for entry in head.get("formal_artifacts", ()):
         digest = entry.get("sha256")
         value = package.artifacts_by_digest.get(digest)
         if value is not None:
             value_by_path[entry.get("path")] = value
+            path_by_identity[id(value)] = entry.get("path")
 
+    # A current Run always has one visible Patrol identity; every indexed cycle is exact.
     monitors = tuple(
-        value
-        for value in package.artifacts_by_type.get("MONITOR_CONTROL", ())
+        value for value in package.artifacts_by_type.get("MONITOR_CONTROL", ())
         if value.get("patrol_conversation_ref") is not None
     )
-    if len(monitors) != 1:
-        add("PATROL_DUPLICATE", monitors[0] if monitors else {}, "exactly one patrol control required")
-    else:
-        monitor = monitors[0]
-        expected_interval = {"HIGH": 10, "MEDIUM": 15, "LOW": 30}.get(
-            monitor.get("project_difficulty")
-        )
+    if not monitors:
+        add("OPERATIONAL_CONTROL_REQUIRED", {}, "current 3.1 patrol control missing")
+    elif (
+        len({value.get("monitor_id") for value in monitors}) != 1
+        or len({value.get("patrol_conversation_ref") for value in monitors}) != 1
+        or len({value.get("patrol_heartbeat_ref") for value in monitors}) != 1
+        or len({(value.get("monitor_id"), value.get("monitor_version")) for value in monitors})
+        != len(monitors)
+    ):
+        add("PATROL_DUPLICATE", monitors[0], "conversation, heartbeat, or version fork")
+    for monitor in monitors:
+        expected_interval = PATROL_INTERVALS.get(monitor.get("project_difficulty"))
         if (
             monitor.get("patrol_model") != "gpt-5.6-luna"
             or monitor.get("patrol_reasoning_effort") != "xhigh"
@@ -423,6 +463,50 @@ def validate_operational_controls(package):
             or not monitor.get("patrol_heartbeat_ref")
         ):
             add("PATROL_BINDING_INVALID", monitor, "model, effort, interval, or identity")
+            continue
+        try:
+            binding = RunPatrolBinding(
+                contract_version="3.1.0",
+                run_id=monitor.get("run_id", ""),
+                patrol_id=monitor.get("monitor_id", ""),
+                conversation_thread_id=monitor.get("patrol_conversation_ref", ""),
+                conversation_host_id=monitor.get("patrol_host_id", ""),
+                heartbeat_id=monitor.get("patrol_heartbeat_ref", ""),
+                callback_ref=monitor.get("callback_target", ""),
+                model=monitor.get("patrol_model", ""),
+                reasoning_effort=monitor.get("patrol_reasoning_effort", ""),
+                project_difficulty=monitor.get("project_difficulty", ""),
+                interval_minutes=monitor.get("patrol_interval_minutes", 0),
+                monitor_version=monitor.get("monitor_version", 0),
+                prior_monitor_sha256=monitor.get("prior_monitor_sha256"),
+            )
+            events = tuple(
+                PatrolEvent(
+                    kind=item.get("finding", ""),
+                    actor_type=item.get("actor_type", ""),
+                    operation=item.get("operation"),
+                    task_ref=monitor.get("patrol_conversation_ref", ""),
+                    evidence_ref=(tuple(item.get("evidence_refs", ())) or ("",))[0],
+                    timeout_ms=item.get("timeout_ms"),
+                    looped=item.get("looped", False),
+                    task_visible=True,
+                    pin_provenance=item.get("pin_provenance"),
+                    occurred_at=monitor.get("issued_at", ""),
+                    patrol_cycle_id=monitor.get("patrol_cycle_id", ""),
+                    check_id=item.get("check_id", ""),
+                    result=item.get("result", ""),
+                    alert_code=item.get("alert_code"),
+                    observation_ref=item.get("observation_ref", ""),
+                    wait_all=item.get("wait_all", False),
+                    terminal_sequence=tuple(item.get("terminal_sequence", ())),
+                )
+                for item in monitor.get("patrol_checklist", ())
+            )
+            observation = derive_patrol_observation(binding, events)
+            for code in observation.alert_codes:
+                add(code, monitor, monitor.get("patrol_cycle_id"))
+        except (PatrolContractError, TypeError, ValueError) as error:
+            add("PATROL_CHECKLIST_INVALID", monitor, error)
 
     profiles = tuple(package.artifacts_by_type.get("DEVICE_CAPACITY_PROFILE", ()))
     loads = tuple(package.artifacts_by_type.get("CUMULATIVE_ENGINEERING_LOAD", ()))
@@ -438,14 +522,12 @@ def validate_operational_controls(package):
     ):
         add("CUMULATIVE_LOAD_PROFILE_MISMATCH", current_load, "profile lineage")
 
-    estimates = {
-        value.get("estimate_id"): value
-        for value in package.artifacts_by_type.get("CELL_WORK_ESTIMATE", ())
-    }
+    estimate_values = tuple(package.artifacts_by_type.get("CELL_WORK_ESTIMATE", ()))
+    estimates = {value.get("estimate_id"): value for value in estimate_values}
+    if len(estimates) != len(estimate_values):
+        add("CELL_CAPACITY_LINEAGE_INVALID", estimate_values[0] if estimate_values else {}, "duplicate estimate")
     gates = tuple(package.artifacts_by_type.get("CELL_CAPACITY_GATE", ()))
-    gate_by_digest = {
-        digest_by_identity.get(id(value)): value for value in gates
-    }
+    gate_by_digest = {digest_by_identity.get(id(value)): value for value in gates}
     for gate in gates:
         estimate = estimates.get(gate.get("estimate_id"))
         if estimate is None or gate.get("plan_version") != estimate.get("plan_version"):
@@ -463,42 +545,427 @@ def validate_operational_controls(package):
         if (gate.get("result") == "PASS") != (gate.get("dispatch_authorized") is True):
             add("CELL_CAPACITY_DECISION_INVALID", gate, "dispatch_authorized contradicts result")
 
+    manifests = tuple(package.artifacts_by_type.get("CELL_MANIFEST", ()))
+    manifest_by_identity = {
+        (value.get("manifest_id"), value.get("manifest_version")): value
+        for value in manifests
+    }
+    d0_values = tuple(package.artifacts_by_type.get("D0_RECEIPT", ()))
     wake_bindings = tuple(package.artifacts_by_type.get("WORKER_CHECKER_WAKE_BINDING", ()))
     wake_by_id = {value.get("wake_binding_id"): value for value in wake_bindings}
     if len(wake_by_id) != len(wake_bindings):
         add("WAKE_BINDING_DUPLICATE", wake_bindings[0] if wake_bindings else {}, "identity")
-    for binding in wake_bindings:
+    binding_for_d0 = {}
+    matched_binding_ids = set()
+    for d0 in d0_values:
+        scope_estimates = tuple(
+            value for value in estimate_values
+            if value.get("go_id") == d0.get("go_id")
+            and value.get("cell_id") == d0.get("cell_id")
+        )
+        scope_estimate_ids = {value.get("estimate_id") for value in scope_estimates}
+        scope_gates = tuple(
+            value for value in gates
+            if value.get("estimate_id") in scope_estimate_ids
+            and value.get("result") == "PASS"
+            and value.get("dispatch_authorized") is True
+        )
+        if len(scope_estimates) != 1 or len(scope_gates) != 1:
+            add("CELL_CAPACITY_GATE_REQUIRED", d0, "exact scope estimate/PASS gate")
+            if any(value.get("estimate_id") in scope_estimate_ids for value in gates):
+                add("CELL_CAPACITY_NOT_PASS", d0, "scope gate is not PASS")
+        matches = tuple(
+            value for value in wake_bindings
+            if value.get("go_id") == d0.get("go_id")
+            and value.get("cell_id") == d0.get("cell_id")
+            and value.get("delivery_candidate_id") == d0.get("candidate_id")
+            and value.get("delivery_candidate_sha256") == d0.get("candidate_sha256")
+        )
+        if len(matches) != 1:
+            add("WORKER_WAKE_CLOSURE_REQUIRED", d0, f"wake binding count={len(matches)}")
+            continue
+        binding = matches[0]
+        binding_for_d0[digest_by_identity.get(id(d0))] = binding
+        matched_binding_ids.add(id(binding))
+        manifest = manifest_by_identity.get(
+            (binding.get("manifest_id"), binding.get("manifest_version"))
+        )
+        required_cells = tuple(manifest.get("required_cells", ())) if manifest else ()
+        required_ids = tuple(item.get("cell_id") for item in required_cells if item.get("required"))
+        expected_ordinal = required_ids.index(d0.get("cell_id")) + 1 if d0.get("cell_id") in required_ids else None
+        if (
+            manifest is None
+            or binding.get("required_cell_count") != len(required_ids)
+            or binding.get("cell_ordinal") != expected_ordinal
+            or not binding.get("round_id")
+        ):
+            add("WAKE_BINDING_SCOPE_MISMATCH", binding, "manifest/ordinal/round")
         gate = gate_by_digest.get(binding.get("capacity_gate_sha256"))
-        if gate is None or gate.get("result") != "PASS" or gate.get("dispatch_authorized") is not True:
-            add("CELL_CAPACITY_NOT_PASS", binding, "wake/dispatch lacks exact PASS gate")
+        estimate = estimates.get(gate.get("estimate_id")) if gate else None
+        if (
+            gate is None
+            or gate.get("result") != "PASS"
+            or gate.get("dispatch_authorized") is not True
+            or estimate is None
+            or estimate.get("go_id") != d0.get("go_id")
+            or estimate.get("cell_id") != d0.get("cell_id")
+            or estimate.get("plan_id") != binding.get("plan_id")
+            or estimate.get("plan_version") != binding.get("plan_version")
+        ):
+            add("CELL_CAPACITY_GATE_REQUIRED", d0, "exact current PASS gate absent")
+    for binding in wake_bindings:
+        if id(binding) not in matched_binding_ids:
+            add("WAKE_BINDING_EXTRA", binding, "no exact D0 delivery")
 
     attempts = tuple(package.artifacts_by_type.get("WAKE_ATTEMPT", ()))
+    acks = tuple(package.artifacts_by_type.get("WAKE_ACK", ()))
+    pendings = tuple(package.artifacts_by_type.get("PENDING_WAKE", ()))
     attempts_by_path = {
-        path: value for path, value in value_by_path.items() if value.get("artifact_type") == "WAKE_ATTEMPT"
+        path: value for path, value in value_by_path.items()
+        if value.get("artifact_type") == "WAKE_ATTEMPT"
     }
-    for attempt in attempts:
-        if attempt.get("wake_binding_id") not in wake_by_id:
-            add("WAKE_BINDING_MISMATCH", attempt, "unknown wake binding")
-    for ack in package.artifacts_by_type.get("WAKE_ACK", ()):
-        binding = wake_by_id.get(ack.get("wake_binding_id"))
-        if binding is None or any(
-            ack.get(field) != binding.get(field)
-            for field in ("go_id", "cell_id", "round_id")
-        ) or ack.get("checker_binding_ref") != binding.get("checker_binding_ref"):
-            add("WAKE_ACK_SCOPE_MISMATCH", ack, "ACK does not bind frozen scope")
-    for pending in package.artifacts_by_type.get("PENDING_WAKE", ()):
-        selected = tuple(attempts_by_path.get(path) for path in pending.get("attempt_refs", ()))
-        binding = wake_by_id.get(pending.get("wake_binding_id"))
-        valid = (
-            binding is not None
-            and len(selected) == 3
-            and all(value is not None for value in selected)
-            and {value.get("level") for value in selected} == {1, 2, 3}
-            and all(value.get("wake_binding_id") == pending.get("wake_binding_id") for value in selected)
-            and all(value.get("message_sha256") == pending.get("message_sha256") for value in selected)
+    for binding in wake_bindings:
+        binding_id = binding.get("wake_binding_id")
+        selected_attempts = tuple(value for value in attempts if value.get("wake_binding_id") == binding_id)
+        selected_acks = tuple(value for value in acks if value.get("wake_binding_id") == binding_id)
+        selected_pending = tuple(value for value in pendings if value.get("wake_binding_id") == binding_id)
+        expected_message = (
+            f"GO {binding.get('go_id')} CELL {binding.get('cell_ordinal')}/"
+            f"{binding.get('required_cell_count')} 已交付，请检查"
         )
-        if not valid:
-            add("PENDING_WAKE_ATTEMPTS_INVALID", pending, "requires exact Levels 1-3 and message")
+        expected_message_sha = hashlib.sha256(expected_message.encode("utf-8")).hexdigest()
+        attempt_scope_valid = all(
+            all(value.get(field) == binding.get(field) for field in ("go_id", "cell_id", "round_id"))
+            and value.get("message") == expected_message
+            and value.get("message_sha256") == expected_message_sha
+            and value.get("timeout_seconds") == 120
+            for value in selected_attempts
+        )
+        levels = tuple(sorted(value.get("level") for value in selected_attempts))
+        success = tuple(
+            value for value in selected_attempts
+            if value.get("outcome") in {"ACKNOWLEDGED", "PROCESSING_OBSERVED"}
+        )
+        valid_closure = attempt_scope_valid and len(levels) == len(set(levels))
+        if success:
+            last = max(success, key=lambda value: value.get("level"))
+            valid_closure = valid_closure and levels == tuple(range(1, last.get("level") + 1))
+            valid_closure = valid_closure and not selected_pending
+            if last.get("outcome") == "ACKNOWLEDGED":
+                valid_closure = valid_closure and len(selected_acks) == 1
+            else:
+                valid_closure = valid_closure and not selected_acks
+        else:
+            valid_closure = (
+                valid_closure
+                and levels == (1, 2, 3)
+                and all(value.get("outcome") == "FAILED" for value in selected_attempts)
+                and not selected_acks
+                and len(selected_pending) == 1
+            )
+        for ack in selected_acks:
+            if (
+                any(ack.get(field) != binding.get(field) for field in ("go_id", "cell_id", "round_id"))
+                or ack.get("checker_binding_ref") != binding.get("checker_binding_ref")
+            ):
+                valid_closure = False
+        for pending in selected_pending:
+            selected = tuple(attempts_by_path.get(path) for path in pending.get("attempt_refs", ()))
+            if (
+                pending.get("message_sha256") != expected_message_sha
+                or len(selected) != 3
+                or any(value is None for value in selected)
+                or {value.get("level") for value in selected} != {1, 2, 3}
+                or any(
+                    value.get("message_sha256") != pending.get("message_sha256")
+                    for value in selected if value is not None
+                )
+            ):
+                valid_closure = False
+                add(
+                    "PENDING_WAKE_ATTEMPTS_INVALID",
+                    pending,
+                    "requires exact Levels 1-3 and message",
+                )
+        if not valid_closure:
+            add("WORKER_WAKE_CLOSURE_INVALID", binding, "ACK/processing or exact Levels 1-3 pending")
+    for value in attempts + acks + pendings:
+        if value.get("wake_binding_id") not in wake_by_id:
+            add("WAKE_CONTROL_EXTRA", value, "unknown wake binding")
+
+    # Progress traces are separate from technical receipts, but exact coverage is mandatory.
+    admissions = tuple(package.artifacts_by_type.get("SUPERVISOR_ADMISSION", ()))
+    admitted_digests = {
+        value.get("admitted_artifact_sha256")
+        for value in admissions
+        if value.get("decision") == "ADMITTED"
+    }
+    checker_events = tuple(package.artifacts_by_type.get("CHECKER_PROGRESS_EVENT", ()))
+    supervisor_events = tuple(package.artifacts_by_type.get("SUPERVISOR_PROGRESS_EVENT", ()))
+    all_sequences = tuple(
+        value.get("progress_sequence") for value in checker_events + supervisor_events
+    )
+    if len(all_sequences) != len(set(all_sequences)):
+        add("PROGRESS_DUPLICATE", checker_events[0] if checker_events else {}, "sequence")
+
+    d1_values = tuple(package.artifacts_by_type.get("D1_RECEIPT", ()))
+    accepted_by_step = {}
+    accepted = set()
+    for d1 in sorted(d1_values, key=lambda value: (value.get("issued_at", ""), value.get("artifact_id", ""))):
+        digest = digest_by_identity.get(id(d1))
+        if d1.get("verdict") == "D1_PASS" and digest in admitted_digests:
+            accepted.add((d1.get("go_id"), d1.get("cell_id"), d1.get("manifest_id"), d1.get("manifest_version")))
+        accepted_by_step[digest] = len(
+            {
+                item[1] for item in accepted
+                if item[0] == d1.get("go_id")
+                and item[2] == d1.get("manifest_id")
+                and item[3] == d1.get("manifest_version")
+            }
+        )
+    expected_checker_triggers = set()
+    for d1 in d1_values:
+        digest = digest_by_identity.get(id(d1))
+        matches = tuple(
+            value for value in checker_events
+            if value.get("event_kind") == "D1_DECISION"
+            and value.get("trigger_artifact_sha256") == digest
+        )
+        expected_checker_triggers.add(("D1_DECISION", digest))
+        if len(matches) != 1:
+            add("PROGRESS_COVERAGE_REQUIRED" if not matches else "PROGRESS_DUPLICATE", d1, "D1 progress")
+            continue
+        event = matches[0]
+        manifest = manifest_by_identity.get((d1.get("manifest_id"), d1.get("manifest_version")))
+        required_ids = tuple(
+            item.get("cell_id") for item in manifest.get("required_cells", ()) if item.get("required")
+        ) if manifest else ()
+        expected_state = "D1_ACCEPTED" if d1.get("verdict") == "D1_PASS" else "DELIVERED"
+        d0 = by_digest.get(d1.get("d0_artifact_sha256"))
+        binding = binding_for_d0.get(d1.get("d0_artifact_sha256"))
+        accepted_count = accepted_by_step.get(digest)
+        if d1.get("verdict") == "D1_PASS":
+            expected_message = (
+                f"{d1.get('go_id')} CELL验收 {accepted_count}/{len(required_ids)}，"
+                + ("GO候选待形成" if accepted_count == len(required_ids) else "下一CELL待交付")
+            )
+            message_valid = event.get("message") == expected_message
+        else:
+            message_valid = event.get("message", "").startswith(
+                f"{d1.get('go_id')} CELL验收仍为 {accepted_count}/{len(required_ids)}"
+            )
+        if (
+            event.get("trigger_artifact_ref") != path_by_identity.get(id(d1))
+            or event.get("d1_verdict") != d1.get("verdict")
+            or event.get("go_id") != d1.get("go_id")
+            or event.get("cell_id") != d1.get("cell_id")
+            or event.get("manifest_id") != d1.get("manifest_id")
+            or event.get("manifest_version") != d1.get("manifest_version")
+            or event.get("required_cell_count") != len(required_ids)
+            or event.get("cell_ordinal") != (required_ids.index(d1.get("cell_id")) + 1 if d1.get("cell_id") in required_ids else None)
+            or event.get("accepted_cell_count") != accepted_count
+            or event.get("state") != expected_state
+            or binding is None
+            or event.get("round_id") != binding.get("round_id")
+            or event.get("plan_id") != binding.get("plan_id")
+            or event.get("plan_version") != binding.get("plan_version")
+            or d0 is None
+            or not message_valid
+        ):
+            add("PROGRESS_SCOPE_INVALID", event, "D1 scope/count/state")
+    d3_values = tuple(package.artifacts_by_type.get("D3_RECEIPT", ()))
+    progress_required_go_ids = (
+        tuple(d3_values[-1].get("required_go_ids", ()))
+        if d3_values
+        else tuple(sorted({value.get("go_id") for value in manifests if value.get("go_id")}))
+    )
+    closures = tuple(package.artifacts_by_type.get("GO_CANDIDATE_CLOSURE", ()))
+    for closure in closures:
+        digest = digest_by_identity.get(id(closure))
+        selected = tuple(closure.get("selected_cells", ()))
+        complete = bool(selected) and all(
+            item.get("d1_artifact_sha256") in admitted_digests for item in selected
+        )
+        if not complete:
+            continue
+        matches = tuple(
+            value for value in checker_events
+            if value.get("event_kind") == "GO_CANDIDATE_MILESTONE"
+            and value.get("trigger_artifact_sha256") == digest
+        )
+        expected_checker_triggers.add(("GO_CANDIDATE_MILESTONE", digest))
+        if len(matches) != 1:
+            add("PROGRESS_COVERAGE_REQUIRED" if not matches else "PROGRESS_DUPLICATE", closure, "GO milestone")
+        else:
+            event = matches[0]
+            manifest = manifest_by_identity.get(
+                (closure.get("manifest_id"), closure.get("manifest_version"))
+            )
+            required_ids = tuple(
+                item.get("cell_id") for item in manifest.get("required_cells", ()) if item.get("required")
+            ) if manifest else ()
+            last_cell = required_ids[-1] if required_ids else None
+            binding = next(
+                (
+                    value for value in wake_bindings
+                    if value.get("go_id") == closure.get("go_id")
+                    and value.get("cell_id") == last_cell
+                ),
+                None,
+            )
+            go_ordinal = (
+                progress_required_go_ids.index(closure.get("go_id")) + 1
+                if closure.get("go_id") in progress_required_go_ids
+                else None
+            )
+            expected_message = (
+                f"GO {go_ordinal}/{len(progress_required_go_ids)}；本GO CELL "
+                f"{len(required_ids)}/{len(required_ids)}已验收；当前状态=GO_CANDIDATE_READY"
+            )
+            if (
+                event.get("state") != "GO_CANDIDATE_READY"
+                or event.get("trigger_artifact_ref") != path_by_identity.get(id(closure))
+                or event.get("go_id") != closure.get("go_id")
+                or event.get("cell_id") != last_cell
+                or event.get("accepted_cell_count") != len(required_ids)
+                or event.get("required_cell_count") != len(required_ids)
+                or event.get("manifest_id") != closure.get("manifest_id")
+                or event.get("manifest_version") != closure.get("manifest_version")
+                or binding is None
+                or event.get("round_id") != binding.get("round_id")
+                or event.get("plan_id") != binding.get("plan_id")
+                or event.get("plan_version") != binding.get("plan_version")
+                or event.get("message") != expected_message
+            ):
+                add("PROGRESS_STAGE_OVERCLAIMED", event, "candidate milestone")
+    for event in checker_events:
+        key = (event.get("event_kind"), event.get("trigger_artifact_sha256"))
+        if key not in expected_checker_triggers:
+            add("PROGRESS_TRIGGER_INVALID", event, "unexpected Checker trigger")
+
+    required_go_ids = progress_required_go_ids
+    required_cell_count = sum(
+        sum(1 for item in value.get("required_cells", ()) if item.get("required"))
+        for value in manifests
+    )
+    expected_supervisor = []
+    for value in manifests:
+        expected_supervisor.append(("REQUIRED_SET_CHANGED", value, "DELIVERED"))
+    for value in package.artifacts_by_type.get("D2_RECEIPT", ()):
+        expected_supervisor.append(("D2_STATE_CHANGED", value, "D2_VERIFIED" if value.get("verdict") == "D2_PASS" else "GO_CANDIDATE_READY"))
+    for value in package.artifacts_by_type.get("GRAPH_EVENT", ()):
+        expected_supervisor.append(("GRAPH_STATE_CHANGED", value, "D2_VERIFIED"))
+    for value in package.artifacts_by_type.get("D3_RECEIPT", ()):
+        expected_supervisor.append(("RUN_STATE_CHANGED", value, "RUN_VERIFIED" if value.get("verdict") == "D3_PASS" else "D2_VERIFIED"))
+    for value in package.artifacts_by_type.get("OWNER_ACCEPTANCE", ()):
+        expected_supervisor.append(("OWNER_STATE_CHANGED", value, "OWNER_ACCEPTED" if value.get("owner_verdict") == "LOOP_OWNER_ACCEPTED" else "RUN_VERIFIED"))
+    expected_supervisor_triggers = set()
+    for event_kind, trigger, expected_state in expected_supervisor:
+        digest = digest_by_identity.get(id(trigger))
+        expected_supervisor_triggers.add((event_kind, digest))
+        matches = tuple(
+            value for value in supervisor_events
+            if value.get("event_kind") == event_kind
+            and value.get("trigger_artifact_sha256") == digest
+        )
+        if len(matches) != 1:
+            add("PROGRESS_COVERAGE_REQUIRED" if not matches else "PROGRESS_DUPLICATE", trigger, event_kind)
+            continue
+        event = matches[0]
+        event_sequence = event.get("progress_sequence")
+        accepted_count = len(
+            {
+                (value.get("go_id"), value.get("cell_id"))
+                for value in checker_events
+                if value.get("event_kind") == "D1_DECISION"
+                and value.get("state") == "D1_ACCEPTED"
+                and isinstance(value.get("progress_sequence"), int)
+                and isinstance(event_sequence, int)
+                and value.get("progress_sequence") < event_sequence
+            }
+        )
+        verified_count = len(
+            {
+                by_digest.get(value.get("trigger_artifact_sha256"), {}).get("go_id")
+                for value in supervisor_events
+                if value.get("event_kind") == "D2_STATE_CHANGED"
+                and value.get("state") == "D2_VERIFIED"
+                and isinstance(value.get("progress_sequence"), int)
+                and isinstance(event_sequence, int)
+                and value.get("progress_sequence") <= event_sequence
+            }
+        )
+        expected_manifest_rows = []
+        for required_event in supervisor_events:
+            if (
+                required_event.get("event_kind") != "REQUIRED_SET_CHANGED"
+                or not isinstance(required_event.get("progress_sequence"), int)
+                or not isinstance(event_sequence, int)
+                or required_event.get("progress_sequence") > event_sequence
+            ):
+                continue
+            manifest = by_digest.get(required_event.get("trigger_artifact_sha256"))
+            if manifest is None:
+                continue
+            binding = next(
+                (
+                    value for value in wake_bindings
+                    if value.get("manifest_id") == manifest.get("manifest_id")
+                    and value.get("manifest_version") == manifest.get("manifest_version")
+                ),
+                None,
+            )
+            if binding is not None:
+                expected_manifest_rows.append(
+                    {
+                        "go_id": manifest.get("go_id"),
+                        "manifest_id": manifest.get("manifest_id"),
+                        "manifest_version": manifest.get("manifest_version"),
+                        "plan_id": binding.get("plan_id"),
+                        "plan_version": binding.get("plan_version"),
+                    }
+                )
+        if (
+            event.get("trigger_artifact_ref") != path_by_identity.get(id(trigger))
+            or event.get("required_go_count") != len(required_go_ids)
+            or event.get("d2_verified_required_go_count") != verified_count
+            or event.get("required_cell_count") != required_cell_count
+            or event.get("d1_accepted_required_cell_count") != accepted_count
+            or event.get("state") != expected_state
+            or sorted(_thaw(event.get("cell_manifest_versions", ())), key=lambda row: (row.get("go_id"), row.get("manifest_version")))
+            != sorted(expected_manifest_rows, key=lambda row: (row.get("go_id"), row.get("manifest_version")))
+            or current_profile is None
+            or event.get("capacity_profile_version") != current_profile.get("profile_version")
+            or current_load is None
+            or event.get("cumulative_load_version") != current_load.get("load_version")
+            or "%" in event.get("message", "")
+            or f"CELL(D1)={accepted_count}/{required_cell_count}" not in event.get("message", "")
+            or f"GO(D2)={verified_count}/{len(required_go_ids)}" not in event.get("message", "")
+        ):
+            add("PROGRESS_SCOPE_INVALID", event, "Supervisor trigger/count/state")
+    for event in supervisor_events:
+        key = (event.get("event_kind"), event.get("trigger_artifact_sha256"))
+        if key not in expected_supervisor_triggers:
+            add("PROGRESS_TRIGGER_INVALID", event, "unexpected Supervisor trigger")
+    ordered_kinds = (
+        "REQUIRED_SET_CHANGED", "D1_DECISION", "GO_CANDIDATE_MILESTONE",
+        "D2_STATE_CHANGED", "GRAPH_STATE_CHANGED", "RUN_STATE_CHANGED",
+        "OWNER_STATE_CHANGED",
+    )
+    sequence_groups = tuple(
+        tuple(
+            value.get("progress_sequence")
+            for value in checker_events + supervisor_events
+            if value.get("event_kind") == kind
+        )
+        for kind in ordered_kinds
+    )
+    nonempty_groups = tuple(group for group in sequence_groups if group)
+    if any(
+        max(left) >= min(right)
+        for left, right in zip(nonempty_groups, nonempty_groups[1:])
+    ):
+        add("PROGRESS_ORDER_INVALID", {}, nonempty_groups)
 
     for amendment in package.artifacts_by_type.get("CELL_PLAN_AMENDMENT", ()):
         successors = tuple(amendment.get("successor_cell_ids", ()))

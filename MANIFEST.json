@@ -17,9 +17,9 @@
   "waiting_rule": "typed WAITING_GO reasons; no schedulable intermediate queue",
   "activation_rule": "maximum-cardinality maximal safe ACTIVE_GO set",
   "causal_rule": "current-source-bound, incident-selected trace with strict typed-seed source disposition and minimum downstream impact",
-  "supervisor_rule": "fresh instance for every Run; no positive-duration or looping wait_threads",
+  "supervisor_rule": "fresh instance for every Run; no positive-duration, looping, or wait-all wait_threads",
   "worker_wake_rule": "Worker-only four-level original-Checker wake with scoped delivery and WAKE_ACK",
-  "patrol_rule": "one visible non-authoritative gpt-5.6-luna xhigh patrol conversation and heartbeat per Run",
+  "patrol_rule": "one visible non-authoritative gpt-5.6-luna xhigh patrol conversation and heartbeat per Run; LOW/MEDIUM/HIGH map to 10/15/30 with one exact seven-check cycle",
   "thread_pin_rule": "method roles cannot Pin; only explicit Owner provenance is legal",
   "progress_rule": "D1 accepted CELL and D2 verified GO are separate versioned counts",
   "cell_capacity_rule": "DEVICE_CAPACITY_PROFILE plus cumulative load and PASS gate before dispatch",
@@ -33,7 +33,7 @@
       "glk/scripts/run_validation.py",
       "glk/scripts/validate_run.py"
     ],
-    "sha256": "259e1156d2afca62f6782c8bf3b241b76b7a96638683b7aaa9922afdbe58f8b2"
+    "sha256": "e43019db194648804ae876274a189a652f31e4a091b28ec01d3421af4327a25d"
   },
   "formal_templates": [
     "RUN_CONTRACT.yaml",
@@ -62,6 +62,8 @@
     "CELL_CAPACITY_GATE.yaml",
     "CELL_PLAN_AMENDMENT.yaml",
     "CELL_SCOPE_EXCEEDED.yaml",
+    "CHECKER_PROGRESS_EVENT.yaml",
+    "SUPERVISOR_PROGRESS_EVENT.yaml",
     "D3_RECEIPT.yaml",
     "OWNER_ACCEPTANCE.yaml",
     "SECURITY_HANDOFF.yaml"

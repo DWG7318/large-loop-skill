@@ -9,3 +9,10 @@ Progress states are distinct: `DELIVERED`, `D1_ACCEPTED`, `GO_CANDIDATE_READY`, 
 - Verifiers emit verdicts only. Patrol emits operational alerts only.
 
 Numerators come from current-valid receipts/verdicts. Denominators come from current versioned Required sets. A manifest, graph, or CELL-plan amendment must recompute the current denominator. Historical projections remain immutable; a split itself adds no accepted progress.
+
+`CHECKER_PROGRESS_EVENT` and `SUPERVISOR_PROGRESS_EVENT` are formal append-only
+operational traces, not verdicts. Layer 11 requires exactly one correctly ordered,
+current-version event for every applicable D1, GO-closure, Required-set, Graph, D2,
+D3, and Owner trigger. Missing, duplicate, wrong-scope, wrong-trigger, stale, or
+overclaiming events fail closed. The progress projection produced from them remains
+derived non-authoritative.

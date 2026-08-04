@@ -56,6 +56,8 @@ EXPECTED_AUTHORITIES = {
     "CELL_CAPACITY_GATE": "RUN_SUPERVISOR",
     "CELL_PLAN_AMENDMENT": "RUN_SUPERVISOR",
     "CELL_SCOPE_EXCEEDED": "WORKER",
+    "CHECKER_PROGRESS_EVENT": "CHECKER",
+    "SUPERVISOR_PROGRESS_EVENT": "RUN_SUPERVISOR",
     "D3_RECEIPT": "RUN_VERIFIER",
     "OWNER_ACCEPTANCE": "OWNER",
     "SECURITY_HANDOFF": "RUN_SUPERVISOR",
@@ -78,6 +80,7 @@ SUPERVISOR_ARTIFACTS = {
     "CELL_WORK_ESTIMATE",
     "CELL_CAPACITY_GATE",
     "CELL_PLAN_AMENDMENT",
+    "SUPERVISOR_PROGRESS_EVENT",
     "SECURITY_HANDOFF",
 }
 
@@ -106,6 +109,8 @@ TEMPLATES = {
     "CELL_CAPACITY_GATE.yaml": "cell_capacity_gate",
     "CELL_PLAN_AMENDMENT.yaml": "cell_plan_amendment",
     "CELL_SCOPE_EXCEEDED.yaml": "cell_scope_exceeded",
+    "CHECKER_PROGRESS_EVENT.yaml": "checker_progress_event",
+    "SUPERVISOR_PROGRESS_EVENT.yaml": "supervisor_progress_event",
     "D3_RECEIPT.yaml": "d3_receipt",
     "OWNER_ACCEPTANCE.yaml": "owner_acceptance_300",
     "SECURITY_HANDOFF.yaml": "security_handoff_300",
@@ -123,6 +128,8 @@ CLOSED_OUTCOMES = {
     "WAKE_ACK.yaml": "ack_status",
     "PENDING_WAKE.yaml": "state",
     "CELL_CAPACITY_GATE.yaml": "result",
+    "CHECKER_PROGRESS_EVENT.yaml": "event_kind",
+    "SUPERVISOR_PROGRESS_EVENT.yaml": "event_kind",
     "D3_RECEIPT.yaml": "verdict",
     "OWNER_ACCEPTANCE.yaml": "owner_verdict",
     "SECURITY_HANDOFF.yaml": "status",
@@ -145,6 +152,8 @@ NON_EMPTY_EVIDENCE = {
     "CELL_CAPACITY_GATE.yaml",
     "CELL_PLAN_AMENDMENT.yaml",
     "CELL_SCOPE_EXCEEDED.yaml",
+    "CHECKER_PROGRESS_EVENT.yaml",
+    "SUPERVISOR_PROGRESS_EVENT.yaml",
 }
 
 

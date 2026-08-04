@@ -649,19 +649,25 @@ upsert/delete, and pending-write capability. Other roles fail as
 ## 28. Supervisor waiting, patrol, subagents, and Pin
 
 The Supervisor ends its turn after dispatch/control work. Positive-duration or
-looping `wait_threads` is `SUPERVISOR_WAIT_FORBIDDEN`; only a zero-time snapshot or
-read is allowed. Only the Worker ladder may wait for a bounded ACK.
+looping `wait_threads`, and every wait-all operation, is
+`SUPERVISOR_WAIT_FORBIDDEN`; only a non-wait-all zero-time snapshot or read is
+allowed. Only the Worker ladder may wait for a bounded ACK.
 
 Each Run has one visible `RUN_PATROL_CONVERSATION` and one heartbeat, using
-`gpt-5.6-luna` with `xhigh` and a frozen 10/15/30-minute interval. The patrol is not
-a seventh authority role. It reports only unexplained stoppage, pending wake,
-subagent misuse, Supervisor wait, duplicate patrol, Pin provenance, and terminal
-closure. It cannot inspect product quality, repair, accept, plan, take over, or
-re-dispatch.
+`gpt-5.6-luna` with `xhigh`. Frozen difficulty maps light `LOW` to 10 minutes,
+normal `MEDIUM` to 15 minutes, and heavy `HIGH` to 30 minutes. The patrol is not a
+seventh authority role. Every `patrol_cycle_id` contains exactly one evidenced
+closed check for unexplained stoppage, pending wake, subagent misuse, Supervisor
+wait including wait-all, duplicate patrol/heartbeat, Pin provenance, and terminal
+closure. Missing, duplicate, free-form, or alert-suppressing checklist rows fail
+closed. It cannot inspect product quality, repair, accept, plan, take over, report
+engineering progress, or re-dispatch.
 
 GO, CELL, Round, plan step, visible stable task, and text `子任务` are not
 subagents. Closed evidence of `spawn_agent`, `delegate_task`, hidden Agent, or
 background Agent is forbidden.
+Every one of the six formal role capability profiles also excludes these four
+subagent capabilities; the rule is not Patrol-only.
 
 Every method role and the patrol permanently lacks `set_thread_pinned(true)` and
 equivalent Pin capability. Only an explicit Owner UI choice or item-specific
@@ -693,6 +699,11 @@ engineering progress.
 Numerators come from current receipts/verdicts and denominators from versioned
 Required sets. Amendments recompute current denominators while historical
 projections remain immutable. Splitting a CELL adds no accepted progress.
+`CHECKER_PROGRESS_EVENT` and `SUPERVISOR_PROGRESS_EVENT` are append-only
+operational trace artifacts with sole Checker and Run Supervisor issuers. They are
+not technical verdicts. Layer 11 requires exact one-to-one coverage and rejects
+missing, duplicate, out-of-order, wrong-scope, wrong-trigger, or stale-version
+events.
 
 ## 30. Device and cumulative-load CELL capacity
 
@@ -723,11 +734,16 @@ heavy-validation reservations. Capacity never creates a fake dependency.
 
 ## 31. GLK 3.1 validation surface
 
-The accepted ten validation layers remain technical authority layers. A current
-3.1 package adds an operational-control gate for Worker wake, patrol uniqueness,
-Pin provenance capability exclusion, capacity lineage, and severe-split
-re-evaluation. Repository validation remains `REPOSITORY_DISTRIBUTION`; Run
-validation remains `RUN_PACKAGE`. All reports are derived non-authoritative.
+The accepted ten validation layers remain technical authority layers. Every Run
+whose exact `GLK_METHOD_LOCK.method_version` is `3.1.0` must execute Layer 11 for
+Worker wake, exact patrol checklist and uniqueness, Pin/subagent capability
+exclusion, Supervisor wait-all/long-wait exclusion, capacity lineage, severe-split
+re-evaluation, and exact progress-event coverage. Absence of any control category
+fails closed; controls are not activated by optional artifact presence. An exact
+historical 3.0 method lock may return explicit legacy `NOT_APPLICABLE` for Layer 11
+and can never be treated as current 3.1 evidence. Repository validation remains
+`REPOSITORY_DISTRIBUTION`; Run validation remains `RUN_PACKAGE`. All reports are
+derived non-authoritative.
 
 Preflight requires the 3.0 trust and isolation gates plus exact operational
 capabilities, one patrol, current capacity/load, PASS dispatch gates, current
