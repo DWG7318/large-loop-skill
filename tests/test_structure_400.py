@@ -299,3 +299,22 @@ def test_causal_amendment_content_is_planned_only_by_kernel():
         "REVERIFY requires a current candidate and D1 receipt",
     ):
         assert message not in method_source
+
+
+def test_non_runtime_engines_and_tooling_are_outside_current_script_surface():
+    moved = {
+        "graph_model.py": ROOT / "tests" / "support" / "legacy_graph_model.py",
+        "cell_capacity.py": ROOT / "tests" / "support" / "cell_capacity_reference.py",
+        "bootstrap_run.py": ROOT / "tools" / "bootstrap_run.py",
+        "build_release.py": ROOT / "tools" / "build_release.py",
+        "repository.py": ROOT / "tools" / "repository.py",
+    }
+    for old_name, new_path in moved.items():
+        assert not (SCRIPTS / old_name).exists(), old_name
+        assert new_path.is_file(), new_path
+
+    production_lines = sum(
+        len(path.read_text(encoding="utf-8").splitlines())
+        for path in SCRIPTS.glob("*.py")
+    )
+    assert production_lines < 8_000
