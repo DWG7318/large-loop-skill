@@ -221,6 +221,22 @@ def graph_topology_payload(topology):
     }
 
 
+def assert_acyclic(node_ids, predecessors_by_id):
+    visiting, visited = set(), set()
+    def visit(go_id):
+        if go_id in visiting:
+            raise RunStateError("R08_GRAPH_CYCLE", go_id)
+        if go_id in visited:
+            return
+        visiting.add(go_id)
+        for predecessor in sorted(predecessors_by_id[go_id]):
+            visit(predecessor)
+        visiting.remove(go_id)
+        visited.add(go_id)
+    for go_id in sorted(node_ids):
+        visit(go_id)
+
+
 def recompute_graph_topology(baseline, fallback_go_ids=()):
     run_id = _value(baseline, "run_id")
     graph_id = _value(baseline, "graph_id")
@@ -262,22 +278,7 @@ def recompute_graph_topology(baseline, fallback_go_ids=()):
         if set(node.predecessors) != incoming[node.go_id]:
             raise RunStateError("GRAPH_PREDECESSOR_MISMATCH", node.go_id)
 
-    visiting = set()
-    visited = set()
-
-    def visit(go_id):
-        if go_id in visiting:
-            raise RunStateError("R08_GRAPH_CYCLE", go_id)
-        if go_id in visited:
-            return
-        visiting.add(go_id)
-        for predecessor in sorted(incoming[go_id]):
-            visit(predecessor)
-        visiting.remove(go_id)
-        visited.add(go_id)
-
-    for go_id in sorted(node_ids):
-        visit(go_id)
+    assert_acyclic(node_ids, incoming)
 
     derived_entries = tuple(sorted(go_id for go_id in node_ids if not incoming[go_id]))
     derived_terminals = tuple(sorted(go_id for go_id in node_ids if not outgoing[go_id]))

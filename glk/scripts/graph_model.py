@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
-from graph_kernel import maximum_compatible_ids
+from graph_kernel import GraphKernelError, assert_acyclic, maximum_compatible_ids
 
 
 WAITING_GO = "WAITING_GO"
@@ -305,26 +305,11 @@ class GoGraph:
             if pair in edge_pairs:
                 raise GraphError("duplicate dependency edge")
             edge_pairs.add(pair)
-        self._assert_acyclic()
+        try:
+            assert_acyclic(self.gos, {go_id: go.predecessors for go_id, go in self.gos.items()})
+        except GraphKernelError as error:
+            raise GraphError("cycle detected") from error
         self._refresh_active_set()
-
-    def _assert_acyclic(self):
-        visiting: Set[str] = set()
-        visited: Set[str] = set()
-
-        def visit(go_id: str):
-            if go_id in visiting:
-                raise GraphError("cycle detected")
-            if go_id in visited:
-                return
-            visiting.add(go_id)
-            for predecessor in self.gos[go_id].predecessors:
-                visit(predecessor)
-            visiting.remove(go_id)
-            visited.add(go_id)
-
-        for go_id in self.gos:
-            visit(go_id)
 
     def active(self) -> List[str]:
         return sorted(

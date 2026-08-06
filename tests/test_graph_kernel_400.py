@@ -131,3 +131,13 @@ def test_maximum_compatible_ids_respects_conflicts_resources_and_tie_order(kerne
     )
 
     assert selected == ("GO-A", "GO-C")
+
+
+def test_assert_acyclic_rejects_cycle_with_canonical_error(kernel):
+    with pytest.raises(kernel.GraphKernelError) as captured:
+        kernel.assert_acyclic(
+            ("GO-A", "GO-B"),
+            {"GO-A": ("GO-B",), "GO-B": ("GO-A",)},
+        )
+
+    assert captured.value.code == "R08_GRAPH_CYCLE"
