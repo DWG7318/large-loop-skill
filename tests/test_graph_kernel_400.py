@@ -88,3 +88,27 @@ def test_project_graph_state_selects_deterministic_maximal_safe_set(kernel):
     assert projection.waiting_go_ids == ("GO-B",)
     assert projection.verified_go_ids == ()
     assert not hasattr(projection, "ready_go_ids")
+
+
+def test_run_state_reexports_exact_kernel_graph_objects(kernel):
+    sys.modules.pop("run_state", None)
+    sys.path.insert(0, str(SCRIPTS))
+    try:
+        state = importlib.import_module("run_state")
+    finally:
+        sys.path.remove(str(SCRIPTS))
+        sys.modules.pop("run_state", None)
+
+    expected = (
+        "GraphConstraint",
+        "GraphNode",
+        "GraphEdge",
+        "FrozenGraphTopology",
+        "GraphStateProjection",
+        "graph_topology_payload",
+        "recompute_graph_topology",
+        "project_graph_state",
+    )
+    for name in expected:
+        assert getattr(state, name) is getattr(kernel, name)
+    assert state.RunStateError is kernel.GraphKernelError
