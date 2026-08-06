@@ -15,6 +15,7 @@
     "VERSION": "b2f44d3b6e29f8b1b73ea4735f006affc4d198e1fd9c7d50e736159b1ef636c6",
     "agents/openai.yaml": "f353273c8ebb7ccb0f11ae154760e78edba3a72434d5fb6642b342012925ade0",
     "docs/interpretation-test.md": "4a5534fa823b3a67b9d3bf69c4dc0a69f7a22a9b65d05d876ceac9059c0d4238",
+    "docs/superpowers/plans/2026-08-06-glk-4.0.0-d3-kernel-migration.md": "24d2f8a180c90da3b7bdd93a2ebe6f81722c4e029fc7513352e99711c19a8a8f",
     "docs/superpowers/plans/2026-08-06-glk-4.0.0-history-surface-slimming.md": "6dcb56e166e435a01fa480d88bca30850ef4af0764e923ab623df0ef60fe41df",
     "docs/superpowers/plans/2026-08-06-glk-4.0.0-progress-reference-removal.md": "610a40c5ea8436973a017c7ae221c98bb1fceaedf9674534004564cec124fad2",
     "docs/superpowers/plans/2026-08-06-glk-4.0.0-shared-graph-algorithms.md": "9565ced1c4469c33ba4fff97a8c09ac5b400d34f6abd5cb1db395889665a47cf",
