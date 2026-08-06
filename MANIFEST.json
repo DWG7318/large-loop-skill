@@ -33,7 +33,7 @@
       "glk/scripts/run_validation.py",
       "glk/scripts/validate_run.py"
     ],
-    "sha256": "c1795aacd901dbf3438afdbbc5f671a9b5670f151cc5fa447aa6709069c2b324"
+    "sha256": "fde6445853b2e78ce98ee8bbb0feb3e3025cdb53af6d26c370c734896fe33ebf"
   },
   "formal_templates": [
     "RUN_CONTRACT.yaml",

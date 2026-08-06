@@ -10,7 +10,19 @@ from typing import Tuple
 from jsonschema import Draft202012Validator, FormatChecker
 
 from artifact_model import FORMAL_TYPES
-from graph_kernel import FrozenGraphTopology, GraphStateProjection, project_graph_state, recompute_graph_topology
+from graph_kernel import (
+    CurrentD2Fact,
+    D3Eligibility,
+    FrozenGraphTopology,
+    GraphKernelError,
+    GraphStateProjection,
+    RunClosureProjection,
+    derive_d3_eligibility,
+    go_candidate_sha256_from_mapping,
+    manifest_closure_sha256_from_mapping,
+    project_graph_state,
+    recompute_graph_topology,
+)
 from provenance import (
     ADAPTER_CONTRACT_VERSION,
     AuthorityScope,
@@ -29,17 +41,6 @@ from run_patrol import (
     RunPatrolBinding,
     derive_patrol_observation,
 )
-from run_state import (
-    CurrentD2Fact,
-    D3Eligibility,
-    RunClosureProjection,
-    RunStateError,
-    derive_d3_eligibility,
-    go_candidate_sha256_from_mapping,
-    manifest_closure_sha256_from_mapping,
-)
-
-
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schemas" / "glk.schema.json"
 TECHNICAL_TYPES = ("D0_RECEIPT", "D1_RECEIPT", "D2_RECEIPT", "D3_RECEIPT")
 REQUIRES_EVIDENCE = TECHNICAL_TYPES + (
@@ -1494,7 +1495,7 @@ def _layer_seven(records, blocked, add_issue):
     )
     try:
         topology = recompute_graph_topology(current.value, fallback_go_ids=fallback_go_ids)
-    except RunStateError as error:
+    except GraphKernelError as error:
         add_issue(error.code, 7, current, error.detail, block=True)
         return None, current
 

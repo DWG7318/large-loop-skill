@@ -38,6 +38,15 @@ CANONICAL_GRAPH_DEFINITIONS = {
     "recompute_graph_topology",
     "maximum_compatible_ids",
     "project_graph_state",
+    "SelectedCell",
+    "CurrentD2Fact",
+    "D3Eligibility",
+    "RunClosureProjection",
+    "manifest_closure_payload",
+    "manifest_closure_sha256_from_mapping",
+    "go_candidate_payload",
+    "go_candidate_sha256_from_mapping",
+    "derive_d3_eligibility",
 }
 
 
@@ -63,9 +72,9 @@ def test_first_slice_size_budget_prevents_duplicate_growth():
     validator_lines = len(
         (SCRIPTS / "run_validation.py").read_text(encoding="utf-8").splitlines()
     )
-    assert kernel_lines <= 420
-    assert state_lines <= 760
-    assert kernel_lines + state_lines <= 1_030
+    assert kernel_lines <= 600
+    assert state_lines <= 450
+    assert kernel_lines + state_lines <= 1_050
     assert validator_lines <= 2_148
 
 
@@ -114,7 +123,7 @@ def test_compatibility_model_uses_kernel_acyclicity_without_private_copy():
     assert "_assert_acyclic" not in methods
 
 
-def test_shared_graph_algorithm_budget_proves_net_reduction():
+def test_graph_model_and_kernel_budget_stays_bounded_after_d3_migration():
     model_lines = len(
         (SCRIPTS / "graph_model.py").read_text(encoding="utf-8").splitlines()
     )
@@ -122,8 +131,8 @@ def test_shared_graph_algorithm_budget_proves_net_reduction():
         (SCRIPTS / "graph_kernel.py").read_text(encoding="utf-8").splitlines()
     )
     assert model_lines <= 1_100
-    assert kernel_lines <= 430
-    assert model_lines + kernel_lines <= 1_500
+    assert kernel_lines <= 600
+    assert model_lines + kernel_lines <= 1_700
 
 
 def test_active_superpowers_document_surface_stays_bounded():
@@ -190,4 +199,27 @@ def test_progress_reference_removal_proves_net_surface_reduction():
         for path in (ROOT / "tests").glob("*.py")
     )
     assert production_lines <= 9_400
-    assert test_lines <= 11_350
+    assert test_lines <= 11_400
+
+
+def test_formal_validator_consumes_d3_and_closure_facts_from_kernel():
+    imports = _imports(SCRIPTS / "run_validation.py")
+    required = {
+        "CurrentD2Fact",
+        "D3Eligibility",
+        "derive_d3_eligibility",
+        "go_candidate_sha256_from_mapping",
+        "manifest_closure_sha256_from_mapping",
+    }
+    assert required <= imports.get("graph_kernel", set())
+    assert "run_state" not in imports
+
+
+def test_current_production_scripts_do_not_import_run_state():
+    consumers = []
+    for path in sorted(SCRIPTS.glob("*.py")):
+        if path.name == "run_state.py":
+            continue
+        if "run_state" in _imports(path):
+            consumers.append(path.name)
+    assert consumers == []
