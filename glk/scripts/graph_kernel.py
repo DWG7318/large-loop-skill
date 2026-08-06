@@ -726,6 +726,183 @@ def project_graph_state(topology, verified_go_ids=(), applied_event_ids=()):
     )
 
 
+def _causal_error(detail):
+    raise GraphKernelError("CAUSAL_TRACE_INVALID", detail)
+
+
+def _impact_error(detail):
+    raise GraphKernelError("CAUSAL_IMPACT_INVALID", detail)
+
+
+def _causal_reachable(starts, pairs, *, reverse=False):
+    reached = set(starts)
+    changed = True
+    while changed:
+        changed = False
+        for source, target in pairs:
+            origin, destination = (target, source) if reverse else (source, target)
+            if origin in reached and destination not in reached:
+                reached.add(destination)
+                changed = True
+    return reached
+
+
+def select_causal_path(gos, edges, *, observed_at_go, source_go, source_candidate_ref,
+                       evidence_refs, symptom_gos, selected_path, confirmation_status,
+                       confirmed_status="CONFIRMED", verified_state="GO_VERIFIED"):
+    """Validate one incident-selected causal slice without mutating graph state."""
+    def go(go_id):
+        try:
+            return gos[go_id]
+        except KeyError as error:
+            raise GraphKernelError("CAUSAL_TRACE_INVALID", f"unknown GO: {go_id}") from error
+
+    go(observed_at_go)
+    source = go(source_go)
+    evidence_refs = tuple(evidence_refs)
+    symptom_gos = tuple(symptom_gos)
+    selected_path = tuple(selected_path)
+    if not evidence_refs or any(not reference for reference in evidence_refs):
+        _causal_error("causal trace requires incident evidence refs")
+    if len(set(symptom_gos)) != len(symptom_gos):
+        _causal_error("causal trace has duplicate symptom GO")
+    for symptom_go in symptom_gos:
+        if symptom_go not in gos:
+            _causal_error(f"unknown symptom GO: {symptom_go}")
+    if source_go == observed_at_go:
+        if symptom_gos or selected_path:
+            _causal_error("local incident requires empty symptom and selected path sets")
+    else:
+        if source_go in symptom_gos:
+            _causal_error("causal source GO cannot be a symptom annotation")
+        if observed_at_go not in symptom_gos:
+            _causal_error("observation GO must belong to the symptom set")
+        if not symptom_gos or not selected_path:
+            _causal_error("downstream incident requires symptoms and a selected path")
+
+    if confirmation_status == confirmed_status:
+        if _value(source, "candidate_id") != source_candidate_ref:
+            _causal_error("CONFIRMED trace must bind the current source candidate")
+        if source_go != observed_at_go and (
+            _value(source, "state") != verified_state or not _value(source, "d2_receipt_id")
+        ):
+            _causal_error("CONFIRMED downstream trace requires current source D2")
+
+    edge_by_pair = {(_value(edge, "source"), _value(edge, "target")): edge for edge in edges}
+    evidence_set = set(evidence_refs)
+    selected_facts = []
+    selected_edges = []
+    seen_pairs = set()
+    for selection in selected_path:
+        pair = (_value(selection, "source"), _value(selection, "target"))
+        edge = edge_by_pair.get(pair)
+        if edge is None:
+            _causal_error("selected path edge is not a current D2 consumption edge")
+        if pair in seen_pairs:
+            _causal_error("selected path contains a duplicate edge")
+        incident_refs = tuple(_value(selection, "incident_evidence_refs") or ())
+        selected_status = _value(selection, "confirmation_status")
+        if not set(incident_refs) <= evidence_set:
+            _causal_error("selected path incident evidence is not trace-bound")
+        if confirmation_status == confirmed_status and selected_status != confirmed_status:
+            _causal_error("CONFIRMED trace requires every selected path edge CONFIRMED")
+        if confirmation_status == confirmed_status:
+            edge_source = go(_value(edge, "source"))
+            if _value(edge_source, "state") != verified_state or not _value(edge_source, "d2_receipt_id"):
+                _causal_error("CONFIRMED selected path requires current source D2 at every hop")
+        seen_pairs.add(pair)
+        selected_edges.append(edge)
+        selected_facts.append((edge, incident_refs, selected_status))
+
+    if source_go != observed_at_go:
+        selected_pairs = {(_value(edge, "source"), _value(edge, "target")) for edge in selected_edges}
+        forward = _causal_reachable({source_go}, selected_pairs)
+        if any(symptom not in forward for symptom in symptom_gos):
+            _causal_error("selected path must reach every symptom GO")
+        reverse = _causal_reachable(set(symptom_gos), selected_pairs, reverse=True)
+        if any(_value(edge, "source") not in forward or _value(edge, "target") not in reverse
+               for edge in selected_edges):
+            _causal_error("selected path contains an edge outside every symptom path")
+        governed_targets = {_value(edge, "target") for edge in selected_edges} | {source_go}
+        bound_pairs = set(edge_by_pair)
+        for target in governed_targets:
+            for predecessor in _value(gos[target], "predecessors"):
+                if (predecessor, target) not in bound_pairs:
+                    _causal_error(f"unbound incoming dependency on causal path: {predecessor}->{target}")
+
+    all_pairs = set(edge_by_pair)
+    forward = _causal_reachable({source_go}, all_pairs)
+    reverse = _causal_reachable(set(symptom_gos), all_pairs, reverse=True)
+    selected_pairs = {(_value(edge, "source"), _value(edge, "target")) for edge in selected_edges}
+    governed_targets = {source_go} | {_value(edge, "target") for edge in selected_edges}
+    excluded = tuple(sorted(
+        (edge for pair, edge in edge_by_pair.items() if pair not in selected_pairs and (
+            (_value(edge, "source") in forward and _value(edge, "target") in reverse)
+            or _value(edge, "target") in governed_targets
+        )),
+        key=lambda edge: (_value(edge, "source"), _value(edge, "target")),
+    ))
+    return tuple(selected_facts), excluded
+
+
+def causal_impact_slice(gos, edges, trace, impact_seeds):
+    """Return the minimum forward GO slice selected by typed source seeds."""
+    source_go = _value(trace, "source_go")
+    try:
+        source = gos[source_go]
+    except KeyError as error:
+        raise GraphKernelError("CAUSAL_IMPACT_INVALID", f"unknown GO: {source_go}") from error
+    affected = {source_go}
+    first_hops = set()
+    trace_evidence = set(_value(trace, "evidence_refs") or ())
+    source_targets = tuple(
+        _value(edge, "target") for edge in edges if _value(edge, "source") == source_go
+    )
+    for seed in impact_seeds:
+        kind = _value(seed, "kind")
+        ref = _value(seed, "ref")
+        if kind == "CLAIM_OR_OUTPUT":
+            matching = {
+                _value(edge, "target")
+                for edge in edges
+                if _value(edge, "source") == source_go
+                and ref in tuple(_value(edge, "source_claim_or_output_refs") or ())
+            }
+            if not matching:
+                _impact_error(f"unrelated impact seed: {kind}:{ref}")
+            first_hops.update(matching)
+        elif kind == "CANDIDATE":
+            if ref != _value(trace, "source_candidate_ref") or ref != _value(source, "candidate_id"):
+                _impact_error(f"unrelated impact seed: {kind}:{ref}")
+            first_hops.update(source_targets)
+        elif kind == "EVIDENCE":
+            if ref not in trace_evidence | {_value(source, "d2_receipt_id")}:
+                _impact_error(f"unrelated impact seed: {kind}:{ref}")
+            first_hops.update(source_targets)
+
+    queue = []
+    for target in sorted(first_hops):
+        if target not in affected:
+            affected.add(target)
+            queue.append(target)
+    while queue:
+        current = queue.pop(0)
+        for edge in edges:
+            if _value(edge, "source") == current and _value(edge, "target") not in affected:
+                affected.add(_value(edge, "target"))
+                queue.append(_value(edge, "target"))
+    return frozenset(affected)
+
+
+def validate_source_seed_disposition(trace, impact_seeds, dispositions):
+    source_disposition = dispositions[_value(trace, "source_go")]
+    seed_kinds = {_value(seed, "kind") for seed in impact_seeds}
+    if "CANDIDATE" in seed_kinds and source_disposition not in {"REWORK", "QUARANTINE"}:
+        _impact_error("strictest source disposition required by CANDIDATE seed is REWORK or QUARANTINE")
+    if "CLAIM_OR_OUTPUT" in seed_kinds and "CANDIDATE" not in seed_kinds and source_disposition not in {"REWORK", "QUARANTINE"}:
+        _impact_error("CLAIM_OR_OUTPUT seed cannot retain the same current artifact; source must use REWORK or QUARANTINE")
+
+
 def freeze_cell_manifest(go_contract, required_cells, prior_manifest=None):
     run_id = _value(go_contract, "run_id")
     graph_id = _value(go_contract, "graph_id")

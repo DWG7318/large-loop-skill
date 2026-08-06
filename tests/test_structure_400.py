@@ -79,7 +79,7 @@ def test_first_slice_size_budget_prevents_duplicate_growth():
     validator_lines = len(
         (SCRIPTS / "run_validation.py").read_text(encoding="utf-8").splitlines()
     )
-    assert kernel_lines <= 1_050
+    assert kernel_lines <= 1_210
     assert validator_lines <= 2_148
 
 
@@ -135,9 +135,9 @@ def test_graph_model_and_kernel_budget_stays_bounded_after_d3_migration():
     kernel_lines = len(
         (SCRIPTS / "graph_kernel.py").read_text(encoding="utf-8").splitlines()
     )
-    assert model_lines <= 1_100
-    assert kernel_lines <= 1_050
-    assert model_lines + kernel_lines <= 2_150
+    assert model_lines <= 930
+    assert kernel_lines <= 1_210
+    assert model_lines + kernel_lines <= 2_135
 
 
 def test_active_superpowers_document_surface_stays_bounded():
@@ -204,7 +204,7 @@ def test_progress_reference_removal_proves_net_surface_reduction():
         for path in (ROOT / "tests").glob("*.py")
     )
     assert production_lines <= 9_400
-    assert test_lines <= 11_400
+    assert test_lines <= 11_425
 
 
 def test_formal_validator_consumes_d3_and_closure_facts_from_kernel():
@@ -247,3 +247,29 @@ def test_run_state_compatibility_module_is_retired():
         assert "run_state.py" not in (ROOT / "tests" / name).read_text(
             encoding="utf-8"
         )
+
+
+def test_causal_selection_and_impact_have_one_kernel_owner():
+    path = SCRIPTS / "graph_model.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    imports = _imports(path)
+    go_graph = next(
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "GoGraph"
+    )
+    methods = {node.name for node in go_graph.body if isinstance(node, ast.FunctionDef)}
+    required = {
+        "select_causal_path",
+        "causal_impact_slice",
+        "validate_source_seed_disposition",
+    }
+    superseded = {
+        "_validate_selected_trace",
+        "_reachable",
+        "_reverse_reachable",
+        "_excluded_for_selected_path",
+        "_assert_causal_slice_fully_bound",
+        "_forward_impact_slice",
+        "_assert_source_seed_disposition",
+    }
+    assert required <= imports.get("graph_kernel", set())
+    assert methods.isdisjoint(superseded)
