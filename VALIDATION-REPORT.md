@@ -44,8 +44,8 @@ Environment: Windows, Python 3.14, UTF-8 mode enabled.
 
 Fresh GLK 3.1.0 acceptance evidence:
 
-- complete repository suite executed as four disjoint file shards: `627 passed`
-  (`73 + 109 + 262 + 183`);
+- complete repository suite executed as four disjoint file shards: `628 passed`
+  (`73 + 109 + 263 + 183`);
 - security-relevant optimized-Python matrix executed as three disjoint shards:
   `230 passed` (`44 + 88 + 98`), with only the expected pytest `-O` warning;
 - CP936 with `PYTHONUTF8=0`: repository validator PASS and `54 passed`;
