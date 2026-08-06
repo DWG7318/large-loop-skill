@@ -284,7 +284,7 @@ def test_bootstrap_creates_only_an_incomplete_draft_scaffold(tmp_path):
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     result = subprocess.run(
-        [sys.executable, "glk/scripts/bootstrap_run.py", str(target)],
+        [sys.executable, "tools/bootstrap_run.py", str(target)],
         cwd=ROOT,
         env=env,
         text=True,

@@ -18,13 +18,11 @@ def require(condition, message):
 @pytest.fixture
 def modules():
     sys.path.insert(0, str(SCRIPTS))
-    for name in ("preflight", "run_model", "worker_wake", "run_patrol", "cell_capacity"):
+    names = ("preflight", "run_model", "worker_wake", "run_patrol", "cell_capacity")
+    for name in names:
         sys.modules.pop(name, None)
     try:
-        yield tuple(
-            importlib.import_module(name)
-            for name in ("preflight", "run_model", "worker_wake", "run_patrol", "cell_capacity")
-        )
+        yield tuple(importlib.import_module(name) for name in names)
     finally:
         sys.path.remove(str(SCRIPTS))
 

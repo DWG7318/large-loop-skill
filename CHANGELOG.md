@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased structural maintenance
+
+- Establish one current graph kernel and retire the duplicate `run_state.py` truth
+  source plus the standalone progress executor.
+- Move the legacy mutable graph model to compatibility-test support and move draft
+  bootstrap, repository hashing, repository validation, and release construction
+  implementations to root `tools/`; preserve the public repository-validator CLI as
+  a thin shim.
+- Keep native `cell_capacity.py` until a current shared LCCoding Loop-control
+  contract owns that behavior; no capability is removed merely to meet a line goal.
+- Reduce current `glk/scripts` Python from 9,382 to 7,956 lines and active
+  Superpowers construction documents to 355 lines without weakening six-role,
+  GO-DAG, D0-D3, causal, provenance, or fail-closed validation rules.
+
 ## 3.1.0
 
 ### Worker wake, patrol, progress, and capacity

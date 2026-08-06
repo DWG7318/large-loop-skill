@@ -16,7 +16,7 @@ from glk300_fixtures import sha256_file, write_json
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "glk" / "scripts"
 GRAPH_KERNEL_PATH = SCRIPTS / "graph_kernel.py"
-GRAPH_MODEL_PATH = SCRIPTS / "graph_model.py"
+GRAPH_MODEL_PATH = ROOT / "tests" / "support" / "legacy_graph_model.py"
 
 
 def require(condition, message):

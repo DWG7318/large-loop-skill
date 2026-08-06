@@ -14,7 +14,7 @@ def main():
     parser.add_argument("output")
     args = parser.parse_args()
 
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[1]
     output = Path(args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     write_hash_manifest(root, output)

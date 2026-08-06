@@ -145,7 +145,7 @@ def test_release_builder_emits_clean_integrity_checked_zip(tmp_path):
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     result = subprocess.run(
-        [sys.executable, "glk/scripts/build_release.py", str(output)],
+        [sys.executable, "tools/build_release.py", str(output)],
         cwd=ROOT,
         env=env,
         text=True,
@@ -171,7 +171,7 @@ def test_repository_validator_accepts_release_zip(tmp_path):
     root = copy_repo(tmp_path)
     output = tmp_path / "GLK-3.1.0.zip"
     build = subprocess.run(
-        [sys.executable, str(root / "glk/scripts/build_release.py"), str(output)],
+        [sys.executable, str(root / "tools/build_release.py"), str(output)],
         cwd=root,
         text=True,
         capture_output=True,
@@ -196,7 +196,7 @@ def test_release_builder_writes_hash_manifest_with_lf(tmp_path):
     root = copy_repo(tmp_path)
     output = tmp_path / "GLK-3.1.0.zip"
     result = subprocess.run(
-        [sys.executable, str(root / "glk/scripts/build_release.py"), str(output)],
+        [sys.executable, str(root / "tools/build_release.py"), str(output)],
         cwd=root,
         text=True,
         capture_output=True,
@@ -212,7 +212,7 @@ def test_release_builder_never_archives_its_own_output_from_another_cwd(tmp_path
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     result = subprocess.run(
-        [sys.executable, str(root / "glk/scripts/build_release.py"), str(output)],
+        [sys.executable, str(root / "tools/build_release.py"), str(output)],
         cwd=tmp_path,
         env=env,
         text=True,

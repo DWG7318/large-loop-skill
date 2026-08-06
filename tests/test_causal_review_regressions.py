@@ -7,7 +7,8 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MODEL_PATH = ROOT / "glk" / "scripts" / "graph_model.py"
+SCRIPTS = ROOT / "glk" / "scripts"
+MODEL_PATH = ROOT / "tests" / "support" / "legacy_graph_model.py"
 
 
 def load_model():
@@ -15,11 +16,11 @@ def load_model():
     if spec is None or spec.loader is None:
         pytest.fail("cannot load GLK graph model")
     module = importlib.util.module_from_spec(spec)
-    sys.path.insert(0, str(MODEL_PATH.parent))
+    sys.path.insert(0, str(SCRIPTS))
     try:
         spec.loader.exec_module(module)
     finally:
-        sys.path.remove(str(MODEL_PATH.parent))
+        sys.path.remove(str(SCRIPTS))
     return module
 
 

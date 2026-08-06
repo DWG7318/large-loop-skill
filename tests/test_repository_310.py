@@ -204,7 +204,7 @@ def test_310_example_edges_use_complete_consumption_contracts():
 
 
 def test_repository_and_run_validators_have_distinct_declared_scopes():
-    repository_validator = text(ROOT / "glk" / "scripts" / "validate_glk.py")
+    repository_validator = text(ROOT / "tools" / "validate_glk.py")
     run_cli = text(ROOT / "glk" / "scripts" / "validate_run.py")
     run_validator = text(ROOT / "glk" / "scripts" / "run_validation.py")
     assert 'VALIDATION_SCOPE = "REPOSITORY_DISTRIBUTION"' in repository_validator
@@ -298,6 +298,14 @@ def test_310_has_worker_wake_patrol_progress_contract_and_capacity_surface():
         "glk/references/cell-capacity.md",
     ]:
         assert (ROOT / relative).is_file(), relative
+
+
+def test_ci_uses_current_repository_tool_paths_and_version():
+    workflow = text(ROOT / ".github" / "workflows" / "validate.yml")
+    assert "python glk/scripts/validate_glk.py ." in workflow
+    assert "python tools/build_release.py dist/GLK-3.1.0.zip" in workflow
+    assert "glk/scripts/build_release.py" not in workflow
+    assert "GLK-2.4.0.zip" not in workflow
 
 
 def test_superseded_construction_packets_are_history_only():

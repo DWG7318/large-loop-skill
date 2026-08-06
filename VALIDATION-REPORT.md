@@ -44,15 +44,36 @@ Environment: Windows, Python 3.14, UTF-8 mode enabled.
 
 Fresh GLK 3.1.0 acceptance evidence:
 
-- complete repository suite: `626 passed`;
-- security-relevant optimized-Python matrix: `207 passed`;
-- CP936 with `PYTHONUTF8=0`: repository validator PASS and `52 passed`;
+- complete repository suite executed as four disjoint file shards: `627 passed`
+  (`73 + 109 + 262 + 183`);
+- security-relevant optimized-Python matrix executed as three disjoint shards:
+  `230 passed` (`44 + 88 + 98`), with only the expected pytest `-O` warning;
+- CP936 with `PYTHONUTF8=0`: repository validator PASS and `54 passed`;
 - repository distribution validator: `PASS`, scope `REPOSITORY_DISTRIBUTION`.
+
+Repository-local structural evidence:
+
+- current `glk/scripts` Python: `7,956` lines, down from `9,382` at the start of
+  this continuation;
+- active `docs/superpowers` surface: `355` lines; completed slice plans remain in
+  Git history rather than the active method surface;
+- `run_state.py` and the standalone progress executor are absent;
+- the legacy mutable graph model is test-support-only; repository validation,
+  hashing, release construction, and draft bootstrap implementations live under
+  `tools/`, with the prior repository-validator command retained as a thin shim;
+- native CELL capacity behavior remains current pending a real shared LCCoding
+  control contract;
+- focused post-migration gates: `146 passed`; repository/ZIP/structure gates after
+  final hash refresh: `56 passed`; repository validator PASS.
 
 The release gate runs the complete pytest suite, the R01-R28/positive suite under
 normal and optimized Python, `validate_glk` with scope `REPOSITORY_DISTRIBUTION`,
 real `validate_run` CLI cases with scope `RUN_PACKAGE`, CP936/UTF-8-off regression,
 schema/template validation, hash verification, and acceptance ZIP integrity.
+
+This is verified unreleased maintenance on the 3.1 code line, not a GLK 4.0 release
+claim. Final 4.0 shared-control, validator-decomposition, distribution-size, and
+release-identity gates remain open and no old tag or Release is overwritten.
 
 The GitHub workflow repeats validation and all tests on Windows and Ubuntu using
 Python 3.12. Repository text is pinned to LF so byte-level integrity hashes remain

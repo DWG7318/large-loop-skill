@@ -7,16 +7,19 @@ import pytest
 
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "glk" / "scripts"
+SUPPORT = Path(__file__).resolve().parent / "support"
 
 
 @pytest.fixture
 def modules():
     sys.path.insert(0, str(SCRIPTS))
-    for name in ("cell_capacity", "graph_model"):
+    sys.path.insert(0, str(SUPPORT))
+    for name in ("cell_capacity", "legacy_graph_model"):
         sys.modules.pop(name, None)
     try:
-        yield importlib.import_module("cell_capacity"), importlib.import_module("graph_model")
+        yield importlib.import_module("cell_capacity"), importlib.import_module("legacy_graph_model")
     finally:
+        sys.path.remove(str(SUPPORT))
         sys.path.remove(str(SCRIPTS))
 
 

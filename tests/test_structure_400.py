@@ -4,6 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "glk" / "scripts"
+SUPPORT = ROOT / "tests" / "support"
 GRAPH_NAMES = {
     "FrozenGraphTopology",
     "GraphStateProjection",
@@ -84,7 +85,7 @@ def test_first_slice_size_budget_prevents_duplicate_growth():
 
 
 def test_repository_distribution_requires_graph_kernel():
-    validator_source = (SCRIPTS / "validate_glk.py").read_text(encoding="utf-8")
+    validator_source = (ROOT / "tools" / "validate_glk.py").read_text(encoding="utf-8")
     repository_test_source = (
         ROOT / "tests" / "test_repository_310.py"
     ).read_text(encoding="utf-8")
@@ -105,7 +106,7 @@ def test_formal_projection_has_no_private_duplicate_selector():
 
 
 def test_compatibility_model_uses_kernel_selector_without_private_copy():
-    path = SCRIPTS / "graph_model.py"
+    path = SUPPORT / "legacy_graph_model.py"
     tree = ast.parse(path.read_text(encoding="utf-8"))
     imports = _imports(path)
     go_graph = next(
@@ -117,7 +118,7 @@ def test_compatibility_model_uses_kernel_selector_without_private_copy():
 
 
 def test_compatibility_model_uses_kernel_acyclicity_without_private_copy():
-    path = SCRIPTS / "graph_model.py"
+    path = SUPPORT / "legacy_graph_model.py"
     tree = ast.parse(path.read_text(encoding="utf-8"))
     imports = _imports(path)
     go_graph = next(
@@ -130,7 +131,7 @@ def test_compatibility_model_uses_kernel_acyclicity_without_private_copy():
 
 def test_graph_model_and_kernel_budget_stays_bounded_after_d3_migration():
     model_lines = len(
-        (SCRIPTS / "graph_model.py").read_text(encoding="utf-8").splitlines()
+        (SUPPORT / "legacy_graph_model.py").read_text(encoding="utf-8").splitlines()
     )
     kernel_lines = len(
         (SCRIPTS / "graph_kernel.py").read_text(encoding="utf-8").splitlines()
@@ -154,7 +155,7 @@ def test_progress_reference_executor_is_absent_but_formal_contract_remains():
     assert not (ROOT / "tests" / "test_progress_reporting_310.py").exists()
 
     required_literal = '"glk/scripts/progress_reporting.py"'
-    validator_source = (SCRIPTS / "validate_glk.py").read_text(encoding="utf-8")
+    validator_source = (ROOT / "tools" / "validate_glk.py").read_text(encoding="utf-8")
     repository_test_source = (
         ROOT / "tests" / "test_repository_310.py"
     ).read_text(encoding="utf-8")
@@ -194,17 +195,17 @@ def test_progress_reference_executor_is_absent_but_formal_contract_remains():
     } <= regression_names
 
 
-def test_progress_reference_removal_proves_net_surface_reduction():
+def test_current_python_surface_reduces_production_without_hiding_test_support():
     production_lines = sum(
         len(path.read_text(encoding="utf-8").splitlines())
         for path in SCRIPTS.glob("*.py")
     )
     test_lines = sum(
         len(path.read_text(encoding="utf-8").splitlines())
-        for path in (ROOT / "tests").glob("*.py")
+        for path in (ROOT / "tests").rglob("*.py")
     )
-    assert production_lines <= 9_400
-    assert test_lines <= 11_450
+    assert production_lines < 8_000
+    assert production_lines + test_lines <= 20_700
 
 
 def test_formal_validator_consumes_d3_and_closure_facts_from_kernel():
@@ -233,7 +234,7 @@ def test_current_production_scripts_do_not_import_run_state():
 def test_run_state_compatibility_module_is_retired():
     assert not (SCRIPTS / "run_state.py").exists()
     required_literal = '"glk/scripts/run_state.py"'
-    assert required_literal not in (SCRIPTS / "validate_glk.py").read_text(
+    assert required_literal not in (ROOT / "tools" / "validate_glk.py").read_text(
         encoding="utf-8"
     )
     assert required_literal not in (
@@ -250,7 +251,7 @@ def test_run_state_compatibility_module_is_retired():
 
 
 def test_causal_selection_and_impact_have_one_kernel_owner():
-    path = SCRIPTS / "graph_model.py"
+    path = SUPPORT / "legacy_graph_model.py"
     tree = ast.parse(path.read_text(encoding="utf-8"))
     imports = _imports(path)
     go_graph = next(
@@ -275,7 +276,7 @@ def test_causal_selection_and_impact_have_one_kernel_owner():
 
 
 def test_causal_amendment_content_is_planned_only_by_kernel():
-    path = SCRIPTS / "graph_model.py"
+    path = SUPPORT / "legacy_graph_model.py"
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source)
     imports = _imports(path)
@@ -304,7 +305,6 @@ def test_causal_amendment_content_is_planned_only_by_kernel():
 def test_non_runtime_engines_and_tooling_are_outside_current_script_surface():
     moved = {
         "graph_model.py": ROOT / "tests" / "support" / "legacy_graph_model.py",
-        "cell_capacity.py": ROOT / "tests" / "support" / "cell_capacity_reference.py",
         "bootstrap_run.py": ROOT / "tools" / "bootstrap_run.py",
         "build_release.py": ROOT / "tools" / "build_release.py",
         "repository.py": ROOT / "tools" / "repository.py",
@@ -312,6 +312,12 @@ def test_non_runtime_engines_and_tooling_are_outside_current_script_surface():
     for old_name, new_path in moved.items():
         assert not (SCRIPTS / old_name).exists(), old_name
         assert new_path.is_file(), new_path
+
+    validator_impl = ROOT / "tools" / "validate_glk.py"
+    validator_shim = SCRIPTS / "validate_glk.py"
+    assert validator_impl.is_file()
+    assert len(validator_shim.read_text(encoding="utf-8").splitlines()) <= 10
+    assert "runpy.run_path" in validator_shim.read_text(encoding="utf-8")
 
     production_lines = sum(
         len(path.read_text(encoding="utf-8").splitlines())
