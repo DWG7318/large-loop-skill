@@ -344,82 +344,50 @@ def recompute_graph_topology(baseline, fallback_go_ids=()):
     return dataclasses.replace(provisional, graph_sha256=graph_sha256)
 
 
-def maximum_compatible_ids(
-    candidate_ids,
-    conflict_keys_by_id,
-    resource_claims_by_id=None,
-    resource_capacity=None,
-    occupied_conflict_keys=(),
-    occupied_resources=None,
-):
+def maximum_compatible_ids(candidate_ids, conflict_keys_by_id, resource_claims_by_id=None,
+                           resource_capacity=None, occupied_conflict_keys=(), occupied_resources=None):
     candidates = tuple(sorted(set(candidate_ids)))
     claims_by_id = resource_claims_by_id or {}
     capacities = resource_capacity or {}
     best = ()
-
-    def resources_fit(usage, claims):
-        return all(
-            usage.get(resource, 0) + amount <= capacities.get(resource, 0)
-            for resource, amount in claims.items()
-            if resource in capacities
-        )
 
     def search(index, chosen, used_keys, used_resources):
         nonlocal best
         if len(chosen) + len(candidates) - index < len(best):
             return
         if index == len(candidates):
-            chosen_ids = tuple(chosen)
-            if len(chosen_ids) > len(best) or (
-                len(chosen_ids) == len(best) and chosen_ids < best
-            ):
-                best = chosen_ids
+            if len(chosen) > len(best) or (len(chosen) == len(best) and chosen < best):
+                best = chosen
             return
         candidate_id = candidates[index]
         keys = set(conflict_keys_by_id.get(candidate_id, ()))
         claims = claims_by_id.get(candidate_id, {})
-        if not (keys & used_keys) and resources_fit(used_resources, claims):
+        resources_fit = all(
+            used_resources.get(resource, 0) + amount <= capacities.get(resource, 0)
+            for resource, amount in claims.items() if resource in capacities
+        )
+        if not (keys & used_keys) and resources_fit:
             next_resources = dict(used_resources)
             for resource, amount in claims.items():
                 next_resources[resource] = next_resources.get(resource, 0) + amount
-            search(
-                index + 1,
-                chosen + (candidate_id,),
-                used_keys | keys,
-                next_resources,
-            )
+            search(index + 1, chosen + (candidate_id,), used_keys | keys, next_resources)
         search(index + 1, chosen, used_keys, used_resources)
 
     search(0, (), set(occupied_conflict_keys), dict(occupied_resources or {}))
     return best
 
 
-def _maximum_compatible_go_ids(nodes):
-    return maximum_compatible_ids(
-        (node.go_id for node in nodes),
-        {node.go_id: node.conflict_keys for node in nodes},
-    )
-
-
 def project_graph_state(topology, verified_go_ids=(), applied_event_ids=()):
     if not isinstance(topology, FrozenGraphTopology):
-        raise RunStateError(
-            "GRAPH_TOPOLOGY_INVALID", "FrozenGraphTopology required"
-        )
-    verified = _sorted_texts(
-        tuple(verified_go_ids), "GRAPH_VERIFIED_SET_INVALID", "verified_go_ids"
-    )
+        raise RunStateError("GRAPH_TOPOLOGY_INVALID", "FrozenGraphTopology required")
+    verified = _sorted_texts(tuple(verified_go_ids), "GRAPH_VERIFIED_SET_INVALID", "verified_go_ids")
     node_by_id = {node.go_id: node for node in topology.nodes}
     if not set(verified).issubset(node_by_id):
         raise RunStateError("GRAPH_VERIFIED_SET_INVALID", "unknown GO")
-    eligible = tuple(
-        node
-        for node in topology.nodes
-        if node.go_id not in verified
-        and set(node.predecessors).issubset(verified)
-        and not node.constraints
-    )
-    active = _maximum_compatible_go_ids(eligible)
+    eligible = tuple(node for node in topology.nodes if node.go_id not in verified
+                     and set(node.predecessors).issubset(verified) and not node.constraints)
+    active = maximum_compatible_ids((node.go_id for node in eligible),
+                                    {node.go_id: node.conflict_keys for node in eligible})
     waiting = tuple(sorted(set(node_by_id) - set(verified) - set(active)))
     return GraphStateProjection(
         graph_sha256=topology.graph_sha256,

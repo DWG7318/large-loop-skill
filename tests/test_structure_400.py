@@ -35,7 +35,7 @@ CANONICAL_GRAPH_DEFINITIONS = {
     "GraphStateProjection",
     "graph_topology_payload",
     "recompute_graph_topology",
-    "_maximum_compatible_go_ids",
+    "maximum_compatible_ids",
     "project_graph_state",
 }
 
@@ -76,3 +76,14 @@ def test_repository_distribution_requires_graph_kernel():
     required_literal = '"glk/scripts/graph_kernel.py"'
     assert required_literal in validator_source
     assert required_literal in repository_test_source
+
+
+def test_formal_projection_has_no_private_duplicate_selector():
+    tree = ast.parse((SCRIPTS / "graph_kernel.py").read_text(encoding="utf-8"))
+    definitions = {
+        node.name
+        for node in tree.body
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef))
+    }
+    assert "maximum_compatible_ids" in definitions
+    assert "_maximum_compatible_go_ids" not in definitions
