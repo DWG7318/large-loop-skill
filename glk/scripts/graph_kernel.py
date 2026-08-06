@@ -124,6 +124,27 @@ class RunClosureProjection:
     lccoding_security_accepted: bool
 
 
+@dataclass(frozen=True)
+class CausalImpactFact:
+    go_id: str
+    disposition: str
+    invalidated_candidate_refs: Tuple[str, ...] = ()
+    invalidated_receipt_refs: Tuple[str, ...] = ()
+    evidence_refs: Tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class CausalAmendmentPlan:
+    incident_id: str
+    from_graph_version: int
+    to_graph_version: int
+    items: Tuple[CausalImpactFact, ...]
+
+    @property
+    def affected_gos(self):
+        return tuple(item.go_id for item in self.items if item.disposition != "UNAFFECTED")
+
+
 @dataclass(frozen=True, order=True)
 class RequiredCell:
     cell_id: str
@@ -901,6 +922,92 @@ def validate_source_seed_disposition(trace, impact_seeds, dispositions):
         _impact_error("strictest source disposition required by CANDIDATE seed is REWORK or QUARANTINE")
     if "CLAIM_OR_OUTPUT" in seed_kinds and "CANDIDATE" not in seed_kinds and source_disposition not in {"REWORK", "QUARANTINE"}:
         _impact_error("CLAIM_OR_OUTPUT seed cannot retain the same current artifact; source must use REWORK or QUARANTINE")
+
+
+def plan_causal_amendment(
+    gos, edges, current_graph_version, trace, impact_seeds, dispositions, new_graph_version,
+    impact_evidence, *, impact_seeds_typed=True, confirmed_status="CONFIRMED", suspected_status="SUSPECTED",
+):
+    """Validate and derive a causal amendment without mutating graph state."""
+    current_version = _value(trace, "graph_version")
+    if _value(trace, "confirmation_status") != confirmed_status:
+        _impact_error("causal amendment requires a CONFIRMED trace")
+    if current_version != current_graph_version:
+        _impact_error("causal trace does not bind the current graph version")
+    if new_graph_version <= current_version:
+        _impact_error("causal amendment must advance the graph version")
+    if not impact_seeds:
+        _impact_error("causal amendment requires impact seeds")
+    for symptom_go in tuple(_value(trace, "symptom_gos") or ()):
+        if symptom_go not in gos:
+            _impact_error(f"unknown symptom GO: {symptom_go}")
+    if not impact_seeds_typed:
+        _impact_error("causal amendment requires typed impact seeds")
+
+    trace_path = tuple(_value(trace, "causal_path") or ())
+    selections = []
+    for step in trace_path:
+        source = _value(step, "source")
+        target = _value(step, "target")
+        refs = tuple(_value(step, "incident_evidence_refs") or ())
+        status = _value(step, "confirmation_status")
+        if not source or not target or source == target or not refs or any(not ref for ref in refs):
+            _impact_error("selected path evidence has an invalid shape")
+        if status not in {confirmed_status, suspected_status}:
+            _impact_error("selected path evidence has an invalid shape")
+        selections.append({"source": source, "target": target,
+                           "incident_evidence_refs": refs, "confirmation_status": status})
+    try:
+        expected_facts, expected_excluded = select_causal_path(
+            gos, edges, observed_at_go=_value(trace, "observed_at_go"),
+            source_go=_value(trace, "source_go"), source_candidate_ref=_value(trace, "source_candidate_ref"),
+            evidence_refs=tuple(_value(trace, "evidence_refs") or ()),
+            symptom_gos=tuple(_value(trace, "symptom_gos") or ()), selected_path=tuple(selections),
+            confirmation_status=_value(trace, "confirmation_status"))
+    except GraphKernelError as error:
+        if "unknown symptom GO" in error.detail:
+            raise
+        _impact_error(f"selected path evidence is no longer valid: {error.detail}")
+    trace_facts = tuple((_value(step, "edge"), tuple(_value(step, "incident_evidence_refs") or ()),
+                         _value(step, "confirmation_status")) for step in trace_path)
+    if (trace_facts != expected_facts or tuple(_value(trace, "excluded_edges") or ()) != expected_excluded
+            or _value(trace, "stopping_reason") != "confirmed source reached"):
+        _impact_error("selected path evidence is incomplete or stale")
+
+    affected = set(causal_impact_slice(gos, edges, trace, impact_seeds))
+    if set(dispositions) != affected:
+        _impact_error("impact dispositions must cover exactly the affected GO slice")
+    for go_id, disposition in dispositions.items():
+        if go_id not in gos:
+            _impact_error(f"unknown GO: {go_id}")
+        if disposition not in {"REVERIFY", "REWORK", "QUARANTINE"}:
+            _impact_error("affected GO requires a non-UNAFFECTED disposition")
+    validate_source_seed_disposition(trace, impact_seeds, dispositions)
+    if (impact_evidence is None or set(impact_evidence) != affected
+            or any(not refs or any(not ref for ref in refs) for refs in impact_evidence.values())):
+        _impact_error("impact evidence must cover every affected GO")
+
+    items = []
+    for go_id in sorted(gos):
+        go = gos[go_id]
+        if go_id not in affected:
+            items.append(CausalImpactFact(go_id=go_id, disposition="UNAFFECTED"))
+            continue
+        disposition = dispositions[go_id]
+        if disposition == "REVERIFY":
+            if not _value(go, "candidate_id") or not _value(go, "d1_receipt_id"):
+                _impact_error("REVERIFY requires a current candidate and D1 receipt")
+            candidates = ()
+            receipts = tuple(value for value in (_value(go, "d2_receipt_id"),) if value)
+        else:
+            candidates = tuple(value for value in (_value(go, "candidate_id"),) if value)
+            receipts = tuple(value for value in (
+                _value(go, "d0_receipt_id"), _value(go, "d1_receipt_id"), _value(go, "d2_receipt_id"))
+                if value)
+        items.append(CausalImpactFact(
+            go_id, disposition, candidates, receipts, tuple(impact_evidence[go_id])))
+    return CausalAmendmentPlan(
+        _value(trace, "incident_id"), current_version, new_graph_version, tuple(items))
 
 
 def freeze_cell_manifest(go_contract, required_cells, prior_manifest=None):

@@ -79,7 +79,7 @@ def test_first_slice_size_budget_prevents_duplicate_growth():
     validator_lines = len(
         (SCRIPTS / "run_validation.py").read_text(encoding="utf-8").splitlines()
     )
-    assert kernel_lines <= 1_210
+    assert kernel_lines <= 1_320
     assert validator_lines <= 2_148
 
 
@@ -135,8 +135,8 @@ def test_graph_model_and_kernel_budget_stays_bounded_after_d3_migration():
     kernel_lines = len(
         (SCRIPTS / "graph_kernel.py").read_text(encoding="utf-8").splitlines()
     )
-    assert model_lines <= 930
-    assert kernel_lines <= 1_210
+    assert model_lines <= 835
+    assert kernel_lines <= 1_320
     assert model_lines + kernel_lines <= 2_135
 
 
@@ -204,7 +204,7 @@ def test_progress_reference_removal_proves_net_surface_reduction():
         for path in (ROOT / "tests").glob("*.py")
     )
     assert production_lines <= 9_400
-    assert test_lines <= 11_425
+    assert test_lines <= 11_450
 
 
 def test_formal_validator_consumes_d3_and_closure_facts_from_kernel():
@@ -257,11 +257,7 @@ def test_causal_selection_and_impact_have_one_kernel_owner():
         node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "GoGraph"
     )
     methods = {node.name for node in go_graph.body if isinstance(node, ast.FunctionDef)}
-    required = {
-        "select_causal_path",
-        "causal_impact_slice",
-        "validate_source_seed_disposition",
-    }
+    required = {"select_causal_path", "plan_causal_amendment"}
     superseded = {
         "_validate_selected_trace",
         "_reachable",
@@ -272,4 +268,34 @@ def test_causal_selection_and_impact_have_one_kernel_owner():
         "_assert_source_seed_disposition",
     }
     assert required <= imports.get("graph_kernel", set())
+    assert {"causal_impact_slice", "validate_source_seed_disposition"}.isdisjoint(
+        imports.get("graph_kernel", set())
+    )
     assert methods.isdisjoint(superseded)
+
+
+def test_causal_amendment_content_is_planned_only_by_kernel():
+    path = SCRIPTS / "graph_model.py"
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    imports = _imports(path)
+    go_graph = next(
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "GoGraph"
+    )
+    method = next(
+        node for node in go_graph.body
+        if isinstance(node, ast.FunctionDef) and node.name == "apply_causal_amendment"
+    )
+    names = {node.id for node in ast.walk(method) if isinstance(node, ast.Name)}
+    method_source = ast.get_source_segment(source, method)
+    assert "plan_causal_amendment" in imports.get("graph_kernel", set())
+    assert "plan_causal_amendment" in names
+    assert names.isdisjoint(
+        {"select_causal_path", "causal_impact_slice", "validate_source_seed_disposition"}
+    )
+    for message in (
+        "impact dispositions must cover exactly the affected GO slice",
+        "impact evidence must cover every affected GO",
+        "REVERIFY requires a current candidate and D1 receipt",
+    ):
+        assert message not in method_source

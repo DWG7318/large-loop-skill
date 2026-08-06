@@ -4,10 +4,9 @@ from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple
 from graph_kernel import (
     GraphKernelError,
     assert_acyclic,
-    causal_impact_slice,
     maximum_compatible_ids,
+    plan_causal_amendment,
     select_causal_path,
-    validate_source_seed_disposition,
 )
 
 
@@ -421,128 +420,22 @@ class GoGraph:
         new_graph_version: int,
         impact_evidence: Optional[Mapping[str, Tuple[str, ...]]] = None,
     ):
-        if trace.confirmation_status != CONFIRMED:
-            raise GraphError("causal amendment requires a CONFIRMED trace")
-        if trace.graph_version != self.graph_version:
-            raise GraphError("causal trace does not bind the current graph version")
-        if new_graph_version <= self.graph_version:
-            raise GraphError("causal amendment must advance the graph version")
-        if not impact_seeds:
-            raise GraphError("causal amendment requires impact seeds")
-        for symptom_go in trace.symptom_gos:
-            if symptom_go not in self.gos:
-                raise GraphError(f"unknown symptom GO: {symptom_go}")
-        if any(not isinstance(seed, ImpactSeed) for seed in impact_seeds):
-            raise GraphError("causal amendment requires typed impact seeds")
-        try:
-            reconstructed = tuple(
-                CausalEdgeSelection(
-                    source=step.source,
-                    target=step.target,
-                    incident_evidence_refs=step.incident_evidence_refs,
-                    confirmation_status=step.confirmation_status,
-                )
-                for step in trace.causal_path
-            )
-        except (AttributeError, TypeError) as error:
-            raise GraphError("selected path evidence has an invalid shape") from error
-        try:
-            expected_facts, expected_excluded = _kernel_fact(
-                select_causal_path,
-                self.gos,
-                self.edges,
-                observed_at_go=trace.observed_at_go,
-                source_go=trace.source_go,
-                source_candidate_ref=trace.source_candidate_ref,
-                evidence_refs=trace.evidence_refs,
-                symptom_gos=trace.symptom_gos,
-                selected_path=reconstructed,
-                confirmation_status=trace.confirmation_status,
-            )
-            expected_path = _causal_steps(expected_facts)
-        except GraphError as error:
-            if "unknown symptom GO" in str(error):
-                raise
-            raise GraphError(f"selected path evidence is no longer valid: {error}") from error
-        if (
-            trace.causal_path != expected_path
-            or trace.excluded_edges != expected_excluded
-            or trace.stopping_reason != "confirmed source reached"
-        ):
-            raise GraphError("selected path evidence is incomplete or stale")
-
-        affected = set(
-            _kernel_fact(
-                causal_impact_slice,
-                self.gos,
-                self.edges,
-                trace,
-                tuple(impact_seeds),
-            )
+        plan = _kernel_fact(
+            plan_causal_amendment, self.gos, self.edges, self.graph_version, trace,
+            tuple(impact_seeds), dispositions, new_graph_version, impact_evidence,
+            impact_seeds_typed=all(isinstance(seed, ImpactSeed) for seed in impact_seeds),
         )
-
-        provided = set(dispositions)
-        if provided != affected:
-            raise GraphError(
-                "impact dispositions must cover exactly the affected GO slice"
-            )
-        for go_id, disposition in dispositions.items():
-            self._go(go_id)
-            if disposition not in IMPACT_DISPOSITIONS - {UNAFFECTED}:
-                raise GraphError("affected GO requires a non-UNAFFECTED disposition")
-        _kernel_fact(
-            validate_source_seed_disposition,
-            trace,
-            tuple(impact_seeds),
-            dispositions,
-        )
-        if (
-            impact_evidence is None
-            or set(impact_evidence) != affected
-            or any(
-                not references or any(not reference for reference in references)
-                for references in impact_evidence.values()
-            )
-        ):
-            raise GraphError("impact evidence must cover every affected GO")
-
-        items = []
-        for go_id in sorted(self.gos):
-            go = self.gos[go_id]
-            if go_id not in affected:
-                items.append(ImpactItem(go_id=go_id, disposition=UNAFFECTED))
-                continue
-            disposition = dispositions[go_id]
-            if disposition == REVERIFY:
-                if not go.candidate_id or not go.d1_receipt_id:
-                    raise GraphError("REVERIFY requires a current candidate and D1 receipt")
-                candidates = ()
-                receipts = tuple(value for value in [go.d2_receipt_id] if value)
-            else:
-                candidates = tuple(value for value in [go.candidate_id] if value)
-                receipts = tuple(
-                    value
-                    for value in [go.d0_receipt_id, go.d1_receipt_id, go.d2_receipt_id]
-                    if value
-                )
-            items.append(
-                ImpactItem(
-                    go_id=go_id,
-                    disposition=disposition,
-                    invalidated_candidate_refs=candidates,
-                    invalidated_receipt_refs=receipts,
-                    evidence_refs=tuple(impact_evidence[go_id]),
-                )
-            )
-
         projection = ImpactProjection(
-            incident_id=trace.incident_id,
-            from_graph_version=self.graph_version,
-            to_graph_version=new_graph_version,
+            incident_id=plan.incident_id,
+            from_graph_version=plan.from_graph_version,
+            to_graph_version=plan.to_graph_version,
             impact_seeds=tuple(impact_seeds),
-            items=tuple(items),
+            items=tuple(ImpactItem(
+                item.go_id, item.disposition, item.invalidated_candidate_refs,
+                item.invalidated_receipt_refs, item.evidence_refs,
+            ) for item in plan.items),
         )
-        for go_id in affected:
+        for go_id in plan.affected_gos:
             go = self.gos[go_id]
             disposition = dispositions[go_id]
             go.state = "FROZEN"
