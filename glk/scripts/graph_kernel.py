@@ -409,3 +409,57 @@ def recompute_graph_topology(baseline, fallback_go_ids=()):
             "declared graph hash differs from recomputation",
         )
     return dataclasses.replace(provisional, graph_sha256=graph_sha256)
+
+
+def _maximum_compatible_go_ids(nodes):
+    candidates = tuple(sorted(nodes, key=lambda node: node.go_id))
+    best = ()
+
+    def search(index, chosen, used_keys):
+        nonlocal best
+        if len(chosen) + len(candidates) - index < len(best):
+            return
+        if index == len(candidates):
+            chosen_ids = tuple(node.go_id for node in chosen)
+            if len(chosen_ids) > len(best) or (
+                len(chosen_ids) == len(best) and chosen_ids < best
+            ):
+                best = chosen_ids
+            return
+        node = candidates[index]
+        keys = set(node.conflict_keys)
+        if not (keys & used_keys):
+            search(index + 1, chosen + (node,), used_keys | keys)
+        search(index + 1, chosen, used_keys)
+
+    search(0, (), set())
+    return best
+
+
+def project_graph_state(topology, verified_go_ids=(), applied_event_ids=()):
+    if not isinstance(topology, FrozenGraphTopology):
+        raise RunStateError(
+            "GRAPH_TOPOLOGY_INVALID", "FrozenGraphTopology required"
+        )
+    verified = _sorted_texts(
+        tuple(verified_go_ids), "GRAPH_VERIFIED_SET_INVALID", "verified_go_ids"
+    )
+    node_by_id = {node.go_id: node for node in topology.nodes}
+    if not set(verified).issubset(node_by_id):
+        raise RunStateError("GRAPH_VERIFIED_SET_INVALID", "unknown GO")
+    eligible = tuple(
+        node
+        for node in topology.nodes
+        if node.go_id not in verified
+        and set(node.predecessors).issubset(verified)
+        and not node.constraints
+    )
+    active = _maximum_compatible_go_ids(eligible)
+    waiting = tuple(sorted(set(node_by_id) - set(verified) - set(active)))
+    return GraphStateProjection(
+        graph_sha256=topology.graph_sha256,
+        verified_go_ids=verified,
+        waiting_go_ids=waiting,
+        active_go_ids=active,
+        applied_event_ids=tuple(applied_event_ids),
+    )

@@ -48,3 +48,43 @@ def test_recompute_single_go_topology_from_frozen_identity():
         kernel.graph_topology_payload(topology)
     )
     assert topology.explicit is False
+
+
+def _node(kernel, go_id, predecessors=(), conflict_keys=()):
+    return kernel.GraphNode(
+        go_id=go_id,
+        predecessors=predecessors,
+        required=True,
+        conflict_keys=conflict_keys,
+        constraints=(),
+        go_claim_sha256="a" * 64,
+        acceptance_contract_sha256="b" * 64,
+    )
+
+
+def test_project_graph_state_selects_deterministic_maximal_safe_set(kernel):
+    topology = kernel.FrozenGraphTopology(
+        run_id="RUN-400",
+        graph_id="GRAPH-400",
+        graph_version=1,
+        baseline_candidate_id="GRAPH-CANDIDATE-400",
+        nodes=(
+            _node(kernel, "GO-A", conflict_keys=("PORT-1",)),
+            _node(kernel, "GO-B", conflict_keys=("PORT-1",)),
+            _node(kernel, "GO-C", conflict_keys=("PORT-2",)),
+        ),
+        edges=(),
+        entry_go_ids=("GO-A", "GO-B", "GO-C"),
+        terminal_go_ids=("GO-A", "GO-B", "GO-C"),
+        required_go_ids=("GO-A", "GO-B", "GO-C"),
+        run_feature_coverage=("CLAIM-400",),
+        graph_sha256="c" * 64,
+        explicit=True,
+    )
+
+    projection = kernel.project_graph_state(topology)
+
+    assert projection.active_go_ids == ("GO-A", "GO-C")
+    assert projection.waiting_go_ids == ("GO-B",)
+    assert projection.verified_go_ids == ()
+    assert not hasattr(projection, "ready_go_ids")
