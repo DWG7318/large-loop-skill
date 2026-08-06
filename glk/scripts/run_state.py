@@ -11,6 +11,10 @@ from graph_kernel import (
     GraphKernelError,
     GraphNode,
     GraphStateProjection,
+    _required_hash,
+    _required_text,
+    _sorted_texts,
+    _value,
     graph_topology_payload,
     project_graph_state,
     recompute_graph_topology,
@@ -176,22 +180,6 @@ class RunClosureProjection:
     lccoding_security_accepted: bool
 
 
-def _required_text(value, code: str, label: str):
-    if not isinstance(value, str) or not value:
-        raise RunStateError(code, f"{label} is required")
-
-
-def _required_hash(value, code: str, label: str):
-    if not isinstance(value, str) or len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
-        raise RunStateError(code, f"{label} must be a lowercase sha256")
-
-
-def _value(subject, field):
-    if isinstance(subject, Mapping):
-        return subject.get(field)
-    return getattr(subject, field, None)
-
-
 def _tuple_text(value, code: str, label: str):
     if not isinstance(value, (list, tuple)) or not value or any(not isinstance(item, str) or not item for item in value):
         raise RunStateError(code, f"{label} must be non-empty")
@@ -278,17 +266,6 @@ def go_candidate_payload(manifest, selected_cells):
 
 def go_candidate_sha256_from_mapping(manifest, selected_cells):
     return canonical_sha256(go_candidate_payload(manifest, selected_cells))
-
-
-def _sorted_texts(value, code, label, *, allow_empty=True):
-    if not isinstance(value, (list, tuple)):
-        raise RunStateError(code, f"{label} must be an array")
-    items = tuple(sorted(value))
-    if (not allow_empty and not items) or any(not isinstance(item, str) or not item for item in items):
-        raise RunStateError(code, f"{label} contains an invalid identity")
-    if len(set(items)) != len(items):
-        raise RunStateError(code, f"{label} contains duplicates")
-    return items
 
 
 def derive_d3_eligibility(

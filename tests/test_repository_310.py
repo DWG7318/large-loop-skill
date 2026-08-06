@@ -288,6 +288,7 @@ def test_glk_contains_no_runtime_or_credential_subsystem_implementation():
 
 def test_310_has_worker_wake_patrol_progress_and_capacity_surface():
     for relative in [
+        "glk/scripts/graph_kernel.py",
         "glk/scripts/worker_wake.py",
         "glk/scripts/run_patrol.py",
         "glk/scripts/progress_reporting.py",

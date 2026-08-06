@@ -42,6 +42,7 @@ REQUIRED = [
     "CHANGELOG.md",
     "VALIDATION-REPORT.md",
     "glk/schemas/glk.schema.json",
+    "glk/scripts/graph_kernel.py",
     "glk/scripts/graph_model.py",
     "glk/scripts/artifact_model.py",
     "glk/scripts/run_model.py",

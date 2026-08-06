@@ -6,9 +6,7 @@ from typing import Tuple
 from artifact_model import canonical_sha256
 
 
-GRAPH_CONSTRAINT_TYPES = frozenset(
-    {"WRITE_CONFLICT", "RESOURCE", "ISOLATION", "SAFETY"}
-)
+GRAPH_CONSTRAINT_TYPES = frozenset({"WRITE_CONFLICT", "RESOURCE", "ISOLATION", "SAFETY"})
 
 
 class GraphKernelError(ValueError):
@@ -79,11 +77,7 @@ def _required_text(value, code: str, label: str):
 
 
 def _required_hash(value, code: str, label: str):
-    if (
-        not isinstance(value, str)
-        or len(value) != 64
-        or any(character not in "0123456789abcdef" for character in value)
-    ):
+    if not isinstance(value, str) or len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
         raise RunStateError(code, f"{label} must be a lowercase sha256")
 
 
@@ -97,9 +91,7 @@ def _sorted_texts(value, code, label, *, allow_empty=True):
     if not isinstance(value, (list, tuple)):
         raise RunStateError(code, f"{label} must be an array")
     items = tuple(sorted(value))
-    if (not allow_empty and not items) or any(
-        not isinstance(item, str) or not item for item in items
-    ):
+    if (not allow_empty and not items) or any(not isinstance(item, str) or not item for item in items):
         raise RunStateError(code, f"{label} contains an invalid identity")
     if len(set(items)) != len(items):
         raise RunStateError(code, f"{label} contains duplicates")
@@ -112,12 +104,7 @@ def _graph_constraint(value):
     kind = value.get("type")
     if kind not in GRAPH_CONSTRAINT_TYPES:
         raise RunStateError("GRAPH_CONSTRAINT_INVALID", str(kind))
-    references = _sorted_texts(
-        value.get("references"),
-        "GRAPH_CONSTRAINT_INVALID",
-        "references",
-        allow_empty=False,
-    )
+    references = _sorted_texts(value.get("references"), "GRAPH_CONSTRAINT_INVALID", "references", allow_empty=False)
     return GraphConstraint(kind=kind, references=references)
 
 
@@ -126,32 +113,20 @@ def _graph_node(value):
         raise RunStateError("GRAPH_NODE_INVALID", "mapping required")
     go_id = value.get("go_id")
     _required_text(go_id, "GRAPH_NODE_INVALID", "go_id")
-    predecessors = _sorted_texts(
-        value.get("predecessors"),
-        "GRAPH_NODE_INVALID",
-        f"{go_id}.predecessors",
-    )
-    conflict_keys = _sorted_texts(
-        value.get("conflict_keys"),
-        "GRAPH_NODE_INVALID",
-        f"{go_id}.conflict_keys",
-    )
+    predecessors = _sorted_texts(value.get("predecessors"), "GRAPH_NODE_INVALID", f"{go_id}.predecessors")
+    conflict_keys = _sorted_texts(value.get("conflict_keys"), "GRAPH_NODE_INVALID", f"{go_id}.conflict_keys")
     constraints_raw = value.get("constraints")
     if not isinstance(constraints_raw, (list, tuple)):
         raise RunStateError("GRAPH_CONSTRAINT_INVALID", f"{go_id}.constraints")
     constraints = tuple(sorted((_graph_constraint(item) for item in constraints_raw)))
     if len(set(constraints)) != len(constraints):
-        raise RunStateError(
-            "GRAPH_CONSTRAINT_INVALID", f"{go_id}.constraints duplicate"
-        )
+        raise RunStateError("GRAPH_CONSTRAINT_INVALID", f"{go_id}.constraints duplicate")
     required = value.get("required")
     if not isinstance(required, bool):
         raise RunStateError("GRAPH_NODE_INVALID", f"{go_id}.required")
     go_claim_sha256 = value.get("go_claim_sha256")
     acceptance_contract_sha256 = value.get("acceptance_contract_sha256")
-    _required_hash(
-        go_claim_sha256, "GRAPH_NODE_INVALID", f"{go_id}.go_claim_sha256"
-    )
+    _required_hash(go_claim_sha256, "GRAPH_NODE_INVALID", f"{go_id}.go_claim_sha256")
     _required_hash(
         acceptance_contract_sha256,
         "GRAPH_NODE_INVALID",
@@ -251,35 +226,20 @@ def recompute_graph_topology(baseline, fallback_go_ids=()):
     graph_id = _value(baseline, "graph_id")
     graph_version = _value(baseline, "graph_version")
     baseline_candidate_id = _value(baseline, "candidate_id")
-    for label, value in (
-        ("run_id", run_id),
-        ("graph_id", graph_id),
-        ("candidate_id", baseline_candidate_id),
-    ):
+    for label, value in (("run_id", run_id), ("graph_id", graph_id), ("candidate_id", baseline_candidate_id)):
         _required_text(value, "GRAPH_BASELINE_INVALID", label)
-    if (
-        not isinstance(graph_version, int)
-        or isinstance(graph_version, bool)
-        or graph_version < 1
-    ):
+    if not isinstance(graph_version, int) or isinstance(graph_version, bool) or graph_version < 1:
         raise RunStateError("GRAPH_BASELINE_INVALID", "graph_version")
 
     raw_nodes = _value(baseline, "nodes")
     explicit = isinstance(raw_nodes, (list, tuple)) and bool(raw_nodes)
     if explicit:
-        nodes = tuple(
-            sorted((_graph_node(item) for item in raw_nodes), key=lambda item: item.go_id)
-        )
+        nodes = tuple(sorted((_graph_node(item) for item in raw_nodes), key=lambda item: item.go_id))
     else:
         derived = tuple(sorted(set(fallback_go_ids)))
         if len(derived) != 1:
-            raise RunStateError(
-                "GRAPH_TOPOLOGY_REQUIRED",
-                "only a single-GO graph can be derived safely",
-            )
-        nodes = (
-            GraphNode(derived[0], (), True, (), (), "0" * 64, "0" * 64),
-        )
+            raise RunStateError("GRAPH_TOPOLOGY_REQUIRED", "only a single-GO graph can be derived safely")
+        nodes = (GraphNode(derived[0], (), True, (), (), "0" * 64, "0" * 64),)
     if len({node.go_id for node in nodes}) != len(nodes):
         raise RunStateError("GRAPH_NODE_DUPLICATE", "duplicate GO identity")
     node_ids = {node.go_id for node in nodes}
@@ -287,19 +247,12 @@ def recompute_graph_topology(baseline, fallback_go_ids=()):
     raw_edges = _value(baseline, "edges") if explicit else ()
     if not isinstance(raw_edges, (list, tuple)):
         raise RunStateError("GRAPH_EDGE_INVALID", "edges must be an array")
-    edges = tuple(
-        sorted(
-            (_graph_edge(item) for item in raw_edges),
-            key=lambda item: (item.source, item.target),
-        )
-    )
+    edges = tuple(sorted((_graph_edge(item) for item in raw_edges), key=lambda item: (item.source, item.target)))
     edge_pairs = {(edge.source, edge.target) for edge in edges}
     if len(edge_pairs) != len(edges):
         raise RunStateError("GRAPH_EDGE_DUPLICATE", "duplicate source/target pair")
     if any(edge.source not in node_ids or edge.target not in node_ids for edge in edges):
-        raise RunStateError(
-            "GRAPH_EDGE_ENDPOINT_INVALID", "edge endpoint is not a GO"
-        )
+        raise RunStateError("GRAPH_EDGE_ENDPOINT_INVALID", "edge endpoint is not a GO")
     incoming = {go_id: set() for go_id in node_ids}
     outgoing = {go_id: set() for go_id in node_ids}
     for edge in edges:
@@ -327,16 +280,10 @@ def recompute_graph_topology(baseline, fallback_go_ids=()):
         visit(go_id)
 
     derived_entries = tuple(sorted(go_id for go_id in node_ids if not incoming[go_id]))
-    derived_terminals = tuple(
-        sorted(go_id for go_id in node_ids if not outgoing[go_id])
-    )
+    derived_terminals = tuple(sorted(go_id for go_id in node_ids if not outgoing[go_id]))
     derived_required = tuple(sorted(node.go_id for node in nodes if node.required))
     if explicit:
-        entry_go_ids = _sorted_texts(
-            _value(baseline, "entry_go_ids"),
-            "GRAPH_ENTRY_SET_INVALID",
-            "entry_go_ids",
-        )
+        entry_go_ids = _sorted_texts(_value(baseline, "entry_go_ids"), "GRAPH_ENTRY_SET_INVALID", "entry_go_ids")
         terminal_go_ids = _sorted_texts(
             _value(baseline, "terminal_go_ids"),
             "GRAPH_TERMINAL_SET_INVALID",
@@ -354,20 +301,11 @@ def recompute_graph_topology(baseline, fallback_go_ids=()):
             allow_empty=False,
         )
         if entry_go_ids != derived_entries:
-            raise RunStateError(
-                "GRAPH_ENTRY_SET_INVALID",
-                "declared entry set differs from topology",
-            )
+            raise RunStateError("GRAPH_ENTRY_SET_INVALID", "declared entry set differs from topology")
         if terminal_go_ids != derived_terminals:
-            raise RunStateError(
-                "GRAPH_TERMINAL_SET_INVALID",
-                "declared terminal set differs from topology",
-            )
+            raise RunStateError("GRAPH_TERMINAL_SET_INVALID", "declared terminal set differs from topology")
         if required_go_ids != derived_required:
-            raise RunStateError(
-                "GRAPH_REQUIRED_GO_COVERAGE_INVALID",
-                "declared required GO set differs from nodes",
-            )
+            raise RunStateError("GRAPH_REQUIRED_GO_COVERAGE_INVALID", "declared required GO set differs from nodes")
     else:
         entry_go_ids = derived_entries
         terminal_go_ids = derived_terminals
@@ -383,9 +321,7 @@ def recompute_graph_topology(baseline, fallback_go_ids=()):
                 reachable.add(target)
                 queue.append(target)
     if not set(required_go_ids).issubset(reachable):
-        raise RunStateError(
-            "GRAPH_REQUIRED_GO_COVERAGE_INVALID", "required GO is unreachable"
-        )
+        raise RunStateError("GRAPH_REQUIRED_GO_COVERAGE_INVALID", "required GO is unreachable")
 
     provisional = FrozenGraphTopology(
         run_id=run_id,
@@ -404,10 +340,7 @@ def recompute_graph_topology(baseline, fallback_go_ids=()):
     graph_sha256 = canonical_sha256(graph_topology_payload(provisional))
     declared_hash = _value(baseline, "graph_hash")
     if explicit and declared_hash != graph_sha256:
-        raise RunStateError(
-            "GRAPH_DIGEST_MISMATCH",
-            "declared graph hash differs from recomputation",
-        )
+        raise RunStateError("GRAPH_DIGEST_MISMATCH", "declared graph hash differs from recomputation")
     return dataclasses.replace(provisional, graph_sha256=graph_sha256)
 
 

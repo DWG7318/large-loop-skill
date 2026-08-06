@@ -10,12 +10,7 @@ from typing import Tuple
 from jsonschema import Draft202012Validator, FormatChecker
 
 from artifact_model import FORMAL_TYPES
-from graph_kernel import (
-    FrozenGraphTopology,
-    GraphStateProjection,
-    project_graph_state,
-    recompute_graph_topology,
-)
+from graph_kernel import FrozenGraphTopology, GraphStateProjection, project_graph_state, recompute_graph_topology
 from provenance import (
     ADAPTER_CONTRACT_VERSION,
     AuthorityScope,
