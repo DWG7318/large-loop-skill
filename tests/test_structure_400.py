@@ -87,3 +87,15 @@ def test_formal_projection_has_no_private_duplicate_selector():
     }
     assert "maximum_compatible_ids" in definitions
     assert "_maximum_compatible_go_ids" not in definitions
+
+
+def test_compatibility_model_uses_kernel_selector_without_private_copy():
+    path = SCRIPTS / "graph_model.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    imports = _imports(path)
+    go_graph = next(
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "GoGraph"
+    )
+    methods = {node.name for node in go_graph.body if isinstance(node, ast.FunctionDef)}
+    assert "maximum_compatible_ids" in imports.get("graph_kernel", set())
+    assert "_maximum_compatible_subset" not in methods

@@ -1,4 +1,5 @@
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,11 @@ def load_model():
     spec = importlib.util.spec_from_file_location("glk_graph_model", MODEL_PATH)
     module = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
-    spec.loader.exec_module(module)
+    sys.path.insert(0, str(MODEL_PATH.parent))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(MODEL_PATH.parent))
     return module
 
 

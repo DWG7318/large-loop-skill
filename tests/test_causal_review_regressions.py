@@ -1,4 +1,5 @@
 import importlib.util
+import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -14,7 +15,11 @@ def load_model():
     if spec is None or spec.loader is None:
         pytest.fail("cannot load GLK graph model")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    sys.path.insert(0, str(MODEL_PATH.parent))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(MODEL_PATH.parent))
     return module
 
 

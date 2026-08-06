@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
+from graph_kernel import maximum_compatible_ids
+
 
 WAITING_GO = "WAITING_GO"
 ACTIVE_GO = "ACTIVE_GO"
@@ -1014,7 +1016,22 @@ class GoGraph:
                 continue
             candidates.append(go_id)
 
-        chosen = self._maximum_compatible_subset(candidates)
+        occupied_keys: Set[str] = set()
+        occupied_resources: Dict[str, int] = {}
+        for active_id in active_ids:
+            occupied_keys.update(self.gos[active_id].conflict_keys)
+            for resource, amount in self.gos[active_id].resource_claims.items():
+                occupied_resources[resource] = occupied_resources.get(resource, 0) + amount
+        chosen = list(
+            maximum_compatible_ids(
+                candidates,
+                {go_id: self.gos[go_id].conflict_keys for go_id in candidates},
+                {go_id: self.gos[go_id].resource_claims for go_id in candidates},
+                self.resource_capacity,
+                occupied_keys,
+                occupied_resources,
+            )
+        )
         chosen_set = set(chosen)
         final_active = active_ids + chosen
         for go_id in candidates:
@@ -1042,57 +1059,6 @@ class GoGraph:
                 if conflicts
                 else [WaitingReason("RESOURCE", resource_conflicts)]
             )
-
-    def _maximum_compatible_subset(self, candidates: List[str]) -> List[str]:
-        active_keys: Set[str] = set()
-        for go_id in self.active():
-            active_keys.update(self.gos[go_id].conflict_keys)
-
-        compatible = [
-            go_id
-            for go_id in sorted(candidates)
-            if not (self.gos[go_id].conflict_keys & active_keys)
-        ]
-        best: List[str] = []
-        active_resources: Dict[str, int] = {}
-        for go_id in self.active():
-            for resource, amount in self.gos[go_id].resource_claims.items():
-                active_resources[resource] = active_resources.get(resource, 0) + amount
-
-        def resources_fit(usage: Mapping[str, int], claims: Mapping[str, int]) -> bool:
-            return all(
-                usage.get(resource, 0) + amount <= self.resource_capacity.get(resource, 0)
-                for resource, amount in claims.items()
-                if resource in self.resource_capacity
-            )
-
-        def search(
-            index: int,
-            chosen: List[str],
-            used_keys: Set[str],
-            used_resources: Dict[str, int],
-        ):
-            nonlocal best
-            if len(chosen) + len(compatible) - index < len(best):
-                return
-            if index == len(compatible):
-                if len(chosen) > len(best) or (
-                    len(chosen) == len(best) and tuple(chosen) < tuple(best)
-                ):
-                    best = list(chosen)
-                return
-            go_id = compatible[index]
-            keys = self.gos[go_id].conflict_keys
-            claims = self.gos[go_id].resource_claims
-            if not (keys & used_keys) and resources_fit(used_resources, claims):
-                next_resources = dict(used_resources)
-                for resource, amount in claims.items():
-                    next_resources[resource] = next_resources.get(resource, 0) + amount
-                search(index + 1, chosen + [go_id], used_keys | keys, next_resources)
-            search(index + 1, chosen, used_keys, used_resources)
-
-        search(0, [], set(active_keys), active_resources)
-        return best
 
     def _resource_conflicts(self, go_id: str, active_ids: List[str]) -> Tuple[str, ...]:
         usage: Dict[str, int] = {}
