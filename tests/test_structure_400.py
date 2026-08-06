@@ -33,6 +33,7 @@ CANONICAL_GRAPH_DEFINITIONS = {
     "GraphEdge",
     "FrozenGraphTopology",
     "GraphStateProjection",
+    "assert_acyclic",
     "graph_topology_payload",
     "recompute_graph_topology",
     "maximum_compatible_ids",
@@ -111,3 +112,15 @@ def test_compatibility_model_uses_kernel_acyclicity_without_private_copy():
     methods = {node.name for node in go_graph.body if isinstance(node, ast.FunctionDef)}
     assert {"GraphKernelError", "assert_acyclic"} <= imports.get("graph_kernel", set())
     assert "_assert_acyclic" not in methods
+
+
+def test_shared_graph_algorithm_budget_proves_net_reduction():
+    model_lines = len(
+        (SCRIPTS / "graph_model.py").read_text(encoding="utf-8").splitlines()
+    )
+    kernel_lines = len(
+        (SCRIPTS / "graph_kernel.py").read_text(encoding="utf-8").splitlines()
+    )
+    assert model_lines <= 1_100
+    assert kernel_lines <= 430
+    assert model_lines + kernel_lines <= 1_500
