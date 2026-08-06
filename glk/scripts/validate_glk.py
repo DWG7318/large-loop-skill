@@ -47,7 +47,6 @@ REQUIRED = [
     "glk/scripts/artifact_model.py",
     "glk/scripts/run_model.py",
     "glk/scripts/run_package.py",
-    "glk/scripts/run_state.py",
     "glk/scripts/run_control.py",
     "glk/scripts/run_validation.py",
     "glk/scripts/validate_run.py",

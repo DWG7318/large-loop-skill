@@ -12,9 +12,6 @@ from glk300_fixtures import read_index, sha256_file, write_index, write_json
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RUN_STATE_PATH = ROOT / "glk" / "scripts" / "run_state.py"
-
-
 def require(condition, message):
     if not condition:
         pytest.fail(message)

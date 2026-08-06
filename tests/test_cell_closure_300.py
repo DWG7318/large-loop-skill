@@ -15,7 +15,7 @@ from glk300_fixtures import sha256_file, write_json
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "glk" / "scripts"
-RUN_STATE_PATH = SCRIPTS / "run_state.py"
+GRAPH_KERNEL_PATH = SCRIPTS / "graph_kernel.py"
 GRAPH_MODEL_PATH = SCRIPTS / "graph_model.py"
 
 
@@ -76,9 +76,9 @@ def _go_candidate_sha256(manifest, selected_cells):
 
 def load_state():
     return rv.load_module(
-        RUN_STATE_PATH,
-        "glk_run_state_300_tests",
-        "GLK 3.0 versioned CELL manifest/closure state engine is missing",
+        GRAPH_KERNEL_PATH,
+        "glk_graph_kernel_closure_300_tests",
+        "GLK canonical graph/closure kernel is missing",
     )
 
 

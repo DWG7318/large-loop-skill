@@ -90,15 +90,7 @@ def test_project_graph_state_selects_deterministic_maximal_safe_set(kernel):
     assert not hasattr(projection, "ready_go_ids")
 
 
-def test_run_state_reexports_exact_kernel_graph_objects(kernel):
-    sys.modules.pop("run_state", None)
-    sys.path.insert(0, str(SCRIPTS))
-    try:
-        state = importlib.import_module("run_state")
-    finally:
-        sys.path.remove(str(SCRIPTS))
-        sys.modules.pop("run_state", None)
-
+def test_kernel_owns_former_run_state_graph_objects(kernel):
     expected = (
         "GraphConstraint",
         "GraphNode",
@@ -110,8 +102,8 @@ def test_run_state_reexports_exact_kernel_graph_objects(kernel):
         "project_graph_state",
     )
     for name in expected:
-        assert getattr(state, name) is getattr(kernel, name)
-    assert state.RunStateError is kernel.GraphKernelError
+        assert getattr(kernel, name)
+    assert kernel.RunStateError is kernel.GraphKernelError
 
 
 def test_maximum_compatible_ids_respects_conflicts_resources_and_tie_order(kernel):

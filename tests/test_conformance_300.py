@@ -333,7 +333,11 @@ def test_positive_two_GO_four_CELL_end_to_end_conformance(tmp_path):
     require_equal(len(loaded.artifacts_by_type["GRAPH_EVENT"]), 2, "graph event count")
     require_equal(len(loaded.artifacts_by_type["OWNER_ACCEPTANCE"]), 1, "Owner Acceptance count")
 
-    state = rv.load_module(ROOT / "glk" / "scripts" / "run_state.py", "glk_conformance_state", "run state missing")
+    state = rv.load_module(
+        ROOT / "glk" / "scripts" / "graph_kernel.py",
+        "glk_conformance_kernel",
+        "graph/closure kernel missing",
+    )
     baseline = loaded.artifacts_by_type["GRAPH_BASELINE"][0]
     topology = state.recompute_graph_topology(baseline)
     initial = state.project_graph_state(topology, (), ())

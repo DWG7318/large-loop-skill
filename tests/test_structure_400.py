@@ -47,6 +47,16 @@ CANONICAL_GRAPH_DEFINITIONS = {
     "go_candidate_payload",
     "go_candidate_sha256_from_mapping",
     "derive_d3_eligibility",
+    "RequiredCell",
+    "FrozenCellManifest",
+    "ImpactRef",
+    "AdmittedD1",
+    "D1ReuseProof",
+    "GoCandidateClosure",
+    "freeze_cell_manifest",
+    "admit_current_d1",
+    "derive_go_candidate_closure",
+    "classify_reusable_d1",
 }
 
 
@@ -66,15 +76,10 @@ def test_first_slice_size_budget_prevents_duplicate_growth():
     kernel_lines = len(
         (SCRIPTS / "graph_kernel.py").read_text(encoding="utf-8").splitlines()
     )
-    state_lines = len(
-        (SCRIPTS / "run_state.py").read_text(encoding="utf-8").splitlines()
-    )
     validator_lines = len(
         (SCRIPTS / "run_validation.py").read_text(encoding="utf-8").splitlines()
     )
-    assert kernel_lines <= 600
-    assert state_lines <= 450
-    assert kernel_lines + state_lines <= 1_050
+    assert kernel_lines <= 1_050
     assert validator_lines <= 2_148
 
 
@@ -131,8 +136,8 @@ def test_graph_model_and_kernel_budget_stays_bounded_after_d3_migration():
         (SCRIPTS / "graph_kernel.py").read_text(encoding="utf-8").splitlines()
     )
     assert model_lines <= 1_100
-    assert kernel_lines <= 600
-    assert model_lines + kernel_lines <= 1_700
+    assert kernel_lines <= 1_050
+    assert model_lines + kernel_lines <= 2_150
 
 
 def test_active_superpowers_document_surface_stays_bounded():
@@ -223,3 +228,22 @@ def test_current_production_scripts_do_not_import_run_state():
         if "run_state" in _imports(path):
             consumers.append(path.name)
     assert consumers == []
+
+
+def test_run_state_compatibility_module_is_retired():
+    assert not (SCRIPTS / "run_state.py").exists()
+    required_literal = '"glk/scripts/run_state.py"'
+    assert required_literal not in (SCRIPTS / "validate_glk.py").read_text(
+        encoding="utf-8"
+    )
+    assert required_literal not in (
+        ROOT / "tests" / "test_repository_310.py"
+    ).read_text(encoding="utf-8")
+    for name in (
+        "test_cell_closure_300.py",
+        "test_run_closure_300.py",
+        "test_conformance_300.py",
+    ):
+        assert "run_state.py" not in (ROOT / "tests" / name).read_text(
+            encoding="utf-8"
+        )
