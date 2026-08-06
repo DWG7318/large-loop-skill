@@ -133,3 +133,61 @@ def test_active_superpowers_document_surface_stays_bounded():
         for path in docs_root.rglob("*.md")
     )
     assert active_lines <= 1_250
+
+
+def test_progress_reference_executor_is_absent_but_formal_contract_remains():
+    assert not (SCRIPTS / "progress_reporting.py").exists()
+    assert not (ROOT / "tests" / "test_progress_reporting_310.py").exists()
+
+    required_literal = '"glk/scripts/progress_reporting.py"'
+    validator_source = (SCRIPTS / "validate_glk.py").read_text(encoding="utf-8")
+    repository_test_source = (
+        ROOT / "tests" / "test_repository_310.py"
+    ).read_text(encoding="utf-8")
+    assert required_literal not in validator_source
+    assert required_literal not in repository_test_source
+
+    for relative in (
+        "glk/references/layered-progress.md",
+        "glk/templates/CHECKER_PROGRESS_EVENT.yaml",
+        "glk/templates/SUPERVISOR_PROGRESS_EVENT.yaml",
+        "glk/schemas/glk.schema.json",
+    ):
+        assert (ROOT / relative).is_file(), relative
+
+    formal_source = (SCRIPTS / "run_validation.py").read_text(encoding="utf-8")
+    for token in (
+        "CHECKER_PROGRESS_EVENT",
+        "SUPERVISOR_PROGRESS_EVENT",
+        "PROGRESS_COVERAGE_REQUIRED",
+        "PROGRESS_DUPLICATE",
+        "PROGRESS_TRIGGER_INVALID",
+        "PROGRESS_SCOPE_INVALID",
+        "PROGRESS_ORDER_INVALID",
+    ):
+        assert token in formal_source, token
+
+    regression_tree = ast.parse(
+        (ROOT / "tests" / "test_run_validation_310.py").read_text(encoding="utf-8")
+    )
+    regression_names = {
+        node.name for node in regression_tree.body if isinstance(node, ast.FunctionDef)
+    }
+    assert {
+        "test_REDO_current_310_requires_exact_layered_progress_coverage",
+        "test_REDO_duplicate_or_wrong_trigger_progress_is_rejected",
+        "test_current_310_progress_order_and_version_fail_closed",
+    } <= regression_names
+
+
+def test_progress_reference_removal_proves_net_surface_reduction():
+    production_lines = sum(
+        len(path.read_text(encoding="utf-8").splitlines())
+        for path in SCRIPTS.glob("*.py")
+    )
+    test_lines = sum(
+        len(path.read_text(encoding="utf-8").splitlines())
+        for path in (ROOT / "tests").glob("*.py")
+    )
+    assert production_lines <= 9_400
+    assert test_lines <= 11_350

@@ -59,7 +59,6 @@ REQUIRED = [
     "glk/scripts/repository.py",
     "glk/scripts/worker_wake.py",
     "glk/scripts/run_patrol.py",
-    "glk/scripts/progress_reporting.py",
     "glk/scripts/cell_capacity.py",
     "glk/templates/RUN_CONTRACT.yaml",
     "glk/templates/ROLE_BINDING.yaml",
