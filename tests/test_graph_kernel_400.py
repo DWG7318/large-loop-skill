@@ -112,3 +112,22 @@ def test_run_state_reexports_exact_kernel_graph_objects(kernel):
     for name in expected:
         assert getattr(state, name) is getattr(kernel, name)
     assert state.RunStateError is kernel.GraphKernelError
+
+
+def test_maximum_compatible_ids_respects_conflicts_resources_and_tie_order(kernel):
+    selected = kernel.maximum_compatible_ids(
+        candidate_ids=("GO-C", "GO-B", "GO-A"),
+        conflict_keys_by_id={
+            "GO-A": ("PORT-1",),
+            "GO-B": ("PORT-1",),
+            "GO-C": ("PORT-2",),
+        },
+        resource_claims_by_id={
+            "GO-A": {"cpu": 1},
+            "GO-B": {"cpu": 1},
+            "GO-C": {"cpu": 2},
+        },
+        resource_capacity={"cpu": 3},
+    )
+
+    assert selected == ("GO-A", "GO-C")
