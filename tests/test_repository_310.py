@@ -301,6 +301,19 @@ def test_310_has_worker_wake_patrol_progress_and_capacity_surface():
         assert (ROOT / relative).is_file(), relative
 
 
+def test_superseded_construction_packets_are_history_only():
+    superseded = (
+        "docs/superpowers/plans/2026-07-29-glk-2.3.1.md",
+        "docs/superpowers/plans/2026-07-30-glk-2.4.0.md",
+        "docs/superpowers/plans/2026-08-03-glk-3.0.0-authority-and-run-validation-implementation.md",
+        "docs/superpowers/specs/2026-08-03-glk-3.0.0-authority-and-run-validation-design.md",
+        "docs/superpowers/plans/2026-08-04-glk-3.1.0-worker-wake-patrol-and-progress-implementation.md",
+        "docs/superpowers/specs/2026-08-04-glk-3.1.0-worker-wake-patrol-and-progress-design.md",
+    )
+    present = tuple(relative for relative in superseded if (ROOT / relative).exists())
+    assert present == (), f"superseded construction packets remain current: {present}"
+
+
 def test_patrol_is_not_a_seventh_authority_role():
     manifest = json.loads(text(ROOT / "MANIFEST.json"))
     assert manifest["roles"] == SIX_ROLES

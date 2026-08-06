@@ -124,3 +124,12 @@ def test_shared_graph_algorithm_budget_proves_net_reduction():
     assert model_lines <= 1_100
     assert kernel_lines <= 430
     assert model_lines + kernel_lines <= 1_500
+
+
+def test_active_superpowers_document_surface_stays_bounded():
+    docs_root = ROOT / "docs" / "superpowers"
+    active_lines = sum(
+        len(path.read_text(encoding="utf-8").splitlines())
+        for path in docs_root.rglob("*.md")
+    )
+    assert active_lines <= 1_250
