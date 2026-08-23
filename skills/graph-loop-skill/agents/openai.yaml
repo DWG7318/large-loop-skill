@@ -1,0 +1,4 @@
+interface:
+  display_name: "Graph Loop Skill (GLK)"
+  short_description: "Multi-start GO DAGs composed from latest SLK Loops"
+  default_prompt: "Use $graph-loop-skill to organize one large Run as a Supervisor-owned GO DAG whose nodes execute through the latest SLK."
