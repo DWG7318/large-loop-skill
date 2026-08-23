@@ -16,6 +16,7 @@
     "agents/openai.yaml": "f353273c8ebb7ccb0f11ae154760e78edba3a72434d5fb6642b342012925ade0",
     "docs/interpretation-test.md": "4a5534fa823b3a67b9d3bf69c4dc0a69f7a22a9b65d05d876ceac9059c0d4238",
     "docs/superpowers/plans/2026-08-07-glk-4.0.0-non-runtime-surface-isolation.md": "b01a550acce02965c54cbff465376e8ae2723023f13f1564faa1321bf798c981",
+    "docs/superpowers/plans/2026-08-23-glk-3.2.0-latest-slk-dag-reconstruction.md": "cb7fd84ce17ec8fc8801e3042c97113ddf84f458ec8b5c353447e218449dda4e",
     "docs/superpowers/specs/2026-08-06-glk-4.0.0-structural-slimming-design.md": "ddbd5e0ee1344e6567e7eb048b639c533d70505167a43455770baa2045685da4",
     "docs/superpowers/specs/2026-08-23-glk-dag-supervisor-slk-composition-design.md": "0951d3eab9c72a0b0c66bd0d647b9cd75e95fc6cb79a17b84c9f60b529e04712",
     "glk/SKILL.md": "9ecd0c483c4432ea2adb4ab97adacb0f4c8e317ea0771428e85373d2f93b8634",
