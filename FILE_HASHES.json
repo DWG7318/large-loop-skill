@@ -17,6 +17,7 @@
     "docs/interpretation-test.md": "4a5534fa823b3a67b9d3bf69c4dc0a69f7a22a9b65d05d876ceac9059c0d4238",
     "docs/superpowers/plans/2026-08-07-glk-4.0.0-non-runtime-surface-isolation.md": "b01a550acce02965c54cbff465376e8ae2723023f13f1564faa1321bf798c981",
     "docs/superpowers/specs/2026-08-06-glk-4.0.0-structural-slimming-design.md": "ddbd5e0ee1344e6567e7eb048b639c533d70505167a43455770baa2045685da4",
+    "docs/superpowers/specs/2026-08-23-glk-dag-supervisor-slk-composition-design.md": "0951d3eab9c72a0b0c66bd0d647b9cd75e95fc6cb79a17b84c9f60b529e04712",
     "glk/SKILL.md": "9ecd0c483c4432ea2adb4ab97adacb0f4c8e317ea0771428e85373d2f93b8634",
     "glk/examples/README.md": "ed200856ee431e0aeecb53876e715fab1f61a6f1b29371b0530d2d5c8fb71801",
     "glk/examples/appointment-run.yaml": "8177ed6eda682c1ebf42f862bfa4089b572f602250a37a3165d3199ccad1f07a",
