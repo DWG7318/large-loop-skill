@@ -1,112 +1,35 @@
-# Migration to GLK 3.1.0
+# Migration to GLK 3.2.0
 
-## From accepted GLK 3.0.0
+GLK 3.2.0 is a method reconstruction. It removes the active 3.1 runtime/kernel surface and keeps only GLK's distinct value: Supervisor-owned DAG orchestration over complete latest-SLK GO Loops.
 
-GLK 3.1 preserves the six roles, fresh Supervisor, GO DAG, WAITING_GO/ACTIVE_GO,
-D0-D3 authority, exact CELL closure, causal recovery, and immutable 3.0 evidence.
-Technical receipts remain usable only when their existing current-validity holds.
+## New Runs
 
-Revalidate or issue new 3.1 control evidence for Worker/original-Checker wake
-bindings, one patrol conversation/heartbeat, current device capacity and cumulative
-load, every undispatched CELL estimate/gate, exact seven-check patrol cycles, and
-append-only Checker/Supervisor progress triggers with current denominators.
-The old Supervisor-task monitor identity is historical-only for 3.1 patrol
-eligibility.
-
-Every exact 3.1 method lock activates Layer 11 even when no operational artifacts
-are present; missing controls fail closed. Only an exact historical 3.0 lock may
-receive legacy `NOT_APPLICABLE`, and that result is never current 3.1 evidence.
-
-Migration never creates a task, heartbeat, Agent, Pin, device measurement,
-admission, or verdict. It produces draft references for an external trusted
-environment and re-runs preflight/validation.
-
-Current 3.1 identity is:
+New GLK Runs use:
 
 ```text
-https://github.com/DWG7318/large-loop-skill
 graph-loop-skill
-3.1.0
-v3.1.0
+glk-design-graph
+glk-run-graph
+glk-close-run
 ```
 
-## Formal-use freeze
+Bind the current latest SLK before the Run starts and keep that SLK version fixed for every GO. Create `GLK-GRAPH.md`, `GLK-ROSTER.md`, and `GLK-RUN-<RUN-ID>.md`; do not restore old runtime indexes, role systems, patrol, or extra verification layers.
 
-New formal 2.4.x Runs are frozen. Historical Runs remain governed by the version
-under which their contracts and evidence were produced. Migration never rewrites
-history or silently relabels an old artifact as 3.1.0.
+## Existing Runs and releases
 
-The canonical 3.0 identity is:
+An active 3.1.0 or older Run remains governed by the exact version under which it began. Keep its evidence, artifacts, role bindings, and decisions unchanged. Do not reinterpret or rewrite them as 3.2.0.
 
-```text
-https://github.com/DWG7318/large-loop-skill
-graph-loop-skill
-3.0.0
-v3.0.0
-```
+Published tags and Releases remain immutable recovery points. GLK 3.2.0 uses a new version identity and does not move, replace, or overwrite an older tag or Release.
 
-## Preserve when semantically compatible
+## Concept mapping
 
-- the six roles and fresh Run Supervisor principle;
-- GO-DAG topology and maximal-safe `WAITING_GO`/`ACTIVE_GO` scheduling;
-- D0-D3 layer meanings and immediate Owner Acceptance;
-- actual-consumption edges, evidence-selected causal traces, impact slices, and
-  reactivation history;
-- immutable historical evidence and repository hash discipline.
+| Previous active surface | GLK 3.2.0 |
+| --- | --- |
+| GLK-owned CELL roles and runtime controls | Latest SLK inside each GO |
+| Multiple graph/runtime authority files | `GLK-GRAPH.md` plus one roster and one shared Run record |
+| GO-level additional verification | SLK D0/D1 inside the GO; one final Graph D2 after Fusion |
+| Runtime graph queues and patrol | Message-activated Supervisor routes direct dependency completion |
+| Separate GLK model policy | `$slk-select-models` |
+| Final merge behavior | Fusion owns real integration in its own worktree |
 
-Preservation keeps facts available; it does not preserve derived trust.
-
-## Convert and revalidate
-
-- Run and GO contracts;
-- graph baselines, amendments, formal resolutions, and indexes;
-- role bindings through the trusted four-operation adapter;
-- CELL required sets as versioned `CELL_MANIFEST` artifacts;
-- CELL candidates as independent D0 and D1 artifacts plus exact admissions;
-- GO candidates as `GO_CANDIDATE_CLOSURE`, D2, D2 admission, and graph event;
-- Run closure as D3, D3 admission, Owner Acceptance, and security handoff.
-
-The 3.0 loader and ten-layer validator recompute identity, digests, graph structure,
-required sets, provenance, lineage, isolation, and current-validity.
-
-## Historical-only
-
-- 2.4 free-form role-binding strings;
-- 2.4 D0-D3 evidence without trusted 3.0 provenance;
-- old control ledgers and validation reports;
-- old bootstrap workspaces and template-level completion claims;
-- unproven 2.4 receipts of any kind.
-
-Historical-only artifacts remain immutable audit evidence and cannot satisfy a 3.0
-admission or closure.
-
-## Rejected as current formal constructs
-
-- combined `CELL_RECEIPT`, `GO_RECEIPT`, and `RUN_RECEIPT` templates;
-- mixed mutable technical and control authority in one object;
-- a hand-written `acyclic: true` value as proof;
-- free actor strings or receipt IDs without digest-bound provenance;
-- sample bootstrap PASS/READY/ACCEPTED claims;
-- health inferred from failed reads;
-- standalone or duplicate cron monitoring.
-
-These constructs may remain mentioned in migration or rejection evidence but are
-not accepted by the current formal registry.
-
-## Migration report boundary
-
-`derive_migration_report` emits a derived, non-authoritative classification and new
-draft references only. It cannot admit an artifact, advance a state, mutate the old
-package, or mark old evidence current-valid.
-
-Compatible GO topology and causal history may be classified `preserve`; contracts
-may be `revalidate`; old bindings and receipts may be `historical-only`; mixed
-receipt/bootstrap constructs are discarded from formal eligibility. An unproven
-2.4 artifact never becomes current evidence through classification.
-
-## External boundaries
-
-LCCoding owns project lifecycle, product-definition routing, centralized security,
-and delivery. LCagent or another trusted environment owns sessions, credentials,
-issuance, replay/checkpoint, Broker, and runtime provenance. GLK defines only the
-method contract, validation logic, and abstract adapter interface.
+Historical implementation details remain available through Git history and old version tags; they are not active 3.2 instructions.

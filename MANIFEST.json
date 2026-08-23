@@ -1,76 +1,122 @@
 {
-  "name": "GLK",
-  "version": "3.1.0",
-  "type": "complete-github-repository",
-  "canonical_repository": "https://github.com/DWG7318/large-loop-skill",
-  "invocation": "graph-loop-skill",
-  "canonical_identity": "Run-scoped GO Execution Graph Standard",
-  "roles": [
-    "Run Supervisor",
-    "Worker",
-    "Checker",
-    "GO Verifier",
-    "Run Verifier",
-    "Owner"
+  "name": "Graph Loop Skill Collection",
+  "version": "3.2.0",
+  "skill_count": 4,
+  "excludes": [
+    "MANIFEST.json"
   ],
-  "graph_rule": "directed acyclic GO execution graph",
-  "waiting_rule": "typed WAITING_GO reasons; no schedulable intermediate queue",
-  "activation_rule": "maximum-cardinality maximal safe ACTIVE_GO set",
-  "causal_rule": "current-source-bound, incident-selected trace with strict typed-seed source disposition and minimum downstream impact",
-  "supervisor_rule": "fresh instance for every Run; no positive-duration, looping, or wait-all wait_threads",
-  "worker_wake_rule": "Worker-only four-level original-Checker wake with scoped delivery and WAKE_ACK",
-  "patrol_rule": "one visible non-authoritative gpt-5.6-luna xhigh patrol conversation and heartbeat per Run; LOW/MEDIUM/HIGH map to 10/15/30 with one exact seven-check cycle",
-  "thread_pin_rule": "method roles cannot Pin; only explicit Owner provenance is legal",
-  "progress_rule": "D1 accepted CELL and D2 verified GO are separate versioned counts",
-  "cell_capacity_rule": "DEVICE_CAPACITY_PROFILE plus cumulative load and PASS gate before dispatch",
-  "completion_handoff": "LOOP_OWNER_ACCEPTED",
-  "centralized_vulnerability_owner": "LCCoding",
-  "repository_validation_scope": "REPOSITORY_DISTRIBUTION",
-  "run_validation_scope": "RUN_PACKAGE",
-  "formal_use_freeze": "2.4.x",
-  "run_validator_bundle": {
-    "paths": [
-      "glk/scripts/run_validation.py",
-      "glk/scripts/validate_run.py"
-    ],
-    "sha256": "fde6445853b2e78ce98ee8bbb0feb3e3025cdb53af6d26c370c734896fe33ebf"
-  },
-  "formal_templates": [
-    "RUN_CONTRACT.yaml",
-    "GLK_METHOD_LOCK.yaml",
-    "PROVENANCE_ADAPTER_PROFILE.yaml",
-    "ROLE_BINDING.yaml",
-    "GRAPH_BASELINE.yaml",
-    "CELL_MANIFEST.yaml",
-    "CELL_MANIFEST_AMENDMENT.yaml",
-    "GO_CANDIDATE_CLOSURE.yaml",
-    "D0_RECEIPT.yaml",
-    "D1_RECEIPT.yaml",
-    "SUPERVISOR_ADMISSION.yaml",
-    "PREFLIGHT_ADMISSION.yaml",
-    "RUN_PACKAGE_INDEX.yaml",
-    "D2_RECEIPT.yaml",
-    "GRAPH_EVENT.yaml",
-    "MONITOR_CONTROL.yaml",
-    "WORKER_CHECKER_WAKE_BINDING.yaml",
-    "WAKE_ATTEMPT.yaml",
-    "WAKE_ACK.yaml",
-    "PENDING_WAKE.yaml",
-    "DEVICE_CAPACITY_PROFILE.yaml",
-    "CUMULATIVE_ENGINEERING_LOAD.yaml",
-    "CELL_WORK_ESTIMATE.yaml",
-    "CELL_CAPACITY_GATE.yaml",
-    "CELL_PLAN_AMENDMENT.yaml",
-    "CELL_SCOPE_EXCEEDED.yaml",
-    "CHECKER_PROGRESS_EVENT.yaml",
-    "SUPERVISOR_PROGRESS_EVENT.yaml",
-    "D3_RECEIPT.yaml",
-    "OWNER_ACCEPTANCE.yaml",
-    "SECURITY_HANDOFF.yaml"
-  ],
-  "legacy_current_templates_rejected": [
-    "CELL_RECEIPT.yaml",
-    "GO_RECEIPT.yaml",
-    "RUN_RECEIPT.yaml"
+  "files": [
+    {
+      "path": ".gitattributes",
+      "sha256": "d60f352d0db1404c70afb4bb8b2ca3fd1c610572aa40720e8a0b7baa7885418c"
+    },
+    {
+      "path": ".github/workflows/validate.yml",
+      "sha256": "556f2894d8c57eb6cbb02c5040106a9858855ef697b0003dcb6303fd45f2c6d7"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "a12089eee38669d034b3733cd9e67cdeb744264cf55c1a8152170d14cf07bbc7"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "9cf29acea6c8e86e16ac3ea500b9941ad04a72104b7b57832da679a600ff2adf"
+    },
+    {
+      "path": "MIGRATION.md",
+      "sha256": "720abbd324425ed9a3d0473bf848d758cb761e640d75225d1756aecbe1b6e307"
+    },
+    {
+      "path": "README.md",
+      "sha256": "44af1cec89dd27b7f59248d31a85be8848b477e6f2e16a571f261f2462ec7e92"
+    },
+    {
+      "path": "README.zh-CN.md",
+      "sha256": "d5963220ff267cc0c219af7bb495741397465a7f06295a21dca366c951292f28"
+    },
+    {
+      "path": "VALIDATION-REPORT.md",
+      "sha256": "4a02679a59dd8505fdd2a7a031db2f13a2bcf9c3da924a50c2f10af1b5fc3bed"
+    },
+    {
+      "path": "VERSION",
+      "sha256": "33bdaf9e2d6bcbde2e4e613e865e403f8fe21fc621078d34c30b0bdc7f68d903"
+    },
+    {
+      "path": "docs/interpretation-test.md",
+      "sha256": "4a5534fa823b3a67b9d3bf69c4dc0a69f7a22a9b65d05d876ceac9059c0d4238"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-07-glk-4.0.0-non-runtime-surface-isolation.md",
+      "sha256": "b01a550acce02965c54cbff465376e8ae2723023f13f1564faa1321bf798c981"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-23-glk-3.2.0-latest-slk-dag-reconstruction.md",
+      "sha256": "cb7fd84ce17ec8fc8801e3042c97113ddf84f458ec8b5c353447e218449dda4e"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-08-06-glk-4.0.0-structural-slimming-design.md",
+      "sha256": "ddbd5e0ee1344e6567e7eb048b639c533d70505167a43455770baa2045685da4"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-08-23-glk-dag-supervisor-slk-composition-design.md",
+      "sha256": "0951d3eab9c72a0b0c66bd0d647b9cd75e95fc6cb79a17b84c9f60b529e04712"
+    },
+    {
+      "path": "requirements-dev.txt",
+      "sha256": "26db60f3749b2d582ef13e54530725d1038086c5b72953678670871c2b85e15a"
+    },
+    {
+      "path": "scripts/quick_validate.py",
+      "sha256": "7a03b0cb6ba94a47f093f18e4798b880b3b3ed90f8357bef354cd1ca79255814"
+    },
+    {
+      "path": "scripts/validate_repository.py",
+      "sha256": "9d84995fc265b928acd096e07085072e7dc9eaf4dcfb312b50e32484b73335ba"
+    },
+    {
+      "path": "skills/glk-close-run/SKILL.md",
+      "sha256": "14b77fd91acf5cebce4d6da4d4af3778fe6a7cfb18306496d0add074ccdd1d8e"
+    },
+    {
+      "path": "skills/glk-design-graph/SKILL.md",
+      "sha256": "e7c557804baf8633fef8f831ac76e53a40c8a0bafed9e4f1bbe4aed8244d546e"
+    },
+    {
+      "path": "skills/glk-design-graph/assets/GLK-GRAPH.template.md",
+      "sha256": "51acbef6b74fb919a2dab29020be82cb2f41ac9749619d0fbd022732485a07ef"
+    },
+    {
+      "path": "skills/glk-design-graph/assets/GLK-ROSTER.template.md",
+      "sha256": "666e965e3e0004ab8e0d289098b6557707c32406c3e39e94edbe69ce631b392a"
+    },
+    {
+      "path": "skills/glk-design-graph/assets/GLK-RUN.template.md",
+      "sha256": "ed9df72e1e0706491d4879ec9fb0a772edb618c76d8c7cf53078a01e3a55c987"
+    },
+    {
+      "path": "skills/glk-run-graph/SKILL.md",
+      "sha256": "76846dc76402eb95e3b62986113ac7763f312f756ad3d7ccde992ca5556fdbf7"
+    },
+    {
+      "path": "skills/graph-loop-skill/SKILL.md",
+      "sha256": "2df0549dc3af0654d0cc85fc5af6f65f3aba768c5689771bf690b335deeb3af9"
+    },
+    {
+      "path": "skills/graph-loop-skill/agents/openai.yaml",
+      "sha256": "b2f7a82e71c7a56980996a9e8e63f1bb06c35ff43179f2cf188c611bc7815893"
+    },
+    {
+      "path": "tests/skill_testkit.py",
+      "sha256": "0eb0ed3fa75c77ef09c40f99f326d8f71fab3548ef07194b4ad81a3d5e1f9adb"
+    },
+    {
+      "path": "tests/test_repository_320.py",
+      "sha256": "03858f7b8e4321a95e166a3cd6ae61f9d02cf573c266d82000f79a614b8a2920"
+    },
+    {
+      "path": "tests/test_skill_collection_320.py",
+      "sha256": "60b7217043908a86120bcfb34b688dd2dba2970d78199022b9dc194de6025224"
+    }
   ]
 }

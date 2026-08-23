@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased structural maintenance
+## 3.2.0
+
+- Reconstructed GLK as a multi-start `ALL`-join DAG whose every GO executes through one Run-bound latest SLK baseline.
+- Reduced the active method to one main Skill and three GLK-native child Skills; removed the old active runtime/kernel, duplicate roles, patrol, queues, and extra verification layers.
+- Added `GLK-GRAPH.md`, `GLK-ROSTER.md`, and one shared `GLK-RUN-<RUN-ID>.md` as the complete Run-control file set.
+- Made Fusion the sole owner of final code overlap, implementation conflict, and interface integration in an independent worktree.
+- Kept one final D2 boundary and one prebuilt conditional D2 Repair GO while preserving ordinary D1 rework in the original GO pair.
+
+## Historical unreleased 3.1 structural-maintenance notes
 
 - Establish one current graph kernel and retire the duplicate `run_state.py` truth
   source plus the standalone progress executor.

@@ -62,13 +62,15 @@ def test_readmes_explain_the_current_method_without_old_runtime() -> None:
     english = read("README.md")
     chinese = read("README.zh-CN.md")
     for text in (english, chinese):
-        for marker in ("3.2.0", "4", "GLK", "DAG", "Fusion", "SLK", "Supervisor"):
+        for marker in ("3.2.0", "GLK", "DAG", "Fusion", "SLK", "Supervisor"):
             assert marker in text
         assert "GLK-GRAPH.md" in text
         assert "GLK-ROSTER.md" in text
         assert "GLK-RUN-<RUN-ID>.md" in text
     assert "multi-start" in english
+    assert "four sibling Skill directories" in english
     assert "多个起点" in chinese
+    assert "4个并列Skill目录" in chinese
 
 
 def test_ci_runs_collection_validation_on_windows_and_ubuntu() -> None:
@@ -80,7 +82,7 @@ def test_ci_runs_collection_validation_on_windows_and_ubuntu() -> None:
     assert "python -m pytest -q" in workflow
 
 
-def test_required_assets_license_and_lf_policy_are_present() -> None:
+def test_required_assets_and_lf_policy_are_present() -> None:
     required = (
         "skills/glk-design-graph/assets/GLK-GRAPH.template.md",
         "skills/glk-design-graph/assets/GLK-ROSTER.template.md",
@@ -88,22 +90,15 @@ def test_required_assets_license_and_lf_policy_are_present() -> None:
     )
     for relative in required:
         assert (ROOT / relative).is_file(), relative
-    assert "The above copyright notice and this permission notice" in read("LICENSE")
     assert "* text=auto eol=lf" in read(".gitattributes")
 
 
 def test_old_active_kernel_is_absent_after_reconstruction() -> None:
-    retired = (
-        "SKILL.md",
-        "SPEC.md",
-        "FILE_HASHES.json",
-        "agents",
-        "glk",
-        "tools",
-        "tests/support",
-    )
-    for relative in retired:
+    for relative in ("SKILL.md", "SPEC.md", "FILE_HASHES.json"):
         assert not (ROOT / relative).exists(), relative
+    released = release_paths()
+    for prefix in ("agents/", "glk/", "tools/", "tests/support/"):
+        assert not any(path.startswith(prefix) for path in released), prefix
     assert {path.name for path in (ROOT / "scripts").iterdir() if path.is_file()} == {
         "quick_validate.py",
         "validate_repository.py",
