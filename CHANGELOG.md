@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.0.0
+
+- Replaced the former graph work unit with a Node DAG: each Node is a group of one or more complete SLK Runs, and it completes only after its required SLKs deliver.
+- Gave every child SLK its own Supervisor, Checker, Worker, record, and lifecycle while keeping one GLK Supervisor responsible only for Node routing and final composition.
+- Added LE BI source metadata guidance so GLK-owned SLKs identify their GLK project without exposing Node, Fusion, or DAG internals in BI.
+- Converted Fusion and conditional D2 Repair into Nodes containing SLK Runs while preserving one final GLK D2 boundary.
+
 ## 3.2.0
 
 - Reconstructed GLK as a multi-start `ALL`-join DAG whose every GO executes through one Run-bound latest SLK baseline.

@@ -43,13 +43,13 @@ def test_repository_validator_passes_for_the_320_collection() -> None:
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "PASS: GLK 3.2 skill collection" in result.stdout
+    assert "PASS: GLK 4.0 skill collection" in result.stdout
 
 
 def test_manifest_exactly_covers_repository_bytes_except_itself() -> None:
     manifest = json.loads(read("MANIFEST.json"))
     assert manifest["name"] == "Graph Loop Skill Collection"
-    assert manifest["version"] == "3.2.0"
+    assert manifest["version"] == "4.0.0"
     assert manifest["skill_count"] == 4
     assert manifest["excludes"] == ["MANIFEST.json"]
     listed = {item["path"]: item["sha256"] for item in manifest["files"]}
@@ -62,7 +62,7 @@ def test_readmes_explain_the_current_method_without_old_runtime() -> None:
     english = read("README.md")
     chinese = read("README.zh-CN.md")
     for text in (english, chinese):
-        for marker in ("3.2.0", "GLK", "DAG", "Fusion", "SLK", "Supervisor"):
+        for marker in ("4.0.0", "GLK", "DAG", "Fusion", "SLK", "Supervisor"):
             assert marker in text
         assert "GLK-GRAPH.md" in text
         assert "GLK-ROSTER.md" in text

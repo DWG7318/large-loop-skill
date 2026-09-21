@@ -1,6 +1,6 @@
 {
   "name": "Graph Loop Skill Collection",
-  "version": "3.2.0",
+  "version": "4.0.0",
   "skill_count": 4,
   "excludes": [
     "MANIFEST.json"
@@ -20,7 +20,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "9cf29acea6c8e86e16ac3ea500b9941ad04a72104b7b57832da679a600ff2adf"
+      "sha256": "f2601f523ca6d7ffdf4095d1f5d16bb8ae5e1e57cc554c9b32b38d0c99caf792"
     },
     {
       "path": "MIGRATION.md",
@@ -28,11 +28,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "44af1cec89dd27b7f59248d31a85be8848b477e6f2e16a571f261f2462ec7e92"
+      "sha256": "828edc628cbfaa75522c08a30286c923034255d28ac73c3d6cbe431aaa30d86f"
     },
     {
       "path": "README.zh-CN.md",
-      "sha256": "d5963220ff267cc0c219af7bb495741397465a7f06295a21dca366c951292f28"
+      "sha256": "dacba87d5378d77763801bd3ab604539ec10b0fda0d1c6227c7260c1395efd36"
     },
     {
       "path": "VALIDATION-REPORT.md",
@@ -40,7 +40,7 @@
     },
     {
       "path": "VERSION",
-      "sha256": "33bdaf9e2d6bcbde2e4e613e865e403f8fe21fc621078d34c30b0bdc7f68d903"
+      "sha256": "e1d49c569ae09b2ede16e2d83820a3809b35eb6c44c13ba9b5330598d6b8f43c"
     },
     {
       "path": "docs/interpretation-test.md",
@@ -72,39 +72,39 @@
     },
     {
       "path": "scripts/validate_repository.py",
-      "sha256": "9d84995fc265b928acd096e07085072e7dc9eaf4dcfb312b50e32484b73335ba"
+      "sha256": "8b9ae57cee7810af758dc67afa2b6716dd7ec5a8c5a45693fb90e1144455834e"
     },
     {
       "path": "skills/glk-close-run/SKILL.md",
-      "sha256": "14b77fd91acf5cebce4d6da4d4af3778fe6a7cfb18306496d0add074ccdd1d8e"
+      "sha256": "b429a947f93989b35786a69467f743b07bedf2b8255f07d75dc640259977cd56"
     },
     {
       "path": "skills/glk-design-graph/SKILL.md",
-      "sha256": "e7c557804baf8633fef8f831ac76e53a40c8a0bafed9e4f1bbe4aed8244d546e"
+      "sha256": "8ce950ab3ebf4a4eac3c7b92831a645c20646ab92a77faf45443c542af6d4bb8"
     },
     {
       "path": "skills/glk-design-graph/assets/GLK-GRAPH.template.md",
-      "sha256": "51acbef6b74fb919a2dab29020be82cb2f41ac9749619d0fbd022732485a07ef"
+      "sha256": "935b80b761d055c4521217e81114cea5265ec1805828213c253949ee21bf73b3"
     },
     {
       "path": "skills/glk-design-graph/assets/GLK-ROSTER.template.md",
-      "sha256": "666e965e3e0004ab8e0d289098b6557707c32406c3e39e94edbe69ce631b392a"
+      "sha256": "f8d6fb2b596c0a1784f2543dffd591134f83edeaea72617ec25fd1e929f08871"
     },
     {
       "path": "skills/glk-design-graph/assets/GLK-RUN.template.md",
-      "sha256": "ed9df72e1e0706491d4879ec9fb0a772edb618c76d8c7cf53078a01e3a55c987"
+      "sha256": "912fa24d6783cc30cfb014317ba583497d85795daf67d22d0858a3a646a169da"
     },
     {
       "path": "skills/glk-run-graph/SKILL.md",
-      "sha256": "76846dc76402eb95e3b62986113ac7763f312f756ad3d7ccde992ca5556fdbf7"
+      "sha256": "3dc0b5620e55ff3d4460b70c0e43f7bb925f1c3a6a88eaea386ceba3dff029f3"
     },
     {
       "path": "skills/graph-loop-skill/SKILL.md",
-      "sha256": "2df0549dc3af0654d0cc85fc5af6f65f3aba768c5689771bf690b335deeb3af9"
+      "sha256": "a8ff5758920b8a33184224e59aa1c576a95520b310bd22456a6e0804a40bac0a"
     },
     {
       "path": "skills/graph-loop-skill/agents/openai.yaml",
-      "sha256": "b2f7a82e71c7a56980996a9e8e63f1bb06c35ff43179f2cf188c611bc7815893"
+      "sha256": "35684d807284a701de3f1baeec74c4131f7df01c8b16809cfd6d10e66e30ff8b"
     },
     {
       "path": "tests/skill_testkit.py",
@@ -112,11 +112,11 @@
     },
     {
       "path": "tests/test_repository_320.py",
-      "sha256": "03858f7b8e4321a95e166a3cd6ae61f9d02cf573c266d82000f79a614b8a2920"
+      "sha256": "bd66b6919f9295707ed714a7d1a9f3347dfc3f1b43954b6f057837e7fd360473"
     },
     {
       "path": "tests/test_skill_collection_320.py",
-      "sha256": "60b7217043908a86120bcfb34b688dd2dba2970d78199022b9dc194de6025224"
+      "sha256": "90c2912f4e8c5cacb94b0ded0ae8f23be5453c91848d9cc68d3586d38489a43d"
     }
   ]
 }

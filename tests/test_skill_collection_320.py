@@ -12,8 +12,8 @@ from skill_testkit import (
 )
 
 
-def test_version_is_320() -> None:
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "3.2.0"
+def test_version_is_400() -> None:
+    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "4.0.0"
 
 
 def test_collection_has_one_main_and_three_children() -> None:
@@ -37,43 +37,50 @@ def test_main_routes_to_three_children_and_latest_slk() -> None:
     assert "$slk-select-models" in "\n".join(read_skill(name) for name in EXPECTED_SKILLS)
 
 
-def test_main_defines_one_run_as_a_supervisor_owned_go_dag() -> None:
+def test_main_defines_one_run_as_a_supervisor_owned_node_dag() -> None:
     text = read_skill("graph-loop-skill")
     for marker in (
         "Graph逻辑",
         "Loop Engineering",
         "一个Graph就是一个Run",
-        "每个节点是一个GO",
+        "一个Node是一组共同形成该节点成果的SLK Runs",
         "DAG",
         "多个起点",
         "ALL",
-        "Fusion GO",
+        "Fusion Node",
         "Supervisor",
         "GLK-GRAPH.md",
         "GLK-ROSTER.md",
         "GLK-RUN-<RUN-ID>.md",
     ):
         assert marker in text
-    assert "Checker和Worker只按SLK" in text
-    assert "普通GO" in text and "D2" in text
+    assert "每个SLK" in text and "自己的Supervisor、Checker和Worker" in text
+    assert "普通Node" in text and "D2" in text
+
+
+def test_glk_uses_node_dag_and_never_reintroduces_go() -> None:
+    active = "\n".join(read_skill(name) for name in EXPECTED_SKILLS)
+    assert re.search(r"\bGO\b", active) is None
+    assert "Node DAG" in read_skill("graph-loop-skill")
+    assert "一组共同形成该节点成果的SLK Runs" in read_skill("graph-loop-skill")
+    assert "source_kind=glk" in read_skill("glk-design-graph")
 
 
 def test_graph_design_skill_checks_the_approved_topology() -> None:
     text = read_skill("glk-design-graph")
     for marker in (
-        "GO001",
+        "Node001",
         "两个或以上",
         "零入度",
         "有向无环",
         "ALL",
-        "普通GO",
-        "可选",
-        "空GO",
+        "普通Node",
+        "至少包含一个SLK",
         "输出接口",
         "输入接口",
         "都能到达Fusion",
-        "唯一Fusion GO",
-        "D2 Repair GO",
+        "唯一Fusion Node",
+        "D2 Repair Node",
         "$small-loop-skill",
         "$slk-select-models",
     ):
@@ -90,12 +97,12 @@ def test_graph_assets_define_one_graph_roster_and_shared_run_record() -> None:
     graph_text = graph.read_text(encoding="utf-8")
     for marker in (
         "GLK-GRAPH.md",
-        "GO registry",
+        "Node registry",
         "Direct predecessors",
         "Start prerequisite",
         "Output interface",
-        "Fusion GO",
-        "D2 Repair GO",
+        "Fusion Node",
+        "D2 Repair Node",
         "Static DAG check",
     ):
         assert marker in graph_text
@@ -105,24 +112,22 @@ def test_graph_assets_define_one_graph_roster_and_shared_run_record() -> None:
     run_text = run.read_text(encoding="utf-8")
     assert "Supervisor创建" in run_text
     assert "每个成员追加自己的事实" in run_text
-    assert "每个GO单独方法记录" not in run_text
+    assert "Node级方法文件" in run_text
 
 
-def test_run_graph_uses_visible_exclusive_slk_pairs_and_event_activation() -> None:
+def test_run_graph_uses_visible_slk_groups_and_event_activation() -> None:
     text = read_skill("glk-run-graph")
     for marker in (
-        "每个GO独占",
-        "GO012-Checker",
-        "GO012-Worker",
-        "Supervisor ↔ 每个Checker",
-        "每个Checker ↔ 自己的Worker",
-        "所有起点GO",
-        "全部直接前置GO",
+        "每个Node包含一组最新SLK Runs",
+        "每个SLK按`$small-loop-skill`建立自己的Supervisor、Checker和Worker",
+        "每个SLK独立完成自身三角色通讯测试",
+        "所有起点Node",
+        "全部直接前置Node",
         "立即启动",
         "完整交付",
         "原样重发",
         "未启动区域",
-        "不复用GO编号",
+        "不复用Node编号",
         "其他路径继续",
     ):
         assert marker in text
@@ -134,24 +139,24 @@ def test_run_graph_uses_visible_exclusive_slk_pairs_and_event_activation() -> No
 def test_close_run_gives_fusion_and_final_d2_distinct_ownership() -> None:
     text = read_skill("glk-close-run")
     for marker in (
-        "Fusion是普通GO",
-        "最后一个GO",
-        "新的独立worktree",
+        "Fusion是普通Node",
+        "最后一个Node",
+        "独立worktree",
         "Run基线",
-        "直接前置GO候选",
+        "直接前置Node候选",
         "代码重叠",
         "实现冲突",
         "接口适配",
         "不是机械Git merge",
         "最终D2",
         "最高能力模型",
-        "D2 Repair GO",
+        "D2 Repair Node",
         "同一最终D2",
-        "原Checker和Worker",
+        "各自成员",
         "归档",
     ):
         assert marker in text
-    assert text.count("D2 Repair GO") >= 3
+    assert text.count("D2 Repair Node") >= 3
 
 
 def test_active_skills_do_not_restore_the_old_glk_kernel() -> None:
