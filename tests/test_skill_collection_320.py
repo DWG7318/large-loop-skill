@@ -12,8 +12,8 @@ from skill_testkit import (
 )
 
 
-def test_version_is_400() -> None:
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "4.0.0"
+def test_version_is_410() -> None:
+    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "4.1.0"
 
 
 def test_collection_has_one_main_and_three_children() -> None:
@@ -54,7 +54,10 @@ def test_main_defines_one_run_as_a_supervisor_owned_node_dag() -> None:
         "GLK-RUN-<RUN-ID>.md",
     ):
         assert marker in text
-    assert "每个SLK" in text and "自己的Supervisor、Checker和Worker" in text
+    assert "一个共享Supervisor Agent" in text
+    assert "每个子SLK的Supervisor角色绑定" in text
+    assert "不会创建第二个Supervisor Agent" in text
+    assert "自己的Supervisor、Checker和Worker" not in text
     assert "普通Node" in text and "D2" in text
 
 
@@ -109,18 +112,32 @@ def test_graph_assets_define_one_graph_roster_and_shared_run_record() -> None:
     roster_text = roster.read_text(encoding="utf-8")
     assert "只有Supervisor创建和修改" in roster_text
     assert "所有成员可以读取" in roster_text
+    for marker in (
+        "Shared Supervisor Agent ID",
+        "Shared Supervisor conversation binding",
+        "Supervisor binding ref",
+        "Checker",
+        "Worker",
+        "SLK TOKEN",
+        "Central record",
+        "Worktree",
+    ):
+        assert marker in roster_text
     run_text = run.read_text(encoding="utf-8")
     assert "Supervisor创建" in run_text
     assert "每个成员追加自己的事实" in run_text
     assert "Node级方法文件" in run_text
+    assert "GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID" in run_text
 
 
 def test_run_graph_uses_visible_slk_groups_and_event_activation() -> None:
     text = read_skill("glk-run-graph")
     for marker in (
         "每个Node包含一组最新SLK Runs",
-        "每个SLK按`$small-loop-skill`建立自己的Supervisor、Checker和Worker",
-        "每个SLK独立完成自身三角色通讯测试",
+        "共享Supervisor Agent",
+        "不会创建新的Supervisor对话",
+        "每个子SLK独立建立Checker和Worker",
+        "每个子SLK独立完成通讯测试",
         "所有起点Node",
         "全部直接前置Node",
         "立即启动",
@@ -134,6 +151,28 @@ def test_run_graph_uses_visible_slk_groups_and_event_activation() -> None:
     assert "Checker ↔ Checker" not in text
     assert "Supervisor不检查交付内容" in text
     assert "不使用`wait_threads`" in text
+
+
+def test_shared_supervisor_is_scoped_without_merging_child_slks() -> None:
+    active = "\n".join(read_skill(name) for name in EXPECTED_SKILLS)
+    for marker in (
+        "GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID",
+        "SLK TOKEN",
+        "中央记录",
+        "独立worktree",
+        "子SLK D2",
+        "GLK最终D2",
+        "重复Supervisor Agent",
+        "跨子SLK",
+        "失败关闭",
+    ):
+        assert marker in active
+    for forbidden in (
+        "自己的Supervisor、Checker和Worker",
+        "建立自己的Supervisor",
+        "各自的Supervisor Agent",
+    ):
+        assert forbidden not in active
 
 
 def test_close_run_gives_fusion_and_final_d2_distinct_ownership() -> None:

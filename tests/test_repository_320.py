@@ -43,13 +43,13 @@ def test_repository_validator_passes_for_the_320_collection() -> None:
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "PASS: GLK 4.0 skill collection" in result.stdout
+    assert "PASS: GLK 4.1 skill collection" in result.stdout
 
 
 def test_manifest_exactly_covers_repository_bytes_except_itself() -> None:
     manifest = json.loads(read("MANIFEST.json"))
     assert manifest["name"] == "Graph Loop Skill Collection"
-    assert manifest["version"] == "4.0.0"
+    assert manifest["version"] == "4.1.0"
     assert manifest["skill_count"] == 4
     assert manifest["excludes"] == ["MANIFEST.json"]
     listed = {item["path"]: item["sha256"] for item in manifest["files"]}
@@ -62,7 +62,7 @@ def test_readmes_explain_the_current_method_without_old_runtime() -> None:
     english = read("README.md")
     chinese = read("README.zh-CN.md")
     for text in (english, chinese):
-        for marker in ("4.0.0", "GLK", "DAG", "Fusion", "SLK", "Supervisor"):
+        for marker in ("4.1.0", "GLK", "DAG", "Fusion", "SLK", "Supervisor"):
             assert marker in text
         assert "GLK-GRAPH.md" in text
         assert "GLK-ROSTER.md" in text
@@ -71,6 +71,28 @@ def test_readmes_explain_the_current_method_without_old_runtime() -> None:
     assert "four sibling Skill directories" in english
     assert "多个起点" in chinese
     assert "4个并列Skill目录" in chinese
+
+
+def test_release_guidance_uses_one_shared_supervisor_agent() -> None:
+    paths = (
+        "README.md",
+        "README.zh-CN.md",
+        "MIGRATION.md",
+        "CHANGELOG.md",
+        "VALIDATION-REPORT.md",
+        "skills/graph-loop-skill/SKILL.md",
+        "skills/glk-run-graph/SKILL.md",
+    )
+    combined = "\n".join(read(path) for path in paths)
+    assert "one shared Supervisor Agent" in combined
+    assert "一个共享Supervisor Agent" in combined
+    assert "GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID" in combined
+    for forbidden in (
+        "every child SLK its own Supervisor",
+        "每个SLK仍有自己的Supervisor",
+        "每个SLK按`$small-loop-skill`建立自己的Supervisor",
+    ):
+        assert forbidden not in combined
 
 
 def test_ci_runs_collection_validation_on_windows_and_ubuntu() -> None:
