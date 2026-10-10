@@ -1,6 +1,6 @@
 # Graph Loop Skill（GLK）
 
-当前版本：**4.0.0**
+当前版本：**4.1.0**
 
 GLK是面向大型工程Run的Graph型Loop Engineering方法。它把一个Run设计为多个起点、由真实成果依赖连接的Node DAG；每个Node是一组使用本Run固定最新SLK基线的完整SLK Runs。
 
@@ -16,8 +16,9 @@ GLK是面向大型工程Run的Graph型Loop Engineering方法。它把一个Run�
 
 - 一个Graph就是一个Run，每个节点使用`Node001`一类数字身份，并包含一个或多个SLK Runs。
 - Node在全部直接前提存在后启动；所有汇合使用`ALL`，无关工作不互相等待。
-- 一个GLK Supervisor负责Graph设计、Node路由、Fusion和最终D2；每个SLK仍有自己的Supervisor、Checker与Worker。
-- GLK不复制SLK的CELL、D0、D1、D2、返工、通讯、记录或模型指导。
+- 一个共享Supervisor Agent负责Graph设计、Node路由、Fusion、GLK最终D2，并绑定全部子SLK的Supervisor角色；子SLK数量不会增加Supervisor Agent。
+- 每个子SLK仍是独立Run，保留自己的Checker、Worker、SLK TOKEN、中央记录、worktree、CELL、D0/D1/子SLK D2与归档。
+- 每次共享Supervisor动作都绑定`GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID`；缺项、碰撞或跨子SLK作用域一律失败关闭。
 - 正常施工最后只有一个Fusion Node；预建的条件D2 Repair Node只在最终D2失败时使用。
 - `$slk-select-models`是SLK、CLK和GLK唯一的模型选择权威。
 
@@ -29,7 +30,7 @@ GLK是面向大型工程Run的Graph型Loop Engineering方法。它把一个Run�
 
 ## Skill集合
 
-GLK 4.0.0由4个并列Skill目录组成：
+GLK 4.1.0由4个并列Skill目录组成：
 
 | Skill | 用途 |
 | --- | --- |

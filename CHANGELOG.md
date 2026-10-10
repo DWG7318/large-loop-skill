@@ -1,9 +1,17 @@
 # Changelog
 
+## 4.1.0
+
+- Replaced the unreleased N+1 Supervisor design with one shared Supervisor Agent per GLK Run; every child SLK Supervisor role binding resolves to that Agent.
+- Kept every ordinary, Fusion, and D2 Repair child SLK independent through its Checker, Worker, token, central record, worktree, CELL loop, D0/D1/D2, and archive.
+- Bound every shared-Supervisor action to `GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID` and made duplicate identities, scope collisions, and cross-child member routes fail closed.
+- Preserved the Node DAG, dependency release, Fusion, child D2, distinct GLK final D2, and four-Skill collection without adding a coordinator or runtime.
+
 ## 4.0.0
 
+- Unpublished intermediate candidate; superseded by 4.1.0 before any 4.0.0 tag or Release.
 - Replaced the former graph work unit with a Node DAG: each Node is a group of one or more complete SLK Runs, and it completes only after its required SLKs deliver.
-- Gave every child SLK its own Supervisor, Checker, Worker, record, and lifecycle while keeping one GLK Supervisor responsible only for Node routing and final composition.
+- Introduced Node groups of child SLK Runs; its initial per-child Supervisor-agent wording was not released and is not current authority.
 - Added LE BI source metadata guidance so GLK-owned SLKs identify their GLK project without exposing Node, Fusion, or DAG internals in BI.
 - Converted Fusion and conditional D2 Repair into Nodes containing SLK Runs while preserving one final GLK D2 boundary.
 

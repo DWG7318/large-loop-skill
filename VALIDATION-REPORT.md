@@ -1,44 +1,26 @@
-# GLK 3.2.0 Validation Report
+# GLK 4.1.0 Validation Report
 
 ## Candidate
 
 - Product: Graph Loop Skill Collection
-- Version: 3.2.0
-- Branch: `design/glk-reconstruction-20260823`
-- Local validation date: 2026-08-24
-- Publication: pending
+- Version: 4.1.0
+- Branch: `feature/glk-4.1.0-shared-supervisor`
+- Design authority: `docs/superpowers/specs/2026-10-11-glk-4.1.0-shared-supervisor-design.md`
+- Publication state: local candidate under verification
 
-## Verified method boundary
+## Method boundary under verification
 
-- one main Skill and three GLK-native child Skills;
-- one multi-start `ALL`-join DAG per Run;
-- one Supervisor and one exclusive latest-SLK Checker/Worker pair per GO;
-- three authoritative root files;
-- no Checker-to-Checker route and no ordinary-GO D2;
-- message-activated routing without `wait_threads` monitoring;
-- Fusion-owned overlap/conflict/interface integration in an independent worktree;
-- one final D2 boundary and one prebuilt conditional D2 Repair GO;
-- no active legacy runtime/kernel, patrol, extra GLK roles, or duplicate model Skill.
+- one shared Supervisor Agent per GLK Run;
+- every child SLK Supervisor role binding resolves to that shared Agent;
+- every ordinary, Fusion, and D2 Repair child remains an independent SLK Run;
+- distinct Checker, Worker, SLK token, central record, worktree, CELL loop, D0/D1/D2, and archive per child;
+- every Supervisor action binds `GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID`;
+- duplicate Supervisor identity, scope collision, and cross-child member routing fail closed;
+- one Node DAG, dependency-driven activation, Fusion, child D2, and a distinct GLK final D2;
+- no added coordinator, broker, runtime, or changes to SLK, CLK, or LCCoding.
 
-## Fresh local verification
+## Required evidence
 
-```text
-python -m pytest -q
-16 passed
+The candidate may be published only after focused and full pytest, optimized-mode tests, repository and Skill validation, contradiction scans, manifest verification, acceptance-archive validation, clean diff checks, remote idempotency checks, and global-installation hash comparison all pass on the same accepted commit.
 
-python scripts/validate_repository.py
-PASS: GLK 3.2 skill collection structure, identity, and Manifest are valid.
-
-python scripts/quick_validate.py skills
-PASS: 4 Skill directories are valid.
-
-official Skill Creator quick validation
-4/4 Skill directories valid under PYTHONUTF8=1
-
-git diff --check
-PASS
-```
-
-The exact Manifest protects 28 release files while excluding only `MANIFEST.json`. Active Skill sizes are 42 lines for the main Skill and 36–50 lines for the three children.
-
-No remote push, tag, Release, or global installation is claimed by this report.
+No publication or installed-byte claim is made before those fresh gates complete.

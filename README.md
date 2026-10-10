@@ -1,6 +1,6 @@
 # Graph Loop Skill (GLK)
 
-Current version: **4.0.0**
+Current version: **4.1.0**
 
 GLK is the Graph-based Loop Engineering method for one large engineering Run. It expresses the Run as a multi-start directed acyclic graph (DAG) of necessary Nodes; every Node contains one or more Runs on one fixed latest-SLK baseline.
 
@@ -16,8 +16,9 @@ multiple start Nodes
 
 - One Graph is one Run; every node is numerically named such as `Node001`.
 - Nodes start as soon as all direct prerequisites exist. Every join uses `ALL`; unrelated work does not wait.
-- One Supervisor owns graph design, member setup, routing, Fusion, final D2, and archival.
-- Every Node contains one or more complete SLK Runs. GLK does not duplicate SLK's CELL, D0, D1, D2, rework, communication, record, or model guidance.
+- One shared Supervisor Agent owns graph design, routing, Fusion, final D2, and the Supervisor role binding of every child SLK Run. Child count never creates another Supervisor Agent.
+- Every Node contains one or more complete, independent SLK Runs. Each child keeps its own Checker, Worker, SLK token, central record, worktree, CELL loop, D0/D1/D2, and archive.
+- Every shared-Supervisor action binds `GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID`; incomplete, colliding, or cross-child scope fails closed.
 - Normal construction ends in one Fusion Node. A prebuilt conditional D2 Repair Node is used only when final D2 fails.
 - `$slk-select-models` is the single model-selection authority for SLK, CLK, and GLK.
 
@@ -29,7 +30,7 @@ multiple start Nodes
 
 ## Skill collection
 
-GLK 4.0.0 contains four sibling Skill directories:
+GLK 4.1.0 contains four sibling Skill directories:
 
 | Skill | Purpose |
 | --- | --- |

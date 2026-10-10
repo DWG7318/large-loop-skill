@@ -16,7 +16,7 @@ description: Use when an active Graph Loop Skill (GLK) Run needs its Node DAG, i
 1. 检查并绑定当前最新GLK与最新SLK版本；本Run开工后固定这两个方法基线。
 2. 从Run目标和真实工程基线写出必要成果，再将每个成果命名为`Node001`、`Node002`直至需要的更高编号。编号只表示身份，不表示启动顺序。
 3. 每个Node说明结果、开工前提、全部直接前置Node、输入、输出接口、组内SLK清单、直接后继和完成事实。
-4. 每个组内SLK调用`$small-loop-skill`形成线性CELL施工方案，并调用`$slk-select-models`选择三角色能力；初始化时登记`source_kind=glk`与`source_project_name=<GLK项目名>`，Owner指定仍有效。
+4. GLK Run只登记一个共享Supervisor Agent；每个组内SLK调用`$small-loop-skill`形成独立线性CELL施工方案，将Supervisor角色绑定到该共享Agent，并调用`$slk-select-models`选择Checker与Worker能力。初始化时登记`source_kind=glk`与`source_project_name=<GLK项目名>`，Owner指定仍有效。
 5. 为并行SLK安排独立worktree，以及需要隔离的端口、数据库、缓存、进程、测试路径和临时资源。文件重叠本身不是依赖。
 6. 预留一个有真实目标的Fusion Node，以及一个只在最终D2失败后启动的D2 Repair Node；二者也分别包含一个或多个SLK Runs。
 
@@ -36,12 +36,14 @@ Supervisor在冻结前逐项确认：
 10. Node编号、组内SLK及其记录指针与花名册一致；
 11. 从所有起点做静态依赖遍历后没有孤儿或死路；
 12. D2 Repair Node唯一开工条件是最终D2失败。
+13. 全部子SLK的Supervisor绑定解析到同一个共享Supervisor Agent，且不会创建新的Supervisor对话；
+14. 每个Supervisor动作可由`GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID`唯一解析，子SLK的Checker、Worker、SLK TOKEN、中央记录与worktree互不混用。
 
 任何不通过项都在设计阶段修正，不用试施工替代Graph设计。
 
 ## 建立权威文件
 
-从`assets/GLK-GRAPH.template.md`、`assets/GLK-ROSTER.template.md`和`assets/GLK-RUN.template.md`在项目根目录创建`GLK-GRAPH.md`、`GLK-ROSTER.md`和`GLK-RUN-<RUN-ID>.md`。Supervisor冻结Graph版本和初始成员清单。
+从`assets/GLK-GRAPH.template.md`、`assets/GLK-ROSTER.template.md`和`assets/GLK-RUN.template.md`在项目根目录创建`GLK-GRAPH.md`、`GLK-ROSTER.md`和`GLK-RUN-<RUN-ID>.md`。Supervisor冻结Graph版本、共享Agent身份与初始子SLK绑定清单。
 
 Owner查看逻辑图是建议，不是开工门禁。提供时只展示Node编号、一句话成果、依赖箭头、起点、Fusion和条件D2 Repair，不展示CELL、模型或成员细节。
 

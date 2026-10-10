@@ -11,6 +11,11 @@ ROOT = Path(__file__).resolve().parents[1]
 EXCLUDED_DIRS = {".git", ".codex", ".worktrees", "__pycache__", ".pytest_cache"}
 
 
+def require(condition: bool, detail: str) -> None:
+    if not condition:
+        raise AssertionError(detail)
+
+
 def read(relative: str) -> str:
     return (ROOT / relative).read_text(encoding="utf-8")
 
@@ -33,7 +38,7 @@ def release_paths() -> set[str]:
     return values
 
 
-def test_repository_validator_passes_for_the_320_collection() -> None:
+def test_repository_validator_passes_for_the_410_collection() -> None:
     result = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "validate_repository.py")],
         cwd=ROOT,
@@ -84,15 +89,18 @@ def test_release_guidance_uses_one_shared_supervisor_agent() -> None:
         "skills/glk-run-graph/SKILL.md",
     )
     combined = "\n".join(read(path) for path in paths)
-    assert "one shared Supervisor Agent" in combined
-    assert "一个共享Supervisor Agent" in combined
-    assert "GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID" in combined
+    require("one shared Supervisor Agent" in combined, "English shared-Agent guidance missing")
+    require("一个共享Supervisor Agent" in combined, "Chinese shared-Agent guidance missing")
+    require(
+        "GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID" in combined,
+        "four-part Supervisor scope missing",
+    )
     for forbidden in (
         "every child SLK its own Supervisor",
         "每个SLK仍有自己的Supervisor",
         "每个SLK按`$small-loop-skill`建立自己的Supervisor",
     ):
-        assert forbidden not in combined
+        require(forbidden not in combined, f"forbidden N+1 guidance: {forbidden}")
 
 
 def test_ci_runs_collection_validation_on_windows_and_ubuntu() -> None:
@@ -127,6 +135,6 @@ def test_old_active_kernel_is_absent_after_reconstruction() -> None:
     }
     assert {path.name for path in (ROOT / "tests").iterdir() if path.is_file()} == {
         "skill_testkit.py",
-        "test_repository_320.py",
-        "test_skill_collection_320.py",
+        "test_repository_410.py",
+        "test_skill_collection_410.py",
     }

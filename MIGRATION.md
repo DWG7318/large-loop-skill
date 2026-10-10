@@ -1,35 +1,38 @@
-# Migration to GLK 3.2.0
+# Migration to GLK 4.1.0
 
-GLK 3.2.0 is a method reconstruction. It removes the active 3.1 runtime/kernel surface and keeps only GLK's distinct value: Supervisor-owned DAG orchestration over complete latest-SLK GO Loops.
+GLK 4.1.0 preserves the four-Skill Node-DAG collection and corrects the unpublished 4.0.0 Supervisor topology.
 
 ## New Runs
 
-New GLK Runs use:
+One GLK Run creates exactly one shared Supervisor Agent. Every ordinary, Fusion, and D2 Repair child SLK registers its Supervisor role against that same Agent without creating another conversation. Each child remains an independent SLK Run with an isolated Checker, Worker, SLK token, central record, worktree, CELL loop, D0/D1/D2 evidence, and archive.
+
+Every Supervisor action binds the complete scope:
 
 ```text
-graph-loop-skill
-glk-design-graph
-glk-run-graph
-glk-close-run
+GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID
 ```
 
-Bind the current latest SLK before the Run starts and keep that SLK version fixed for every GO. Create `GLK-GRAPH.md`, `GLK-ROSTER.md`, and `GLK-RUN-<RUN-ID>.md`; do not restore old runtime indexes, role systems, patrol, or extra verification layers.
+Missing or colliding scope, a second Supervisor Agent identity, or a cross-child Checker/Worker reference fails closed.
 
 ## Existing Runs and releases
 
-An active 3.1.0 or older Run remains governed by the exact version under which it began. Keep its evidence, artifacts, role bindings, and decisions unchanged. Do not reinterpret or rewrite them as 3.2.0.
+Published tags and Releases remain immutable. An existing Run continues under the exact method version with which it started. Do not silently rebind an active child Run.
 
-Published tags and Releases remain immutable recovery points. GLK 3.2.0 uses a new version identity and does not move, replace, or overwrite an older tag or Release.
+GLK 4.0.0 was an unpublished intermediate candidate and has no migration authority. New Runs use 4.1.0. Historical 3.x evidence stays historical and is never promoted merely because the current topology is simpler.
+
+## Preserved boundaries
+
+- Node DAG, multi-start execution, `ALL` joins, dependency-driven release, and one normal Fusion Node remain unchanged.
+- Child SLK construction, D0, D1, child D2, recovery, communication evidence, central record, token, worktree, and archive remain owned by SLK.
+- Fusion child SLKs complete their own D2 before the same shared Supervisor performs the distinct GLK final D2.
+- Conditional D2 Repair remains a child SLK Run and returns to the same GLK final-D2 boundary.
+- No coordinator, broker, Router, hidden Agent, or runtime layer is added.
 
 ## Concept mapping
 
-| Previous active surface | GLK 3.2.0 |
+| Unreleased 4.0.0 wording | GLK 4.1.0 |
 | --- | --- |
-| GLK-owned CELL roles and runtime controls | Latest SLK inside each GO |
-| Multiple graph/runtime authority files | `GLK-GRAPH.md` plus one roster and one shared Run record |
-| GO-level additional verification | SLK D0/D1 inside the GO; one final Graph D2 after Fusion |
-| Runtime graph queues and patrol | Message-activated Supervisor routes direct dependency completion |
-| Separate GLK model policy | `$slk-select-models` |
-| Final merge behavior | Fusion owns real integration in its own worktree |
-
-Historical implementation details remain available through Git history and old version tags; they are not active 3.2 instructions.
+| One GLK Supervisor plus separate child Supervisor Agents | One shared Supervisor Agent with child-run-scoped role bindings |
+| Indirect GLK-to-child-Supervisor handoff | Direct shared-Supervisor action under the exact four-part scope |
+| Child isolation implied by separate Supervisors | Child isolation proved by distinct Checker, Worker, token, record, workspace, evidence, and archive |
+| Supervisor count grows with child count | Supervisor Agent count is exactly one per GLK Run |

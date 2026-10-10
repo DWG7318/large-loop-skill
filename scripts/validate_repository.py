@@ -10,7 +10,7 @@ from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS_ROOT = ROOT / "skills"
-VERSION = "4.0.0"
+VERSION = "4.1.0"
 COLLECTION_NAME = "Graph Loop Skill Collection"
 EXPECTED_SKILLS = (
     "graph-loop-skill",
@@ -137,6 +137,30 @@ def validate(root: Path) -> list[str]:
     for name in EXPECTED_SKILLS[1:]:
         check(main.count(f"`${name}`") == 1, "GLK_REPO_ROUTE", name, errors)
     check("`$small-loop-skill`" in main, "GLK_REPO_SLK_ROUTE", "main", errors)
+    for marker in (
+        "一个共享Supervisor Agent",
+        "每个子SLK的Supervisor角色绑定",
+        "GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID",
+        "不会创建第二个Supervisor Agent",
+    ):
+        check(marker in main, "GLK_REPO_SHARED_SUPERVISOR", marker, errors)
+
+    current_surfaces = (
+        "README.md",
+        "README.zh-CN.md",
+        "MIGRATION.md",
+        "CHANGELOG.md",
+        "VALIDATION-REPORT.md",
+        "skills/graph-loop-skill/SKILL.md",
+        "skills/glk-run-graph/SKILL.md",
+    )
+    combined = "\n".join(utf8_lf_text(root / relative, errors) for relative in current_surfaces)
+    for forbidden in (
+        "every child SLK its own Supervisor",
+        "每个SLK仍有自己的Supervisor",
+        "每个SLK按`$small-loop-skill`建立自己的Supervisor",
+    ):
+        check(forbidden not in combined, "GLK_REPO_N_PLUS_ONE_SUPERVISOR", forbidden, errors)
 
     for relative in ("README.md", "README.zh-CN.md", "MIGRATION.md", "CHANGELOG.md"):
         utf8_lf_text(root / relative, errors)
@@ -179,7 +203,7 @@ def main(argv: Iterable[str]) -> int:
         for error in errors:
             print(f"FAIL {error}", file=sys.stderr)
         return 1
-    print("PASS: GLK 4.0 skill collection structure, identity, and Manifest are valid.")
+    print("PASS: GLK 4.1 skill collection structure, identity, and Manifest are valid.")
     return 0
 
 

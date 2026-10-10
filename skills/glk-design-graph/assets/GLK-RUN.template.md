@@ -5,11 +5,14 @@
 - Run baseline:
 - Graph version:
 - GLK / fixed SLK version:
+- Shared Supervisor Agent ID:
 - Current state:
 
 本文件由Supervisor创建。每个成员追加自己的事实，包括施工、D0、D1、错误、返工、豁免、交付、接收、路由、最终D2、D2 Repair、证据位置和归档；不覆盖他人的既有记录。
 
 GLK只使用这一份共享Run记录，不另建Node级方法文件。需要细节时按Node与SLK记录指针查阅。
+
+每个Supervisor事件必须记录完整作用域：`GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID`。缺项、碰撞或跨子SLK引用失败关闭。
 
 ## Supervisor events
 

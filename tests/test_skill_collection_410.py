@@ -12,8 +12,16 @@ from skill_testkit import (
 )
 
 
+def require(condition: bool, detail: str) -> None:
+    if not condition:
+        raise AssertionError(detail)
+
+
 def test_version_is_410() -> None:
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "4.1.0"
+    require(
+        (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "4.1.0",
+        "VERSION must be 4.1.0",
+    )
 
 
 def test_collection_has_one_main_and_three_children() -> None:
@@ -149,7 +157,7 @@ def test_run_graph_uses_visible_slk_groups_and_event_activation() -> None:
     ):
         assert marker in text
     assert "Checker ↔ Checker" not in text
-    assert "Supervisor不检查交付内容" in text
+    assert "路由阶段后不再次检查交付内容" in text
     assert "不使用`wait_threads`" in text
 
 
@@ -166,13 +174,13 @@ def test_shared_supervisor_is_scoped_without_merging_child_slks() -> None:
         "跨子SLK",
         "失败关闭",
     ):
-        assert marker in active
+        require(marker in active, f"missing shared-Supervisor marker: {marker}")
     for forbidden in (
         "自己的Supervisor、Checker和Worker",
         "建立自己的Supervisor",
         "各自的Supervisor Agent",
     ):
-        assert forbidden not in active
+        require(forbidden not in active, f"forbidden N+1 marker: {forbidden}")
 
 
 def test_close_run_gives_fusion_and_final_d2_distinct_ownership() -> None:

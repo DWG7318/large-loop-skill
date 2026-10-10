@@ -5,6 +5,7 @@
 - Fixed latest SLK version:
 - Run baseline:
 - Graph version:
+- Shared Supervisor Agent ID:
 - Fusion Node:
 - D2 Repair Node:
 
@@ -32,6 +33,8 @@
 - 输出接口与输入接口相符：
 - 唯一正常Fusion终点：
 - D2 Repair仅由最终D2失败激活：
+- 全部子SLK Supervisor绑定解析到唯一共享Agent：
+- Supervisor四元作用域可唯一解析：
 
 ## Unstarted-region amendments
 

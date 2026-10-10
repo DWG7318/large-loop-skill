@@ -13,18 +13,22 @@ description: Use when an active Graph Loop Skill (GLK) Run has a frozen Node DAG
 
 ## 建立成员
 
-1. Supervisor按冻结花名册为每个Node创建已知SLK Run；每个SLK按`$small-loop-skill`建立自己的Supervisor、Checker和Worker。Fusion与D2 Repair下的SLK也预先登记，满足条件前保持未启动。
-2. 每个SLK独立完成自身三角色通讯测试；不同SLK成员之间不建立工作通道，Node交付统一回到GLK Supervisor。
-3. 把SLK Run ID、中央记录、专属worktree、通讯结果和状态写入`GLK-ROSTER.md`。隐藏代理或文字角色不算成员。
+1. Supervisor按冻结花名册为每个Node创建已知子SLK Run。每个Run的Supervisor角色绑定引用同一个共享Supervisor Agent，不会创建新的Supervisor对话；Fusion与D2 Repair子SLK也预先登记，满足条件前保持未启动。
+2. 每个子SLK独立建立Checker和Worker；每个子SLK独立完成通讯测试，并保留自己的SLK TOKEN、中央记录、独立worktree、CELL、D0、D1、子SLK D2与归档。不同子SLK的Checker或Worker之间不建立工作通道。
+3. 把唯一共享Agent、各子SLK的Supervisor绑定、Run ID、Checker、Worker、SLK TOKEN、中央记录、worktree、通讯结果和状态写入`GLK-ROSTER.md`。隐藏代理或文字角色不算成员。
 
 ## 启动与路由
 
-1. Supervisor向所有起点Node中的SLK Supervisor分别发送完整交付，使它们可以并行开工。
-2. 每个SLK只按固定SLK完成CELL、D0、D1、D2、必要返工和记录；关闭后把完整交付发送给GLK Supervisor。
-3. Supervisor不检查交付内容、不重跑测试也不给第二个结论；它记录交付身份和Graph位置。
+1. 共享Supervisor向所有起点Node中的子SLK分别发送完整交付，使它们可以并行开工。每次动作必须绑定`GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID`并重新读取目标子SLK中央记录与当前SLK TOKEN。
+2. 每个子SLK只按固定SLK完成CELL、D0、D1、子SLK D2、必要返工和记录；关闭后把完整交付交给同一个共享Supervisor。
+3. 共享Supervisor已经在对应子SLK作用域完成子SLK D2；进入Graph路由阶段后不再次检查交付内容、不重跑测试也不给第二个结论，只记录交付身份和Graph位置。
 4. 某Node组内全部必需SLK关闭后，该Node完成；目标Node的全部直接前置Node交付到齐时，Supervisor把这些交付及目标Node合同合成一份完整交付，立即启动目标Node下的SLK，不等待其他无关Node。
 5. 交付缺失或消息不可用时，目标Checker只向Supervisor报告通讯问题；Supervisor恢复通道或把同一交付原样重发。上游Checker不参与回退确认。
 6. 受阻Node只让相关后继保持未启动，其他路径继续。Supervisor完成一次启动、转发或恢复后结束当前活动，不使用`wait_threads`观察成员。
+
+## 失败关闭
+
+发现重复Supervisor Agent、四元作用域缺失或碰撞、跨子SLK Checker/Worker派工或记录/TOKEN不匹配时，立即失败关闭；不猜ID、不跨域重发，也不创建替代Supervisor。子SLK仍分别保留可恢复证据。
 
 ## 交付接收记录
 

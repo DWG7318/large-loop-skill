@@ -13,15 +13,17 @@ Graph是有向无环的Node DAG：它可以有多个起点、分叉和ALL汇合�
 
 ## 与SLK的关系
 
-每个Node列出一个或多个本Run固定最新SLK基线的Runs；每个SLK通过`$small-loop-skill`完成线性CELL施工并拥有自己的Supervisor、Checker和Worker。SLK成员不需要理解整个Graph；GLK不复制SLK的规划、派工、D0、D1、返工、通讯、记录或模型规则。
+每个Node列出一个或多个本Run固定最新SLK基线的Runs；每个子SLK通过`$small-loop-skill`完成独立线性CELL施工。一个GLK Run只有一个共享Supervisor Agent；每个子SLK的Supervisor角色绑定都引用它，不会创建第二个Supervisor Agent。子SLK独立保留Checker、Worker、SLK TOKEN、中央记录、worktree、D0、D1、子SLK D2与归档。
 
 普通Node在组内全部必需SLK形成可用交付后完成，不增加Node级检验；Fusion完成后才有整个Graph的一次最终D2。
 
 ## Supervisor
 
-一个GLK Run只有一个GLK Supervisor。它负责设计和维护Graph、启动各Node下的SLK、接收SLK交付、按依赖转发、启动Fusion、执行最终D2与必要的D2 Repair；每个SLK仍按自身方法管理三角色与归档。
+共享Supervisor Agent负责设计和维护Graph，也以独立的子SLK Supervisor角色绑定负责每个普通、Fusion与D2 Repair SLK Run。它接收子SLK交付、按依赖转发、启动Fusion、执行GLK最终D2与必要的D2 Repair；共享Agent不合并子SLK证据链。
 
-GLK Supervisor不承担普通CELL派工或D1，也不重新检查普通Node内的SLK内容。消息激活它完成一次路由或边界工作后，它结束当前活动，不使用`wait_threads`观察成员施工。
+每次Supervisor动作都绑定`GLK_RUN_ID + NODE_ID + SLK_RUN_ID + CELL_ID`，并重新读取该子SLK的中央记录与SLK TOKEN。缺项、作用域碰撞、重复Supervisor Agent或跨子SLK成员引用一律失败关闭，不猜测身份也不创建替代Supervisor。
+
+共享Supervisor按SLK承担各子Run的派工和子SLK D2，但不承担Worker D0或Checker D1，也不重新检查D1内容。消息激活它完成一次子Run或Graph边界工作后，它结束当前活动，不使用`wait_threads`观察成员施工。
 
 ## 三个权威文件
 
